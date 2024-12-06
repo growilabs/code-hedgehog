@@ -6,4 +6,4 @@ eval "$(cat /home/vscode/.bashrc)"
 pnpm install turbo @devcontainers/cli act --global
 
 # Install dependencies
-# turbo run bootstrap
+turbo run bootstrap
