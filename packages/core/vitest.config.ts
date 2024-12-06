@@ -11,16 +11,17 @@ export default defineConfig({
 
     // Test environment
     environment: 'node',
+    globals: true,
 
     // Configure coverage
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
-      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', 'tests/**'],
+      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts'],
     },
 
     // Configure includes/excludes
-    include: ['tests/**/*.{test,spec}.{js,ts}'],
+    include: ['src/**/*.{test,spec}.{js,ts}'],
     exclude: ['node_modules/**', 'dist/**'],
   },
 
