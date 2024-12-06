@@ -17,6 +17,7 @@
   "devDependencies": {
     "@types/node": "^22.10.1",
     "@biomejs/biome": "^1.9.4",
+    "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "vitest-mock-extended": "^2.0.2"

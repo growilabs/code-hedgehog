@@ -3,10 +3,16 @@
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "scripts": {
-    "build": "ncc build src/index.ts -o dist",
+    "build": "tsup \"src/**/*.ts\" --format esm,cjs --dts --clean --no-splitting",
     "test": "vitest run",
     "lint": "biome lint .",
     "format": "biome format . --write"

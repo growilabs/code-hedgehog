@@ -3,7 +3,8 @@
   "compilerOptions": {
     "module": "ESNext",
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "composite": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],
