@@ -1,10 +1,24 @@
+/**
+ * Represents a file change in a pull request
+ */
 export interface IFileChange {
-  /** File path relative to the repository root */
+  /**
+   * File path relative to repository root
+   */
   path: string;
-  /** File content */
-  content: string;
-  /** Diff information in patch format */
-  patch: string;
-  /** File size in bytes */
-  size: number;
+
+  /**
+   * Patch/diff information
+   */
+  patch: string | null;
+
+  /**
+   * Number of lines changed
+   */
+  changes: number;
+
+  /**
+   * Type of change
+   */
+  status: 'added' | 'modified' | 'removed' | 'renamed' | 'changed';
 }

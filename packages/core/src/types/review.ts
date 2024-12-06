@@ -1,12 +1,29 @@
+/**
+ * Type of review comment
+ */
 export type CommentType = 'inline' | 'pr';
 
+/**
+ * Represents a review comment on a pull request
+ */
 export interface IReviewComment {
-  /** Target file path for the comment */
+  /**
+   * Target file path for the comment
+   */
   path: string;
-  /** Position in the diff (for inline comments) */
+
+  /**
+   * Position in the diff (for inline comments)
+   */
   position?: number;
-  /** Comment content */
+
+  /**
+   * Comment content
+   */
   body: string;
-  /** Type of comment */
+
+  /**
+   * Type of comment
+   */
   type: CommentType;
 }

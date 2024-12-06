@@ -1,21 +1,22 @@
 {
-    "name": "@code-hedgehog/core",
-    "version": "0.0.1",
-    "private": true,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "type": "module",
-    "scripts": {
-      "build": "tsc",
-      "test": "vitest run",
-      "lint": "biome lint .",
-      "format": "biome format . --write"
-    },
-    "dependencies": {
-      "@actions/core": "^1.11.1",
-      "@actions/github": "^6.0.0",
-      "minimatch": "^10.0.1"
-    },
-    "devDependencies": {
-    }
+  "name": "@code-hedgehog/core",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "biome lint .",
+    "format": "biome format . --write"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "minimatch": "^10.0.1"
+  },
+  "devDependencies": {
+    "@octokit/core": "^5.0.1"
   }
+}
