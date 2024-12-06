@@ -53,6 +53,22 @@ importers:
         specifier: ^5.0.1
         version: 5.2.0
 
+  packages/providers/acme:
+    dependencies:
+      '@code-hedgehog/core':
+        specifier: workspace:*
+        version: link:../../core
+    devDependencies:
+      '@vercel/ncc':
+        specifier: ^0.38.3
+        version: 0.38.3
+
+  packages/providers/dify:
+    dependencies:
+      '@code-hedgehog/core':
+        specifier: workspace:*
+        version: link:../../core
+
 packages:
 
   '@actions/core@1.11.1':

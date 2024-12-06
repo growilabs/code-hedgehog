@@ -1,0 +1,20 @@
+{
+  "name": "@code-hedgehog/provider-acme",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist",
+    "test": "vitest run",
+    "lint": "biome lint .",
+    "format": "biome format . --write"
+  },
+  "dependencies": {
+    "@code-hedgehog/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3"
+  }
+}
