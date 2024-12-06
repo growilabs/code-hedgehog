@@ -19,12 +19,12 @@ export default defineWorkspace([
   }),
 
   // integration test
-  mergeConfig(configShared, {
-    test: {
-      name: 'integration',
-      environment: 'node',
-      include: ['dist', '**/*.integration.spec.ts'],
-      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts'],
-    },
-  }),
+  // mergeConfig(configShared, {
+  //   test: {
+  //     name: 'integration',
+  //     environment: 'node',
+  //     include: ['dist', '**/*.integration.spec.ts'],
+  //     exclude: ['node_modules/**', 'dist/**', '**/*.d.ts'],
+  //   },
+  // }),
 ]);

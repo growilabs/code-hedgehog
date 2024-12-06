@@ -1,0 +1,22 @@
+name: 'Code Hedgehog'
+description: 'AI-powered code review for your pull requests'
+inputs:
+  github-token:
+    description: 'GitHub token'
+    required: true
+  provider:
+    description: 'Review provider to use (dify, anthropic)'
+    required: true
+  include:
+    description: 'Glob patterns for files to include'
+    required: false
+  exclude:
+    description: 'Glob patterns for files to exclude'
+    required: false
+  max-changes:
+    description: 'Maximum number of line changes to review per file'
+    required: false
+    default: '300'
+runs:
+  using: 'node22'
+  main: 'dist/index.js'

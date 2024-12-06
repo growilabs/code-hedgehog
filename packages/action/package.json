@@ -1,19 +1,21 @@
 {
-    "name": "@code-hedgehog/action",
-    "version": "0.0.1",
-    "private": true,
-    "main": "./dist/index.js",
-    "scripts": {
-      "build": "ncc build src/index.ts -o dist",
-      "test": "vitest run",
-      "lint": "biome lint .",
-      "format": "biome format . --write"
-    },
-    "dependencies": {
-      "@code-hedgehog/core": "workspace:*",
-      "@actions/core": "^1.11.1"
-    },
-    "devDependencies": {
-      "@vercel/ncc": "^0.38.3"
-    }
+  "name": "@code-hedgehog/action",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist",
+    "test": "vitest run",
+    "lint": "biome lint .",
+    "format": "biome format . --write"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "@code-hedgehog/core": "workspace:*",
+    "@code-hedgehog/provider-acme": "workspace:*"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3"
   }
+}
