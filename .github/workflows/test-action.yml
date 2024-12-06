@@ -1,0 +1,35 @@
+name: Test Action
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: |
+          pnpm add turbo --global
+          pnpm install --frozen-lockfile
+
+      - name: Build
+        run: turbo run build
+
+      - name: Run Code Review
+        uses: ./packages/action
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          provider: 'acme'
+          exclude: |
+            ["**/dist/**", "pnpm-lock.yaml"]
+          max-changes: "300"

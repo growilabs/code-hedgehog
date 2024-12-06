@@ -1,0 +1,16 @@
+{
+  "pull_request": {
+    "number": 1,
+    "title": "Test Pull Request",
+    "body": "This is a test pull request for local testing.",
+    "base": {
+      "ref": "main"
+    },
+    "head": {
+      "ref": "feature/test"
+    }
+  },
+  "repository": {
+    "full_name": "growilabs/code-hedgehog"
+  }
+}

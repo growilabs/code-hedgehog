@@ -13,6 +13,9 @@ node_modules
 .pnp.js
 .pnpm-store
 
+# installed bin
+bin
+
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
