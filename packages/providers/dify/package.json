@@ -15,7 +15,5 @@
       "@code-hedgehog/core": "workspace:*"
     },
     "devDependencies": {
-      "typescript": "^5.3.3",
-      "vitest": "^1.3.1"
     }
   }
