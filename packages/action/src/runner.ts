@@ -38,6 +38,11 @@ export class ActionRunner {
   }
 
   private createGitHubConfig(): IGitHubConfig {
+    core.debug('Environment variables:');
+    core.debug(`GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
+    core.debug(`GITHUB_EVENT_PATH: ${process.env.GITHUB_EVENT_PATH}`);
+    core.debug(`GITHUB_PR_NUMBER: ${process.env.GITHUB_PR_NUMBER}`);
+
     const repository = process.env.GITHUB_REPOSITORY;
     if (!repository) {
       throw new Error('GITHUB_REPOSITORY environment variable is not set');
@@ -48,15 +53,25 @@ export class ActionRunner {
       throw new Error('GITHUB_REPOSITORY environment variable is in invalid format');
     }
 
+    let pullNumber: number;
     const eventPath = process.env.GITHUB_EVENT_PATH;
-    if (!eventPath) {
-      throw new Error('GITHUB_EVENT_PATH environment variable is not set');
+
+    if (eventPath) {
+      try {
+        const event = require(eventPath);
+        pullNumber = event?.pull_request?.number;
+      } catch (error) {
+        core.warning(`Failed to read event file: ${error}`);
+        // fallback to environment variable
+        pullNumber = Number.parseInt(process.env.GITHUB_PR_NUMBER || '', 10);
+      }
+    } else {
+      // get pull request number from environment variable
+      pullNumber = Number.parseInt(process.env.GITHUB_PR_NUMBER || '', 10);
     }
 
-    const event = require(eventPath);
-    const pullNumber = event?.pull_request?.number;
-    if (!pullNumber) {
-      throw new Error('Could not determine pull request number from event');
+    if (!pullNumber || Number.isNaN(pullNumber)) {
+      throw new Error('Could not determine pull request number');
     }
 
     return {
