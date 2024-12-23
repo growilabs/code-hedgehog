@@ -1,13 +1,20 @@
-import type { IFileChange, IPullRequestInfo, IReviewComment, IReviewProvider } from '@code-hobbit/core';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessor, IReviewComment } from '@code-hobbit/core';
 
-export class AcmeReviewProvider implements IReviewProvider {
-  async reviewBatch(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IReviewComment[]> {
+export class AcmeProcessor implements IPullRequestProcessor {
+  /**
+   * @inheritdoc
+   */
+  async process(prInfo: IPullRequestInfo, files: IFileChange[]) {
     // simply comment on each file
-    return files.map((file) => ({
+    const comments: IReviewComment[] = files.map((file) => ({
       path: file.path,
       position: 1,
       body: `[ACME] Reviewed ${file.path}\n\nPR: ${prInfo.title}`,
       type: 'inline',
     }));
+
+    return {
+      comments,
+    };
   }
 }
