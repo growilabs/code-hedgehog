@@ -1,7 +1,7 @@
 // packages/action/src/runner.ts
 import * as core from '@actions/core';
-import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig } from '@code-hedgehog/core';
-import { AcmeReviewProvider } from '@code-hedgehog/provider-acme';
+import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig } from '@code-hobbit/core';
+import { AcmeReviewProvider } from '@code-hobbit/provider-acme';
 import type { ActionConfig } from './config';
 
 export class ActionRunner {

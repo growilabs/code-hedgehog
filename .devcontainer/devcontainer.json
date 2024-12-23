@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-  "name": "Code-Hedgehog-Dev",
+  "name": "code-hobbit-Dev",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
@@ -9,7 +9,7 @@
       "version": "22.12.0"
     },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
   },
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
@@ -29,7 +29,7 @@
         "github.vscode-pull-request-github",
         "vitest.explorer",
         "GitHub.vscode-github-actions",
-        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-docker"
       ],
       "settings": {
         "editor.formatOnSave": true,
@@ -52,7 +52,7 @@
         }
       }
     }
-  },
+  }
 
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"

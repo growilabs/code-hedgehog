@@ -1,5 +1,5 @@
 {
-  "name": "@code-hedgehog/provider-acme",
+  "name": "@code-hobbit/provider-acme",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
     "format": "biome format . --write"
   },
   "dependencies": {
-    "@code-hedgehog/core": "workspace:*"
+    "@code-hobbit/core": "workspace:*"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3"

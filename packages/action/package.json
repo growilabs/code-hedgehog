@@ -1,5 +1,5 @@
 {
-  "name": "@code-hedgehog/action",
+  "name": "@code-hobbit/action",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -12,8 +12,8 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
-    "@code-hedgehog/core": "workspace:*",
-    "@code-hedgehog/provider-acme": "workspace:*"
+    "@code-hobbit/core": "workspace:*",
+    "@code-hobbit/provider-acme": "workspace:*"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3"

@@ -35,10 +35,10 @@ importers:
       '@actions/github':
         specifier: ^6.0.0
         version: 6.0.0
-      '@code-hedgehog/core':
+      '@code-hobbit/core':
         specifier: workspace:*
         version: link:../core
-      '@code-hedgehog/provider-acme':
+      '@code-hobbit/provider-acme':
         specifier: workspace:*
         version: link:../providers/acme
     devDependencies:
@@ -64,7 +64,7 @@ importers:
 
   packages/providers/acme:
     dependencies:
-      '@code-hedgehog/core':
+      '@code-hobbit/core':
         specifier: workspace:*
         version: link:../../core
     devDependencies:
@@ -74,7 +74,7 @@ importers:
 
   packages/providers/dify:
     dependencies:
-      '@code-hedgehog/core':
+      '@code-hobbit/core':
         specifier: workspace:*
         version: link:../../core
 

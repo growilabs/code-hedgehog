@@ -1,5 +1,5 @@
 {
-  "name": "@code-hedgehog/provider-dify",
+  "name": "@code-hobbit/provider-dify",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
     "format": "biome format . --write"
   },
   "dependencies": {
-    "@code-hedgehog/core": "workspace:*"
+    "@code-hobbit/core": "workspace:*"
   },
   "devDependencies": {}
 }

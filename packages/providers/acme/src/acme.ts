@@ -1,4 +1,4 @@
-import type { IFileChange, IPullRequestInfo, IReviewComment, IReviewProvider } from '@code-hedgehog/core';
+import type { IFileChange, IPullRequestInfo, IReviewComment, IReviewProvider } from '@code-hobbit/core';
 
 export class AcmeReviewProvider implements IReviewProvider {
   async reviewBatch(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IReviewComment[]> {

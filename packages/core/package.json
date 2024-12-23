@@ -1,5 +1,5 @@
 {
-  "name": "@code-hedgehog/core",
+  "name": "@code-hobbit/core",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
