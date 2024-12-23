@@ -1,5 +1,5 @@
-name: 'Code Hedgehog'
-description: 'AI-powered code review for your pull requests'
+name: 'Code Hobbit'
+description: 'AI-powered CI integrator for your pull requests'
 inputs:
   github-token:
     description: 'GitHub token'
