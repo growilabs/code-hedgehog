@@ -1,7 +1,7 @@
 // packages/action/src/runner.ts
 import * as core from '@actions/core';
 import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig } from '@code-hobbit/core';
-import { AcmeReviewProvider } from '@code-hobbit/provider-acme';
+import { AcmeProcessor } from '@code-hobbit/processor-acme';
 import type { ActionConfig } from './config';
 
 export class ActionRunner {
@@ -87,7 +87,7 @@ export class ActionRunner {
     if (this.config.provider !== 'acme') {
       throw new Error(`Unsupported provider: ${this.config.provider}`);
     }
-    return new AcmeReviewProvider();
+    return new AcmeProcessor();
   }
 
   private getFileFilter(): IFileFilter {

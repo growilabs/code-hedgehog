@@ -1,5 +1,5 @@
 {
-  "name": "@code-hobbit/provider-acme",
+  "name": "@code-hobbit/processor-acme",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",

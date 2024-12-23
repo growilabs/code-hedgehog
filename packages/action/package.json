@@ -13,7 +13,7 @@
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
     "@code-hobbit/core": "workspace:*",
-    "@code-hobbit/provider-acme": "workspace:*"
+    "@code-hobbit/processor-acme": "workspace:*"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3"

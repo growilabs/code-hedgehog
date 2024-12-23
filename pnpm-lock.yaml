@@ -38,9 +38,9 @@ importers:
       '@code-hobbit/core':
         specifier: workspace:*
         version: link:../core
-      '@code-hobbit/provider-acme':
+      '@code-hobbit/processor-acme':
         specifier: workspace:*
-        version: link:../providers/acme
+        version: link:../processors/acme
     devDependencies:
       '@vercel/ncc':
         specifier: ^0.38.3
@@ -62,7 +62,7 @@ importers:
         specifier: ^5.0.1
         version: 5.2.0
 
-  packages/providers/acme:
+  packages/processors/acme:
     dependencies:
       '@code-hobbit/core':
         specifier: workspace:*
@@ -72,7 +72,7 @@ importers:
         specifier: ^0.38.3
         version: 0.38.3
 
-  packages/providers/dify:
+  packages/processors/dify:
     dependencies:
       '@code-hobbit/core':
         specifier: workspace:*

@@ -1,5 +1,5 @@
 {
-  "name": "@code-hobbit/provider-dify",
+  "name": "@code-hobbit/processor-dify",
   "version": "0.0.1",
   "private": true,
   "main": "./dist/index.js",
