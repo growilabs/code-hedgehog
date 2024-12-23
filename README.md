@@ -26,3 +26,19 @@ pnpm install
 
 # Run tests across all packages
 pnpm test
+```
+
+### Test with act
+
+1. Add secret
+    
+    ```.act.secret
+    GITHUB_TOKEN=XXXXXXXXXX
+    ```
+
+1. Run act
+    
+    ```bash
+    pnpm bin/act
+    ```
+
