@@ -1,6 +1,6 @@
 // packages/action/src/runner.ts
 import * as core from '@actions/core';
-import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig } from '@code-hobbit/core';
+import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hobbit/core';
 import { AcmeProcessor } from '@code-hobbit/processor-acme';
 import type { ActionConfig } from './config';
 
@@ -14,7 +14,7 @@ export class ActionRunner {
       // Initialize components
       const githubClient = new GitHubClient(githubConfig);
       const fileManager = new FileManager(githubClient, this.getFileFilter());
-      const provider = this.createProvider();
+      const processor = this.createProcessor();
 
       // Get PR information
       core.info('Fetching pull request information...');
@@ -23,8 +23,8 @@ export class ActionRunner {
       // Process files in batches and get reviews
       core.info('Starting code review...');
       for await (const files of fileManager.collectChangedFiles()) {
-        const comments = await provider.reviewBatch(prInfo, files);
-        if (comments.length > 0) {
+        const { comments } = await processor.process(prInfo, files);
+        if (comments != null && comments.length > 0) {
           await githubClient.createReviewBatch(comments);
           core.info(`Posted ${comments.length} review comments`);
         }
@@ -82,10 +82,10 @@ export class ActionRunner {
     };
   }
 
-  private createProvider() {
-    // Currently only supporting ACME provider
-    if (this.config.provider !== 'acme') {
-      throw new Error(`Unsupported provider: ${this.config.provider}`);
+  private createProcessor(): IPullRequestProcessor {
+    // Currently only supporting ACME processor
+    if (this.config.processor !== 'acme') {
+      throw new Error(`Unsupported processor: ${this.config.processor}`);
     }
     return new AcmeProcessor();
   }

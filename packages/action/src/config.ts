@@ -7,9 +7,9 @@ export interface ActionConfig {
   githubToken: string;
 
   /**
-   * Selected provider name
+   * Selected processor name
    */
-  provider: string;
+  processor: string;
 
   /**
    * File filtering configuration
@@ -34,7 +34,7 @@ export function getConfig(): ActionConfig {
 
   return {
     githubToken: core.getInput('github-token', { required: true }),
-    provider: core.getInput('provider', { required: true }),
+    processor: core.getInput('processor', { required: true }),
     filter: {
       include,
       exclude,
