@@ -4,8 +4,8 @@ inputs:
   github-token:
     description: 'GitHub token'
     required: true
-  provider:
-    description: 'Review provider to use (dify, anthropic)'
+  processor:
+    description: 'PR processor to use (dify, anthropic)'
     required: true
   include:
     description: 'Glob patterns for files to include'
