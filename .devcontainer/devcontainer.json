@@ -1,60 +1,58 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-  "name": "code-hobbit-Dev",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+	"name": "code-hobbit-Dev",
+	"image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
-  "features": {
-    "ghcr.io/devcontainers-extra/features/deno": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
+	"features": {
+		"ghcr.io/devcontainers-extra/features/deno": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
 
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
 
-  // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "/bin/bash ./.devcontainer/postCreateCommand.sh",
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "/bin/bash ./.devcontainer/postCreateCommand.sh",
 
-  // Configure tool-specific properties.
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "denoland.vscode-deno",
-        "github.copilot",
-        "github.copilot-chat",
-        "rooveterinaryinc.roo-cline",
-        "biomejs.biome",
-        "mhutchie.git-graph",
-        "eamodio.gitlens",
-        "editorconfig.editorconfig",
-        "github.vscode-pull-request-github",
-        "GitHub.vscode-github-actions",
-        "ms-azuretools.vscode-docker"
-      ],
-      "settings": {
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "biomejs.biome",
-        "editor.codeActionsOnSave": {
-          "source.organizeImports.biome": "always",
-          "quickfix.biome": "always"
-        },
-        "[typescript]": {
-          "editor.defaultFormatter": "biomejs.biome"
-        },
-        "[javascript]": {
-          "editor.defaultFormatter": "biomejs.biome"
-        },
-        "[json]": {
-          "editor.defaultFormatter": "biomejs.biome"
-        },
-        "[jsonc]": {
-          "editor.defaultFormatter": "biomejs.biome"
-        }
-      }
-    }
-  }
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"denoland.vscode-deno",
+				"github.copilot",
+				"github.copilot-chat",
+				"rooveterinaryinc.roo-cline",
+				"mhutchie.git-graph",
+				"eamodio.gitlens",
+				"github.vscode-pull-request-github",
+				"GitHub.vscode-github-actions",
+				"ms-azuretools.vscode-docker"
+			],
+			"settings": {
+				"editor.formatOnSave": true,
+				"editor.defaultFormatter": "biomejs.biome",
+				"editor.codeActionsOnSave": {
+					"source.organizeImports.biome": "always",
+					"quickfix.biome": "always"
+				},
+				"[typescript]": {
+					"editor.defaultFormatter": "biomejs.biome"
+				},
+				"[javascript]": {
+					"editor.defaultFormatter": "biomejs.biome"
+				},
+				"[json]": {
+					"editor.defaultFormatter": "biomejs.biome"
+				},
+				"[jsonc]": {
+					"editor.defaultFormatter": "biomejs.biome"
+				}
+			}
+		}
+	}
 
-  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-  // "remoteUser": "root"
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
 }
