@@ -9,12 +9,13 @@
   "compilerOptions": {
     "strict": true
   },
+  "workspace": [
+    "./packages/action",
+    "./packages/core",
+    "./packages/processors/acme",
+    "./packages/processors/dify"
+  ],
   "imports": {
-    "@actions/core": "npm:@actions/core@1.11.1",
-    "@actions/github": "npm:@actions/github@6.0.0",
-    "minimatch": "npm:minimatch@10.0.1",
-    "@octokit/core": "npm:@octokit/core@5.0.1",
-    "@code-hobbit/core/": "./packages/core/"
   },
   "tasks": {
     "test": "deno test --allow-read --allow-write --allow-net",
