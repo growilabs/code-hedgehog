@@ -5,9 +5,7 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "22.12.0"
-    },
+    "ghcr.io/devcontainers-extra/features/deno": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
@@ -22,12 +20,15 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "denoland.vscode-deno",
+        "github.copilot",
+        "github.copilot-chat",
+        "rooveterinaryinc.roo-cline",
         "biomejs.biome",
         "mhutchie.git-graph",
         "eamodio.gitlens",
         "editorconfig.editorconfig",
         "github.vscode-pull-request-github",
-        "vitest.explorer",
         "GitHub.vscode-github-actions",
         "ms-azuretools.vscode-docker"
       ],
