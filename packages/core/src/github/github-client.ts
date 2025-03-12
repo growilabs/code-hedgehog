@@ -1,7 +1,9 @@
-import * as core from '@actions/core';
-import { getOctokit } from '@actions/github';
-import type { IFileChange, IGitHubConfig, IPullRequestInfo, IReviewComment } from '../types/mod.ts';
-import type { IGitHubClient } from './types.ts';
+import * as core from "@actions/core";
+import { getOctokit } from "@actions/github";
+
+import { IGitHubConfig, IPullRequestInfo } from "../types/mod.ts";
+
+import type { IGitHubClient } from "./types.ts";
 
 export class GitHubClient implements IGitHubClient {
   private readonly octokit;
@@ -23,24 +25,33 @@ export class GitHubClient implements IGitHubClient {
 
       return {
         title: response.data.title,
-        body: response.data.body ?? '',
+        body: response.data.body ?? "",
         baseBranch: response.data.base.ref,
         headBranch: response.data.head.ref,
       };
     } catch (error) {
-      core.error(`Failed to fetch PR info: ${error instanceof Error ? error.message : String(error)}`);
+      core.error(
+        `Failed to fetch PR info: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       throw error;
     }
   }
 
-  async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
+  async *getPullRequestChangesStream(
+    batchSize = 10,
+  ): AsyncIterableIterator<IFileChange[]> {
     try {
-      const iterator = this.octokit.paginate.iterator(this.octokit.rest.pulls.listFiles, {
-        owner: this.config.owner,
-        repo: this.config.repo,
-        pull_number: this.config.pullNumber,
-        per_page: 100,
-      });
+      const iterator = this.octokit.paginate.iterator(
+        this.octokit.rest.pulls.listFiles,
+        {
+          owner: this.config.owner,
+          repo: this.config.repo,
+          pull_number: this.config.pullNumber,
+          per_page: 100,
+        },
+      );
 
       let currentBatch: IFileChange[] = [];
 
@@ -48,7 +59,9 @@ export class GitHubClient implements IGitHubClient {
         for (const file of response.data) {
           this.fileCount++;
           if (this.fileCount > 3000) {
-            core.warning('GitHub API limits the response to 3000 files. Some files may be skipped.');
+            core.warning(
+              "GitHub API limits the response to 3000 files. Some files may be skipped.",
+            );
             return;
           }
 
@@ -56,7 +69,7 @@ export class GitHubClient implements IGitHubClient {
             path: file.filename,
             patch: file.patch ?? null,
             changes: file.changes,
-            status: file.status as IFileChange['status'],
+            status: file.status as IFileChange["status"],
           });
 
           if (currentBatch.length >= batchSize) {
@@ -70,9 +83,15 @@ export class GitHubClient implements IGitHubClient {
         yield currentBatch;
       }
 
-      core.debug(`Processed ${this.fileCount} files from PR #${this.config.pullNumber}`);
+      core.debug(
+        `Processed ${this.fileCount} files from PR #${this.config.pullNumber}`,
+      );
     } catch (error) {
-      core.error(`Failed to fetch PR changes: ${error instanceof Error ? error.message : String(error)}`);
+      core.error(
+        `Failed to fetch PR changes: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       throw error;
     }
   }
@@ -87,7 +106,7 @@ export class GitHubClient implements IGitHubClient {
         owner: this.config.owner,
         repo: this.config.repo,
         pull_number: this.config.pullNumber,
-        event: 'COMMENT',
+        event: "COMMENT",
         comments: comments.map((comment) => ({
           path: comment.path,
           position: comment.position,
@@ -97,7 +116,11 @@ export class GitHubClient implements IGitHubClient {
 
       core.debug(`Created review with ${comments.length} comments`);
     } catch (error) {
-      core.error(`Failed to create review: ${error instanceof Error ? error.message : String(error)}`);
+      core.error(
+        `Failed to create review: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
       throw error;
     }
   }

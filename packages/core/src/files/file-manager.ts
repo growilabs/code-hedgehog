@@ -1,7 +1,9 @@
 import * as core from "@actions/core";
 import { minimatch } from "minimatch";
-import type { IGitHubClient } from "../github/types.ts";
+
+import type { IGitHubClient } from "../github/mod.ts";
 import type { IFileChange } from "../types/mod.ts";
+
 import type { IFileFilter, IFileManager } from "./types.ts";
 
 export class FileManager implements IFileManager {

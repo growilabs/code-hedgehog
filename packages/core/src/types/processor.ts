@@ -1,6 +1,6 @@
-import type { IFileChange } from './file';
-import type { IPullRequestInfo } from './github';
-import type { IReviewComment } from './review';
+import type { IFileChange } from "./file.ts";
+import type { IPullRequestInfo } from "./github.ts";
+import type { IReviewComment } from "./review.ts";
 
 type IPullRequestProcessedResult = {
   updatedPrInfo?: IPullRequestInfo;
@@ -14,7 +14,10 @@ export interface IPullRequestProcessor {
    * @param files List of file changes to review
    * @returns Review comments
    */
-  process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult>;
+  process(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+  ): Promise<IPullRequestProcessedResult>;
 
   // TODO: will be implemented in the future
   // getPullRequestInfo(): Promise<IPullRequestInfo>;

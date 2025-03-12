@@ -1,4 +1,4 @@
-import type { IFileChange } from '../types';
+import type { IFileChange } from "../../types/mod.ts";
 
 export interface IFileFilter {
   /**
@@ -21,7 +21,8 @@ export interface IFileFilter {
   /**
    * List of file statuses to process
    */
-  allowedStatuses?: ('added' | 'modified' | 'removed' | 'renamed' | 'changed')[];
+  allowedStatuses?:
+    ("added" | "modified" | "removed" | "renamed" | "changed")[];
 }
 
 export interface IFileManager {
