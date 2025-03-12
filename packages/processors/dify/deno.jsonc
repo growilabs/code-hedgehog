@@ -1,0 +1,9 @@
+{
+	"imports": {
+		"@code-hobbit/core/": "../../../core/"
+	},
+	"tasks": {
+		"test": "deno test",
+		"lint": "deno lint"
+	}
+}
