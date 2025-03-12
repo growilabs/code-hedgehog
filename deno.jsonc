@@ -5,8 +5,8 @@
   "keywords": [],
   "license": "MIT",
   "author": "Yuki Takei <yuki@weseek.co.jp>",
+  "nodeModulesDir": "auto",
   "compilerOptions": {
-    "allowJs": true,
     "strict": true
   },
   "imports": {
