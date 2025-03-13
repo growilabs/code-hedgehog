@@ -9,9 +9,5 @@
     "build": "deno run -A ./scripts/build-action.ts",
     "test": "deno test --allow-read --allow-write --allow-net",
     "lint": "deno lint"
-  },
-  "fmt": {
-    "semiColons": false,
-    "singleQuote": true
   }
 }

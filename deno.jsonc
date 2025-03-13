@@ -37,10 +37,8 @@
     }
   },
   "fmt": {
-    "options": {
-      "useTabs": false,
-      "singleQuote": true,
-      "semiColons": true
-    }
+    "useTabs": false,
+    "singleQuote": true,
+    "semiColons": true
   }
 }
