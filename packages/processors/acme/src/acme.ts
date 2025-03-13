@@ -1,4 +1,9 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessor, IReviewComment } from '@code-hobbit/core';
+import type {
+  IFileChange,
+  IPullRequestInfo,
+  IPullRequestProcessor,
+  IReviewComment,
+} from '@code-hobbit/core';
 
 export class AcmeProcessor implements IPullRequestProcessor {
   /**

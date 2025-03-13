@@ -1,2 +1,2 @@
-export * from "./types.ts";
-export * from "./github-client.ts";
+export * from './types.ts';
+export * from './github-client.ts';

@@ -2,7 +2,7 @@ import type {
   IFileChange,
   IPullRequestInfo,
   IReviewComment,
-} from "../types/mod.ts";
+} from '../types/mod.ts';
 
 /**
  * Interface for GitHub API client operations

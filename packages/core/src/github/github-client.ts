@@ -1,9 +1,9 @@
-import * as core from "@actions/core";
-import { getOctokit } from "@actions/github";
+import * as core from '@actions/core';
+import { getOctokit } from '@actions/github';
 
-import { IGitHubConfig, IPullRequestInfo } from "../types/mod.ts";
+import { IGitHubConfig, IPullRequestInfo } from '../types/mod.ts';
 
-import type { IGitHubClient } from "./types.ts";
+import type { IGitHubClient } from './types.ts';
 
 export class GitHubClient implements IGitHubClient {
   private readonly octokit;
@@ -25,7 +25,7 @@ export class GitHubClient implements IGitHubClient {
 
       return {
         title: response.data.title,
-        body: response.data.body ?? "",
+        body: response.data.body ?? '',
         baseBranch: response.data.base.ref,
         headBranch: response.data.head.ref,
       };
@@ -60,7 +60,7 @@ export class GitHubClient implements IGitHubClient {
           this.fileCount++;
           if (this.fileCount > 3000) {
             core.warning(
-              "GitHub API limits the response to 3000 files. Some files may be skipped.",
+              'GitHub API limits the response to 3000 files. Some files may be skipped.',
             );
             return;
           }
@@ -69,7 +69,7 @@ export class GitHubClient implements IGitHubClient {
             path: file.filename,
             patch: file.patch ?? null,
             changes: file.changes,
-            status: file.status as IFileChange["status"],
+            status: file.status as IFileChange['status'],
           });
 
           if (currentBatch.length >= batchSize) {
@@ -106,7 +106,7 @@ export class GitHubClient implements IGitHubClient {
         owner: this.config.owner,
         repo: this.config.repo,
         pull_number: this.config.pullNumber,
-        event: "COMMENT",
+        event: 'COMMENT',
         comments: comments.map((comment) => ({
           path: comment.path,
           position: comment.position,

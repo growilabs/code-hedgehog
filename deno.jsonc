@@ -35,5 +35,12 @@
         "no-inner-declarations"
       ]
     }
+  },
+  "fmt": {
+    "options": {
+      "useTabs": false,
+      "singleQuote": true,
+      "semiColons": true
+    }
   }
 }
