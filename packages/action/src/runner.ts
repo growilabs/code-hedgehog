@@ -1,13 +1,7 @@
+import process from 'node:process';
 // packages/action/src/runner.ts
 import * as core from '@actions/core';
-import process from 'node:process';
-import {
-  FileManager,
-  GitHubClient,
-  type IFileFilter,
-  type IGitHubConfig,
-  type IPullRequestProcessor,
-} from '@code-hobbit/core';
+import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hobbit/core';
 import { AcmeProcessor } from '@code-hobbit/processor-acme';
 import type { ActionConfig } from './config.ts';
 
@@ -39,11 +33,7 @@ export class ActionRunner {
 
       core.info('Code review completed successfully');
     } catch (error) {
-      core.setFailed(
-        `Action failed: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
+      core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -61,9 +51,7 @@ export class ActionRunner {
 
     const [owner, repo] = repository.split('/');
     if (!owner || !repo) {
-      throw new Error(
-        'GITHUB_REPOSITORY environment variable is in invalid format',
-      );
+      throw new Error('GITHUB_REPOSITORY environment variable is in invalid format');
     }
 
     let pullNumber: number;

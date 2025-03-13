@@ -8,9 +8,7 @@ const result = await esbuild.build({
   platform: 'node',
   target: 'node20',
   format: 'cjs',
-  plugins: [
-    ...denoPlugins(),
-  ],
+  plugins: [...denoPlugins()],
   sourcemap: true,
 });
 

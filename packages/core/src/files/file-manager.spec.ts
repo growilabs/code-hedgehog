@@ -14,11 +14,7 @@ describe('FileManager', () => {
     vi.clearAllMocks();
   });
 
-  const createMockFile = (
-    path: string,
-    changes = 10,
-    status: IFileChange['status'] = 'modified',
-  ): IFileChange => ({
+  const createMockFile = (path: string, changes = 10, status: IFileChange['status'] = 'modified'): IFileChange => ({
     path,
     patch: '@@ -1,1 +1,1 @@',
     changes,
@@ -33,16 +29,11 @@ describe('FileManager', () => {
         maxChanges: 50,
       });
 
-      const mockFiles = [
-        createMockFile('small.ts', 10),
-        createMockFile('large.ts', 100),
-      ];
+      const mockFiles = [createMockFile('small.ts', 10), createMockFile('large.ts', 100)];
 
-      mockGithubClient.getPullRequestChangesStream.mockImplementation(
-        async function* () {
-          yield mockFiles;
-        },
-      );
+      mockGithubClient.getPullRequestChangesStream.mockImplementation(async function* () {
+        yield mockFiles;
+      });
 
       const result: IFileChange[] = [];
       for await (const batch of manager.collectChangedFiles()) {
@@ -52,9 +43,7 @@ describe('FileManager', () => {
       expect(result).toHaveLength(1);
       assert(result[0] != null);
       expect(result[0].path).toBe('small.ts');
-      expect(core.debug).toHaveBeenCalledWith(
-        expect.stringContaining('exceeds limit'),
-      );
+      expect(core.debug).toHaveBeenCalledWith(expect.stringContaining('exceeds limit'));
     });
 
     it('should filter files based on status', async () => {
@@ -63,17 +52,11 @@ describe('FileManager', () => {
         allowedStatuses: ['added', 'modified'],
       });
 
-      const mockFiles = [
-        createMockFile('added.ts', 10, 'added'),
-        createMockFile('removed.ts', 10, 'removed'),
-        createMockFile('modified.ts', 10, 'modified'),
-      ];
+      const mockFiles = [createMockFile('added.ts', 10, 'added'), createMockFile('removed.ts', 10, 'removed'), createMockFile('modified.ts', 10, 'modified')];
 
-      mockGithubClient.getPullRequestChangesStream.mockImplementation(
-        async function* () {
-          yield mockFiles;
-        },
-      );
+      mockGithubClient.getPullRequestChangesStream.mockImplementation(async function* () {
+        yield mockFiles;
+      });
 
       const result: IFileChange[] = [];
       for await (const batch of manager.collectChangedFiles()) {
@@ -91,17 +74,11 @@ describe('FileManager', () => {
         exclude: ['**/generated/**'],
       });
 
-      const mockFiles = [
-        createMockFile('src/index.ts'),
-        createMockFile('src/generated/types.ts'),
-        createMockFile('src/util.js'),
-      ];
+      const mockFiles = [createMockFile('src/index.ts'), createMockFile('src/generated/types.ts'), createMockFile('src/util.js')];
 
-      mockGithubClient.getPullRequestChangesStream.mockImplementation(
-        async function* () {
-          yield mockFiles;
-        },
-      );
+      mockGithubClient.getPullRequestChangesStream.mockImplementation(async function* () {
+        yield mockFiles;
+      });
 
       const result: IFileChange[] = [];
       for await (const batch of manager.collectChangedFiles()) {
@@ -120,11 +97,9 @@ describe('FileManager', () => {
         .fill(null)
         .map((_, i) => createMockFile(`file${i}.ts`));
 
-      mockGithubClient.getPullRequestChangesStream.mockImplementation(
-        async function* () {
-          yield mockFiles;
-        },
-      );
+      mockGithubClient.getPullRequestChangesStream.mockImplementation(async function* () {
+        yield mockFiles;
+      });
 
       const batchSize = 10;
       const batches: IFileChange[][] = [];
@@ -156,9 +131,7 @@ describe('FileManager', () => {
         }
       }).rejects.toThrow('Stream error');
 
-      expect(core.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to collect changed files'),
-      );
+      expect(core.error).toHaveBeenCalledWith(expect.stringContaining('Failed to collect changed files'));
     });
   });
 });

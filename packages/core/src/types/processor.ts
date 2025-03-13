@@ -14,10 +14,7 @@ export interface IPullRequestProcessor {
    * @param files List of file changes to review
    * @returns Review comments
    */
-  process(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-  ): Promise<IPullRequestProcessedResult>;
+  process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult>;
 
   // TODO: will be implemented in the future
   // getPullRequestInfo(): Promise<IPullRequestInfo>;

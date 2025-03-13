@@ -30,9 +30,7 @@ export function getConfig(): ActionConfig {
 
   // Parse max changes
   const maxChangesInput = core.getInput('max-changes');
-  const maxChanges = maxChangesInput
-    ? Number.parseInt(maxChangesInput, 10)
-    : undefined;
+  const maxChanges = maxChangesInput ? Number.parseInt(maxChangesInput, 10) : undefined;
 
   return {
     githubToken: core.getInput('github-token', { required: true }),

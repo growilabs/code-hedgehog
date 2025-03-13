@@ -14,12 +14,7 @@ export default defineWorkspace([
       name: 'unit',
       environment: 'node',
       include: ['**/*.spec.{ts,js}'],
-      exclude: [
-        'node_modules/**',
-        'dist/**',
-        '**/*.d.ts',
-        '**/*.integration.spec.ts',
-      ],
+      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', '**/*.integration.spec.ts'],
     },
   }),
   // integration test
