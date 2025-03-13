@@ -1,6 +1,6 @@
 {
   "imports": {
-    "@code-hobbit/core/": "../../../core/"
+    "@code-hobbit/core": "../../core/mod.ts"
   },
   "tasks": {
     "test": "deno test",
