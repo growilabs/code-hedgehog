@@ -17,7 +17,6 @@ export default defineWorkspace([
       exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', '**/*.integration.spec.ts'],
     },
   }),
-
   // integration test
   // mergeConfig(configShared, {
   //   test: {

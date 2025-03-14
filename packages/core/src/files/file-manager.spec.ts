@@ -118,10 +118,12 @@ describe('FileManager', () => {
       const manager = new FileManager(mockGithubClient);
       const error = new Error('Stream error');
 
-      // biome-ignore lint/correctness/useYield: <explanation>
-      mockGithubClient.getPullRequestChangesStream.mockImplementation(async function* () {
-        throw error;
-      });
+      mockGithubClient.getPullRequestChangesStream.mockImplementation(
+        // deno-lint-ignore require-yield
+        async function* () {
+          throw error;
+        },
+      );
 
       await expect(async () => {
         for await (const _ of manager.collectChangedFiles()) {

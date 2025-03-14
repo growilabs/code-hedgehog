@@ -1,13 +1,11 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-  "name": "code-hobbit-Dev",
+  "name": "code-hedgehog-Dev",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "22.12.0"
-    },
+    "ghcr.io/devcontainers-extra/features/deno": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
@@ -22,16 +20,20 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "denoland.vscode-deno",
+        "github.copilot",
+        "github.copilot-chat",
+        "rooveterinaryinc.roo-cline",
         "biomejs.biome",
         "mhutchie.git-graph",
         "eamodio.gitlens",
-        "editorconfig.editorconfig",
         "github.vscode-pull-request-github",
-        "vitest.explorer",
         "GitHub.vscode-github-actions",
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
+        "deno.enable": true,
+
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "biomejs.biome",
         "editor.codeActionsOnSave": {
@@ -53,7 +55,6 @@
       }
     }
   }
-
   // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
   // "remoteUser": "root"
 }

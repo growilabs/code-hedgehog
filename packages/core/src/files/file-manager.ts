@@ -1,8 +1,10 @@
 import * as core from '@actions/core';
 import { minimatch } from 'minimatch';
-import type { IGitHubClient } from '../github/types';
-import type { IFileChange } from '../types';
-import type { IFileFilter, IFileManager } from './types';
+
+import type { IGitHubClient } from '../github/mod.ts';
+import type { IFileChange } from '../types/mod.ts';
+
+import type { IFileFilter, IFileManager } from './types.ts';
 
 export class FileManager implements IFileManager {
   constructor(
@@ -15,7 +17,7 @@ export class FileManager implements IFileManager {
       let currentBatch: IFileChange[] = [];
 
       for await (const files of this.githubClient.getPullRequestChangesStream(batchSize)) {
-        const filteredFiles = files.filter((file) => this.shouldProcessFile(file));
+        const filteredFiles = files.filter((file: IFileChange) => this.shouldProcessFile(file));
 
         currentBatch.push(...filteredFiles);
 
@@ -48,13 +50,13 @@ export class FileManager implements IFileManager {
     }
 
     // Check exclude patterns if specified
-    if (this.filter.exclude?.some((pattern) => minimatch(file.path, pattern))) {
+    if (this.filter.exclude?.some((pattern: string) => minimatch(file.path, pattern))) {
       core.debug(`Skipping ${file.path}: matches exclude pattern`);
       return false;
     }
 
     // Check include patterns if specified
-    if (this.filter.include?.length && !this.filter.include.some((pattern) => minimatch(file.path, pattern))) {
+    if (this.filter.include?.length && !this.filter.include.some((pattern: string) => minimatch(file.path, pattern))) {
       core.debug(`Skipping ${file.path}: does not match any include pattern`);
       return false;
     }

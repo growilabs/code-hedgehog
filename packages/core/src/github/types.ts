@@ -1,4 +1,4 @@
-import type { IFileChange, IPullRequestInfo, IReviewComment } from '../types';
+import type { IFileChange, IPullRequestInfo, IReviewComment } from '../types/mod.ts';
 
 /**
  * Interface for GitHub API client operations

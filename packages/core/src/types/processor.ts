@@ -1,8 +1,8 @@
-import type { IFileChange } from './file';
-import type { IPullRequestInfo } from './github';
-import type { IReviewComment } from './review';
+import type { IFileChange } from './file.ts';
+import type { IPullRequestInfo } from './github.ts';
+import type { IReviewComment } from './review.ts';
 
-type IPullRequestProcessedResult = {
+export type IPullRequestProcessedResult = {
   updatedPrInfo?: IPullRequestInfo;
   comments?: IReviewComment[];
 };

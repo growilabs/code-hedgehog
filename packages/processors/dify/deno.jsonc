@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "@code-hedgehog/core": "../../core/mod.ts"
+  },
+  "tasks": {
+    "test": "deno test",
+    "lint": "deno lint"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@growilabs/code-hedgehog",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "Yuki Takei <yuki@weseek.co.jp>",
+  "exports": "./mod.ts",
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "strict": true
+  },
+  "workspace": ["./packages/action", "./packages/core", "./packages/processors/acme", "./packages/processors/dify"],
+  "imports": {
+    "@biomejs/biome": "npm:@biomejs/biome@^1.9.4"
+  },
+  "tasks": {
+    "test": "deno test --allow-read --allow-write --allow-net",
+    "lint": "deno run -A npm:@biomejs/biome check ./",
+    "lint:fix": "deno run -A npm:@biomejs/biome check --write ./"
+  },
+  "lint": {
+    "include": ["packages/"],
+    "rules": {
+      "exclude": ["no-explicit-any", "prefer-const", "no-unused-vars", "require-await", "no-slow-types", "no-inner-declarations"]
+    }
+  }
+}

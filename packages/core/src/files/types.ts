@@ -1,4 +1,4 @@
-import type { IFileChange } from '../types';
+import type { IFileChange } from '../types/mod.ts';
 
 export interface IFileFilter {
   /**

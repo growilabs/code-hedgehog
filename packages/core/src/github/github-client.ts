@@ -1,7 +1,9 @@
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
-import type { IFileChange, IGitHubConfig, IPullRequestInfo, IReviewComment } from '../types';
-import type { IGitHubClient } from './types';
+
+import type { IGitHubConfig, IPullRequestInfo } from '../types/mod.ts';
+
+import type { IGitHubClient } from './types.ts';
 
 export class GitHubClient implements IGitHubClient {
   private readonly octokit;
@@ -90,9 +92,8 @@ export class GitHubClient implements IGitHubClient {
         event: 'COMMENT',
         comments: comments.map((comment) => ({
           path: comment.path,
-          position: comment.type === 'inline' ? comment.position : undefined,
+          position: comment.position,
           body: comment.body,
-          line: comment.type === 'pr' ? undefined : comment.position,
         })),
       });
 

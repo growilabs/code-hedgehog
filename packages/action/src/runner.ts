@@ -1,8 +1,9 @@
+import process from 'node:process';
 // packages/action/src/runner.ts
 import * as core from '@actions/core';
-import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hobbit/core';
-import { AcmeProcessor } from '@code-hobbit/processor-acme';
-import type { ActionConfig } from './config';
+import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hedgehog/core';
+import { AcmeProcessor } from '@code-hedgehog/processor-acme';
+import type { ActionConfig } from './config.ts';
 
 export class ActionRunner {
   constructor(private readonly config: ActionConfig) {}
@@ -38,10 +39,10 @@ export class ActionRunner {
   }
 
   private createGitHubConfig(): IGitHubConfig {
-    core.debug('Environment variables:');
-    core.debug(`GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
-    core.debug(`GITHUB_EVENT_PATH: ${process.env.GITHUB_EVENT_PATH}`);
-    core.debug(`GITHUB_PR_NUMBER: ${process.env.GITHUB_PR_NUMBER}`);
+    core.info('Environment variables:');
+    core.info(`GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
+    core.info(`GITHUB_EVENT_PATH: ${process.env.GITHUB_EVENT_PATH}`);
+    core.info(`GITHUB_PR_NUMBER: ${process.env.GITHUB_PR_NUMBER}`);
 
     const repository = process.env.GITHUB_REPOSITORY;
     if (!repository) {
@@ -73,6 +74,7 @@ export class ActionRunner {
     if (!pullNumber || Number.isNaN(pullNumber)) {
       throw new Error('Could not determine pull request number');
     }
+    core.info(`Pull Request number is determined: ${pullNumber}`);
 
     return {
       token: this.config.githubToken,
