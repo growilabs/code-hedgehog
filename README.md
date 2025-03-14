@@ -32,13 +32,13 @@ pnpm test
 
 1. Add secret
     
-    ```.act.secret
+    ```.act.secrets
     GITHUB_TOKEN=XXXXXXXXXX
     ```
 
 1. Run act
     
     ```bash
-    pnpm bin/act
+    ./bin/act
     ```
 
