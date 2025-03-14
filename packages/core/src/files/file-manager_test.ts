@@ -1,11 +1,13 @@
-import { assertEquals, assertRejects } from 'https://deno.land/std@0.218.0/assert/mod.ts';
-import { assertSpyCalls } from 'https://deno.land/std@0.218.0/testing/mock.ts';
-import { debug, error, resetSpies } from '../mocks/actions-core.ts';
+import { assertEquals, assertRejects } from '@std/assert';
+import { assertSpyCalls } from '@std/testing/mock';
 
 import type { IGitHubClient } from '../github/mod.ts';
 import type { IFileChange } from '../types/file.ts';
 import type { IPullRequestInfo } from '../types/github.ts';
-import { FileManager } from './mod.ts';
+
+import { debug, error, resetSpies } from '../mocks/actions-core.ts';
+
+import { FileManager } from './file-manager.ts';
 
 function createMockFile(path: string, changes = 10, status: IFileChange['status'] = 'modified'): IFileChange {
   return {

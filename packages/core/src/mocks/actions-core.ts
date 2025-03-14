@@ -1,4 +1,4 @@
-import { spy } from 'https://deno.land/std@0.218.0/testing/mock.ts';
+import { spy } from '@std/testing/mock';
 
 // スパイ関数を作成
 export const debug = spy((message: string) => {
