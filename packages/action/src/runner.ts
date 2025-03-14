@@ -1,8 +1,8 @@
 import process from 'node:process';
 // packages/action/src/runner.ts
 import * as core from '@actions/core';
-import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hobbit/core';
-import { AcmeProcessor } from '@code-hobbit/processor-acme';
+import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hedgehog/core';
+import { AcmeProcessor } from '@code-hedgehog/processor-acme';
 import type { ActionConfig } from './config.ts';
 
 export class ActionRunner {

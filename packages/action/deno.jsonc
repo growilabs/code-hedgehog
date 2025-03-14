@@ -2,8 +2,8 @@
   "imports": {
     "@actions/core": "npm:@actions/core@1.11.1",
     "@actions/github": "npm:@actions/github@6.0.0",
-    "@code-hobbit/core": "../core/mod.ts",
-    "@code-hobbit/processor-acme": "../processors/acme/mod.ts"
+    "@code-hedgehog/core": "../core/mod.ts",
+    "@code-hedgehog/processor-acme": "../processors/acme/mod.ts"
   },
   "tasks": {
     "build": "deno run -A ./scripts/build-action.ts",

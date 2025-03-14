@@ -1,4 +1,4 @@
-# code-hobbit
+# code-hedgehog
 
 ## Development Environment
 
