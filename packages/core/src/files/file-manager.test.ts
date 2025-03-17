@@ -113,6 +113,7 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
 
   await t.step('should handle errors during file collection', async () => {
     const mockGithubClient = createMockGithubClient(async function* () {
+      yield []; // Empty batch to simulate initial successful connection
       throw new Error('Stream error');
     });
 
