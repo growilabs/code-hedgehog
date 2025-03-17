@@ -1,9 +1,0 @@
-{
-  "imports": {
-    "@actions/core": "./src/mocks/actions-core.ts",
-    "@actions/github": "https://esm.sh/@actions/github@6.0.0",
-    "minimatch": "https://esm.sh/minimatch@9.0.3",
-    "@std/assert": "jsr:@std/assert@^0.218.2",
-    "@std/testing/mock": "jsr:@std/testing@^0.218.2/mock"
-  }
-}

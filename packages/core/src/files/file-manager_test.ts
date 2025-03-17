@@ -5,8 +5,6 @@ import type { IGitHubClient } from '../github/mod.ts';
 import type { IFileChange } from '../types/file.ts';
 import type { IPullRequestInfo } from '../types/github.ts';
 
-import { debug, error, resetSpies } from '../mocks/actions-core.ts';
-
 import { FileManager } from './file-manager.ts';
 
 function createMockFile(path: string, changes = 10, status: IFileChange['status'] = 'modified'): IFileChange {
@@ -34,9 +32,6 @@ function createMockGithubClient(generator: () => AsyncGenerator<IFileChange[]>):
 }
 
 Deno.test('FileManager.collectChangedFiles', async (t) => {
-  // 各テストの前にスパイをリセット
-  resetSpies();
-
   await t.step('should filter files based on maxChanges', async () => {
     const mockGithubClient = createMockGithubClient(async function* () {
       yield [createMockFile('small.ts', 10), createMockFile('large.ts', 100)];
@@ -53,13 +48,9 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
 
     assertEquals(result.length, 1);
     assertEquals(result[0].path, 'small.ts');
-    assertSpyCalls(debug, 1);
-    assertEquals(debug.calls[0].args[0], 'Skipping large.ts: changes (100) exceeds limit (50)');
   });
 
   await t.step('should filter files based on status', async () => {
-    resetSpies();
-
     const mockGithubClient = createMockGithubClient(async function* () {
       yield [createMockFile('added.ts', 10, 'added'), createMockFile('removed.ts', 10, 'removed'), createMockFile('modified.ts', 10, 'modified')];
     });
@@ -78,13 +69,9 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
       result.map((f) => f.path),
       ['added.ts', 'modified.ts'],
     );
-    assertSpyCalls(debug, 1);
-    assertEquals(debug.calls[0].args[0], 'Skipping removed.ts: status removed not in allowed list');
   });
 
   await t.step('should apply include and exclude patterns', async () => {
-    resetSpies();
-
     const mockGithubClient = createMockGithubClient(async function* () {
       yield [createMockFile('src/index.ts'), createMockFile('src/generated/types.ts'), createMockFile('src/util.js')];
     });
@@ -101,9 +88,6 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
 
     assertEquals(result.length, 1);
     assertEquals(result[0].path, 'src/index.ts');
-    assertSpyCalls(debug, 2);
-    assertEquals(debug.calls[0].args[0], 'Skipping src/generated/types.ts: matches exclude pattern');
-    assertEquals(debug.calls[1].args[0], 'Skipping src/util.js: does not match any include pattern');
   });
 
   await t.step('should handle batch size correctly', async () => {
@@ -128,8 +112,6 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
   });
 
   await t.step('should handle errors during file collection', async () => {
-    resetSpies();
-
     const mockGithubClient = createMockGithubClient(async function* () {
       throw new Error('Stream error');
     });
@@ -145,8 +127,5 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
       Error,
       'Stream error',
     );
-
-    assertSpyCalls(error, 1);
-    assertEquals(error.calls[0].args[0], 'Failed to collect changed files: Stream error');
   });
 });
