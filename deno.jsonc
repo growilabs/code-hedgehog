@@ -17,7 +17,8 @@
     "@std/testing": "jsr:@std/testing@^1.0.9"
   },
   "tasks": {
-    "test": "deno test --allow-read --allow-write --allow-net",
+    "test": "deno test -A --parallel packages",
+    "test:cov": "deno test -A --coverage=./cov packages && deno coverage ./cov",
     "lint": "deno run -A npm:@biomejs/biome check ./",
     "lint:fix": "deno run -A npm:@biomejs/biome check --write ./"
   },
