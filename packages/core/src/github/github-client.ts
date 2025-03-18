@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
 
-import type { IGitHubConfig, IPullRequestInfo } from '../types/mod.ts';
+import type { IFileChange, IGitHubConfig, IPullRequestInfo, IReviewComment } from '../types/mod.ts';
 
 import type { IGitHubClient } from './types.ts';
 
