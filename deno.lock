@@ -567,7 +567,6 @@
         "dependencies": [
           "npm:@actions/core@1.11.1",
           "npm:@actions/github@6.0.0",
-          "npm:@octokit/core@5.0.1",
           "npm:minimatch@10.0.1"
         ]
       }
