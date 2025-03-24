@@ -6,6 +6,8 @@
   },
   "tasks": {
     "test": "deno test --allow-read --allow-write --allow-net",
-    "lint": "deno lint"
+    "test:cov": "rm -rf ./coverage && deno test -A --parallel --coverage --doc && deno coverage ./coverage",
+    "lint": "biome lint .",
+    "health": "deno task lint && deno task test:cov"
   }
 }
