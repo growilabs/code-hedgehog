@@ -1,7 +1,9 @@
 import * as core from '@actions/core';
+import { getOctokit } from '@actions/github';
 import type { IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
+import type { GitHubFile } from './_mock.ts';
 import { BaseVCS } from './base.ts';
-import type { CreateGitHubAPI, GitHubFile, IGitHubAPI } from './github.types.ts';
+import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
 
 /**
  * GitHub-specific configuration derived from repository URL
@@ -17,7 +19,7 @@ export class GitHubVCS extends BaseVCS {
   private readonly context: IGitHubContext;
   private fileCount = 0;
 
-  constructor(config: IVCSConfig, createApi: CreateGitHubAPI = (token) => require('@actions/github').getOctokit(token)) {
+  constructor(config: IVCSConfig, createApi: CreateGitHubAPI = (token) => getOctokit(token)) {
     super(config, 'github');
     const { owner, repo } = this.getRepositoryInfo();
     this.context = {
@@ -49,26 +51,44 @@ export class GitHubVCS extends BaseVCS {
 
   async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
-      const iterator = this.api.paginate.iterator<GitHubFile[]>(this.api.rest.pulls.listFiles, {
-        owner: this.context.owner,
-        repo: this.context.repo,
-        pull_number: this.context.pullNumber,
-        per_page: 100,
-      });
+      // Optimize page size based on batch size
+      const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
+
+      const iterator = this.api.paginate.iterator<GitHubFile>(
+        this.api.rest.pulls.listFiles.endpoint.merge({
+          owner: this.context.owner,
+          repo: this.context.repo,
+          pull_number: this.context.pullNumber,
+          per_page: pageSize,
+        }),
+      );
 
       let currentBatch: IFileChange[] = [];
+      let isFileLimitWarned = false;
 
       for await (const response of iterator) {
+        // Check rate limit
+        const rateLimit = response.headers?.['x-ratelimit-remaining'];
+        if (rateLimit && Number.parseInt(rateLimit, 10) < 10) {
+          core.warning(`GitHub API rate limit is running low: ${rateLimit} requests remaining`);
+        }
+
         for (const file of response.data) {
           this.fileCount++;
           if (this.fileCount > 3000) {
-            core.warning('GitHub API limits the response to 3000 files. Some files may be skipped.');
-            return;
+            if (!isFileLimitWarned) {
+              core.warning('GitHub API limits the response to 3000 files. Some files may be skipped.');
+              isFileLimitWarned = true;
+            }
+            // Continue processing after warning
           }
+
+          // Check for oversized patch data
+          const patchSize = file.patch ? new TextEncoder().encode(file.patch).length : 0;
 
           currentBatch.push({
             path: file.filename,
-            patch: file.patch ?? null,
+            patch: patchSize > 1_000_000 ? null : (file.patch ?? null),
             changes: file.changes,
             status: file.status as IFileChange['status'],
           });
