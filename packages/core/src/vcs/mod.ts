@@ -16,5 +16,3 @@ export function createVCS(config: IVCSConfig): IVersionControlSystem {
 }
 
 export type { IVCSConfig, IVersionControlSystem } from '../types/mod.ts';
-export { BaseVCS } from './base.ts';
-export { GitHubVCS } from './github.ts';

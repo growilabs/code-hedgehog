@@ -37,7 +37,7 @@ describe('BaseVCS', () => {
       type: 'github',
       token: 'test-token',
       repositoryUrl: 'https://github.com/owner/repo',
-      requestId: '123',
+      pullRequestId: '123',
     };
     const vcs = new TestVCS(validConfig);
     assertEquals(vcs.type, 'github');
@@ -63,7 +63,7 @@ describe('BaseVCS', () => {
       type: 'github',
       token: 'test-token',
       repositoryUrl: 'https://github.com/test-owner/test-repo',
-      requestId: '123',
+      pullRequestId: '123',
     });
 
     const info = vcs.testGetRepositoryInfo();
@@ -78,7 +78,7 @@ describe('BaseVCS', () => {
       type: 'github',
       token: 'test-token',
       repositoryUrl: 'https://github.com/owner/repo',
-      requestId: '123',
+      pullRequestId: '123',
     });
 
     const error = vcs.testFormatError('test operation', new Error('test error'));

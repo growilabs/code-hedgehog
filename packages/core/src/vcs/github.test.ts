@@ -10,7 +10,7 @@ describe('GitHubVCS', () => {
     type: 'github',
     token: 'test-token',
     repositoryUrl: 'https://github.com/test-owner/test-repo',
-    requestId: '123',
+    pullRequestId: '123',
   };
 
   it('should initialize with correct repository info', () => {

@@ -34,7 +34,7 @@ export interface IVCSConfig {
   /**
    * Pull/Merge request ID
    */
-  requestId: string | number;
+  pullRequestId: string | number;
 }
 
 /**

@@ -1,7 +1,8 @@
-import process from 'node:process';
 // packages/action/src/runner.ts
+
+import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, GitHubClient, type IFileFilter, type IGitHubConfig, type IPullRequestProcessor } from '@code-hedgehog/core';
+import { FileManager, type IFileFilter, type IPullRequestProcessor, type IVCSConfig, createVCS } from '@code-hedgehog/core';
 import { AcmeProcessor } from '@code-hedgehog/processor-acme';
 import type { ActionConfig } from './config.ts';
 
@@ -13,20 +14,20 @@ export class ActionRunner {
       const githubConfig = this.createGitHubConfig();
 
       // Initialize components
-      const githubClient = new GitHubClient(githubConfig);
-      const fileManager = new FileManager(githubClient, this.getFileFilter());
+      const vcsClient = createVCS(githubConfig);
+      const fileManager = new FileManager(vcsClient, this.getFileFilter());
       const processor = this.createProcessor();
 
       // Get PR information
       core.info('Fetching pull request information...');
-      const prInfo = await githubClient.getPullRequestInfo();
+      const prInfo = await vcsClient.getPullRequestInfo();
 
       // Process files in batches and get reviews
       core.info('Starting code review...');
       for await (const files of fileManager.collectChangedFiles()) {
         const { comments } = await processor.process(prInfo, files);
         if (comments != null && comments.length > 0) {
-          await githubClient.createReviewBatch(comments);
+          await vcsClient.createReviewBatch(comments);
           core.info(`Posted ${comments.length} review comments`);
         }
       }
@@ -38,7 +39,7 @@ export class ActionRunner {
     }
   }
 
-  private createGitHubConfig(): IGitHubConfig {
+  private createGitHubConfig(): IVCSConfig {
     core.info('Environment variables:');
     core.info(`GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
     core.info(`GITHUB_EVENT_PATH: ${process.env.GITHUB_EVENT_PATH}`);
@@ -77,10 +78,10 @@ export class ActionRunner {
     core.info(`Pull Request number is determined: ${pullNumber}`);
 
     return {
+      type: 'github',
       token: this.config.githubToken,
-      owner,
-      repo,
-      pullNumber,
+      repositoryUrl: `https://github.com/${owner}/${repo}`,
+      pullRequestId: pullNumber,
     };
   }
 

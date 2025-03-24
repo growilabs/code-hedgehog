@@ -1,14 +1,13 @@
 import * as core from '@actions/core';
 import { minimatch } from 'minimatch';
 
-import type { IGitHubClient } from '../github/mod.ts';
-import type { IFileChange } from '../types/mod.ts';
+import type { IFileChange, IVersionControlSystem } from '../types/mod.ts';
 
 import type { IFileFilter, IFileManager } from './types.ts';
 
 export class FileManager implements IFileManager {
   constructor(
-    private readonly githubClient: IGitHubClient,
+    private readonly vcsClient: IVersionControlSystem,
     private readonly filter: IFileFilter = {},
   ) {}
 
@@ -16,7 +15,7 @@ export class FileManager implements IFileManager {
     try {
       let currentBatch: IFileChange[] = [];
 
-      for await (const files of this.githubClient.getPullRequestChangesStream(batchSize)) {
+      for await (const files of this.vcsClient.getPullRequestChangesStream(batchSize)) {
         const filteredFiles = files.filter((file: IFileChange) => this.shouldProcessFile(file));
 
         currentBatch.push(...filteredFiles);

@@ -23,7 +23,7 @@ export class GitHubVCS extends BaseVCS {
     this.context = {
       owner,
       repo,
-      pullNumber: Number(config.requestId),
+      pullNumber: Number(config.pullRequestId),
     };
     this.api = createApi(config.token);
   }
