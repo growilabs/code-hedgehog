@@ -1,0 +1,3 @@
+{
+  "roo-cline.allowedCommands": ["deno install", "deno doc", "deno test", "tsc", "git log", "git diff", "git show"]
+}
