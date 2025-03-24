@@ -3,7 +3,6 @@
  */
 
 import type { IFileChange } from './file.ts';
-import type { IPullRequestInfo } from './github.ts';
 import type { IReviewComment } from './review.ts';
 
 /**
@@ -36,6 +35,33 @@ export interface IVCSConfig {
    * Pull/Merge request ID
    */
   requestId: string | number;
+}
+
+/**
+ * Common pull/merge request information
+ * This interface represents the common structure between GitHub Pull Requests
+ * and GitLab Merge Requests.
+ */
+export interface IPullRequestInfo {
+  /**
+   * Pull/Merge request title
+   */
+  title: string;
+
+  /**
+   * Pull/Merge request description/body
+   */
+  body: string;
+
+  /**
+   * Base/target branch name
+   */
+  baseBranch: string;
+
+  /**
+   * Head/source branch name
+   */
+  headBranch: string;
 }
 
 /**

@@ -22,28 +22,3 @@ export interface IGitHubConfig {
    */
   pullNumber: number;
 }
-
-/**
- * Pull request metadata
- */
-export interface IPullRequestInfo {
-  /**
-   * Pull request title
-   */
-  title: string;
-
-  /**
-   * Pull request description/body
-   */
-  body: string;
-
-  /**
-   * Base branch name
-   */
-  baseBranch: string;
-
-  /**
-   * Head branch name
-   */
-  headBranch: string;
-}
