@@ -1,7 +1,6 @@
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
 import type { IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
-import type { GitHubFile } from './_mock.ts';
 import { BaseVCS } from './base.ts';
 import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
 
@@ -51,10 +50,9 @@ export class GitHubVCS extends BaseVCS {
 
   async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
-      // Optimize page size based on batch size
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
-      const iterator = this.api.paginate.iterator<GitHubFile>(
+      const iterator = this.api.paginate.iterator<{ filename: string; patch?: string; changes: number; status: string }>(
         this.api.rest.pulls.listFiles.endpoint.merge({
           owner: this.context.owner,
           repo: this.context.repo,
@@ -67,7 +65,6 @@ export class GitHubVCS extends BaseVCS {
       let isFileLimitWarned = false;
 
       for await (const response of iterator) {
-        // Check rate limit
         const rateLimit = response.headers?.['x-ratelimit-remaining'];
         if (rateLimit && Number.parseInt(rateLimit, 10) < 10) {
           core.warning(`GitHub API rate limit is running low: ${rateLimit} requests remaining`);
@@ -80,10 +77,8 @@ export class GitHubVCS extends BaseVCS {
               core.warning('GitHub API limits the response to 3000 files. Some files may be skipped.');
               isFileLimitWarned = true;
             }
-            // Continue processing after warning
           }
 
-          // Check for oversized patch data
           const patchSize = file.patch ? new TextEncoder().encode(file.patch).length : 0;
 
           currentBatch.push({

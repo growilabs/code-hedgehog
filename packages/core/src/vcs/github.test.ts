@@ -28,10 +28,10 @@ describe('GitHubVCS', () => {
     const info = await vcs.getPullRequestInfo();
 
     assertEquals(info, {
-      title: mockPullRequest.title,
-      body: mockPullRequest.body ?? '',
-      baseBranch: mockPullRequest.base.ref,
-      headBranch: mockPullRequest.head.ref,
+      title: mockPullRequest.data.title,
+      body: mockPullRequest.data.body ?? '',
+      baseBranch: mockPullRequest.data.base.ref,
+      headBranch: mockPullRequest.data.head.ref,
     });
 
     assertEquals(spies.getPullRequest.calls.length, 1);
@@ -48,13 +48,13 @@ describe('GitHubVCS', () => {
 
     assertEquals(changes, [
       {
-        path: mockFiles[0].filename,
+        path: mockFiles[0].path,
         patch: mockFiles[0].patch,
         changes: mockFiles[0].changes,
         status: mockFiles[0].status,
       },
       {
-        path: mockFiles[1].filename,
+        path: mockFiles[1].path,
         patch: mockFiles[1].patch,
         changes: mockFiles[1].changes,
         status: mockFiles[1].status,

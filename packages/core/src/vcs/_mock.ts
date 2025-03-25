@@ -1,62 +1,97 @@
 import { spy } from '@std/testing/mock';
-import type { GitHubAPIResponse, GitHubFile, GitHubPullRequest, IGitHubAPI } from './github.types.ts';
+import type { IFileChange } from '../types/file.ts';
+import type { IGitHubAPI } from './github.types.ts';
 
-// Mock GitHub API responses
-export const mockPullRequest: GitHubPullRequest = {
-  title: 'Test PR',
-  body: 'Test description',
-  base: { ref: 'main' },
-  head: { ref: 'feature' },
+// Mock response types
+export interface PullRequestResponse {
+  data: {
+    title: string;
+    body: string | null;
+    base: { ref: string };
+    head: { ref: string };
+  };
+}
+
+// Mock data with exported const
+export const mockPullRequest: PullRequestResponse = {
+  data: {
+    title: 'Test PR',
+    body: 'Test description',
+    base: { ref: 'main' },
+    head: { ref: 'feature' },
+  },
 };
 
-export const mockFiles: GitHubFile[] = [
+export const mockFiles: IFileChange[] = [
   {
-    filename: 'test.ts',
+    path: 'test.ts',
     patch: 'test patch',
     changes: 10,
     status: 'modified',
   },
   {
-    filename: 'new.ts',
+    path: 'new.ts',
     patch: 'new file',
     changes: 5,
     status: 'added',
   },
 ];
 
-// Create fresh spy instances
-export function createSpies() {
+// Create spies
+function createSpies() {
   return {
-    getPullRequest: spy(() => Promise.resolve({ data: mockPullRequest })),
-    listFiles: spy(() => Promise.resolve({ data: mockFiles })),
-    createReview: spy(() => Promise.resolve()),
+    getPullRequest: spy(() => Promise.resolve(mockPullRequest)),
+    listFiles: spy(() =>
+      Promise.resolve({
+        data: mockFiles.map((file) => ({
+          filename: file.path,
+          patch: file.patch,
+          changes: file.changes,
+          status: file.status,
+        })),
+      }),
+    ),
+    createReview: spy(() => Promise.resolve({ data: {} })),
     paginateIterator: spy(async function* () {
-      yield { data: mockFiles };
+      yield {
+        headers: { 'x-ratelimit-remaining': '1000' },
+        data: mockFiles.map((file) => ({
+          filename: file.path,
+          patch: file.patch,
+          changes: file.changes,
+          status: file.status,
+        })),
+      };
     }),
+    endpoint: {
+      merge: spy(() => 'GET /repos/{owner}/{repo}/pulls/{pull_number}/files'),
+    },
   };
 }
 
-// Create fresh mock Octokit instance
+// Create mock Octokit instance
 export function createMockOctokit() {
   const spies = createSpies();
 
-  const mockOctokit: IGitHubAPI = {
+  const mockApi = {
     rest: {
       pulls: {
-        get: () => spies.getPullRequest(),
-        listFiles: () => spies.listFiles(),
-        createReview: (params: { comments: unknown[] }) => {
-          if (params.comments.length === 0) {
-            return Promise.resolve();
-          }
-          return spies.createReview();
-        },
+        get: spies.getPullRequest,
+        listFiles: Object.assign(spies.listFiles, {
+          endpoint: {
+            merge: spies.endpoint.merge,
+          },
+        }),
+        createReview: spies.createReview,
       },
     },
     paginate: {
-      iterator: <T>() => spies.paginateIterator() as AsyncIterableIterator<GitHubAPIResponse<T>>,
+      iterator: spies.paginateIterator,
     },
   };
 
-  return { mockOctokit, spies };
+  return {
+    mockOctokit: mockApi as unknown as IGitHubAPI,
+    spies,
+  };
 }

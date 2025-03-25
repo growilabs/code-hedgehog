@@ -1,12 +1,14 @@
 /**
  * GitHub API Types
- * Minimal type definitions for GitHub API interaction
+ *
+ * This module provides minimal type definitions for GitHub API interaction
+ * using @actions/github's Octokit implementation.
  */
-import { Octokit } from '@octokit/core';
-import { paginateRest } from '@octokit/plugin-paginate-rest';
-import { restEndpointMethods } from '@octokit/plugin-rest-endpoint-methods';
 
-const GitHub = Octokit.plugin(restEndpointMethods, paginateRest).defaults({});
+import type { getOctokit } from '@actions/github';
 
-export type IGitHubAPI = InstanceType<typeof GitHub>;
+// Export the type that getOctokit returns
+export type IGitHubAPI = ReturnType<typeof getOctokit>;
+
+// Factory type for creating GitHub API clients
 export type CreateGitHubAPI = (token: string) => IGitHubAPI;
