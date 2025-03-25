@@ -6,6 +6,7 @@ import { createMockOctokit, mockFiles, mockPullRequest } from './_mock.ts';
 import { GitHubVCS } from './github.ts';
 
 describe('GitHubVCS', () => {
+  // Common test configuration
   const config: IVCSConfig = {
     type: 'github',
     token: 'test-token',

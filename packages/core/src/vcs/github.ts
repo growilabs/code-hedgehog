@@ -1,3 +1,10 @@
+/**
+ * GitHub VCS Implementation
+ *
+ * This module provides a concrete implementation of the VCS interface for GitHub.
+ * It uses the official GitHub Actions SDK (@actions/github) to interact with the GitHub API,
+ * handling pagination, rate limits, and error cases appropriately.
+ */
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
 import type { IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
@@ -5,7 +12,8 @@ import { BaseVCS } from './base.ts';
 import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
 
 /**
- * GitHub-specific configuration derived from repository URL
+ * Repository context derived from the repository URL
+ * Contains the essential parameters needed for API calls
  */
 interface IGitHubContext {
   owner: string;
@@ -13,11 +21,20 @@ interface IGitHubContext {
   pullNumber: number;
 }
 
+/**
+ * GitHub-specific VCS implementation
+ * Handles API interactions, data transformation, and error handling
+ */
 export class GitHubVCS extends BaseVCS {
   private readonly api: IGitHubAPI;
   private readonly context: IGitHubContext;
   private fileCount = 0;
 
+  /**
+   * Creates a new GitHub VCS instance
+   * @param config VCS configuration including token and repository details
+   * @param createApi Factory function for creating the GitHub API client (useful for testing)
+   */
   constructor(config: IVCSConfig, createApi: CreateGitHubAPI = (token) => getOctokit(token)) {
     super(config, 'github');
     const { owner, repo } = this.getRepositoryInfo();
@@ -29,6 +46,10 @@ export class GitHubVCS extends BaseVCS {
     this.api = createApi(config.token);
   }
 
+  /**
+   * Fetches pull request metadata from GitHub
+   * Handles null values and error cases appropriately
+   */
   async getPullRequestInfo(): Promise<IPullRequestInfo> {
     try {
       const response = await this.api.rest.pulls.get({
@@ -48,8 +69,18 @@ export class GitHubVCS extends BaseVCS {
     }
   }
 
+  /**
+   * Streams pull request changes from GitHub, handling pagination automatically
+   * Includes safeguards for:
+   * - Rate limiting (warns when rate limit is low)
+   * - File size limits (skips patches larger than 1MB)
+   * - Total file count limits (warns after 3000 files)
+   *
+   * @param batchSize Number of files to include in each yielded batch
+   */
   async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
+      // Optimize page size based on batch size to reduce API calls
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
       const iterator = this.api.paginate.iterator<{ filename: string; patch?: string; changes: number; status: string }>(
@@ -85,7 +116,7 @@ export class GitHubVCS extends BaseVCS {
             path: file.filename,
             patch: patchSize > 1_000_000 ? null : (file.patch ?? null),
             changes: file.changes,
-            status: file.status as IFileChange['status'],
+            status: file.status as IFileChange['status'], // Type assertion for GitHub API status values
           });
 
           if (currentBatch.length >= batchSize) {
@@ -105,6 +136,10 @@ export class GitHubVCS extends BaseVCS {
     }
   }
 
+  /**
+   * Creates a review on the pull request with the provided comments
+   * Skips API call if no comments are provided
+   */
   async createReviewBatch(comments: IReviewComment[]): Promise<void> {
     if (comments.length === 0) {
       return;

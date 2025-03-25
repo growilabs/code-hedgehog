@@ -1,8 +1,17 @@
+/**
+ * GitHub API Mock Implementation
+ *
+ * This module provides mock data and implementations for testing the GitHub VCS integration.
+ * The mock data follows the actual GitHub API response structure while keeping the implementation
+ * minimal and focused on the features we actually use.
+ */
 import { spy } from '@std/testing/mock';
-import type { IFileChange } from '../types/file.ts';
 import type { IGitHubAPI } from './github.types.ts';
 
-// Mock response data
+/**
+ * Mock response data structured to match GitHub API responses
+ * We use literal objects instead of class instances to keep the mock simple
+ */
 export const mockPullRequest = {
   data: {
     title: 'Test PR',
@@ -12,7 +21,10 @@ export const mockPullRequest = {
   },
 };
 
-// Mock files using octokit response format
+/**
+ * Mock file changes that match the GitHub API response format
+ * Note: We use 'as const' to ensure type safety for the status field
+ */
 export const mockFiles = [
   {
     filename: 'test.ts',
@@ -28,7 +40,11 @@ export const mockFiles = [
   },
 ];
 
-// Create spies
+/**
+ * Creates spy functions for all required API methods
+ * Each spy returns a Promise that resolves to a mock response
+ * matching the GitHub API structure
+ */
 function createSpies() {
   return {
     getPullRequest: spy(() => Promise.resolve(mockPullRequest)),
@@ -43,7 +59,11 @@ function createSpies() {
   };
 }
 
-// Create mock Octokit instance
+/**
+ * Creates a mock Octokit instance that implements the minimum required
+ * subset of the GitHub API interface. The mock focuses only on the
+ * methods actually used by our implementation.
+ */
 export function createMockOctokit() {
   const spies = createSpies();
 
