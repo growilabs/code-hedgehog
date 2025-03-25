@@ -48,13 +48,13 @@ describe('GitHubVCS', () => {
 
     assertEquals(changes, [
       {
-        path: mockFiles[0].path,
+        path: mockFiles[0].filename,
         patch: mockFiles[0].patch,
         changes: mockFiles[0].changes,
         status: mockFiles[0].status,
       },
       {
-        path: mockFiles[1].path,
+        path: mockFiles[1].filename,
         patch: mockFiles[1].patch,
         changes: mockFiles[1].changes,
         status: mockFiles[1].status,
