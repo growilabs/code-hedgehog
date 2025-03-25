@@ -87,4 +87,20 @@ describe('GitHubVCS', () => {
     await vcs.createReviewBatch([]);
     assertEquals(spies.createReview.calls.length, 0);
   });
+
+  it('should skip API call in dry run mode', async () => {
+    const { mockOctokit, spies } = createMockOctokit();
+    const vcs = new GitHubVCS(config, () => mockOctokit);
+    const comments = [
+      {
+        path: 'test.ts',
+        position: 1,
+        body: 'Test comment',
+        type: 'inline' as const,
+      },
+    ];
+
+    await vcs.createReviewBatch(comments, true);
+    assertEquals(spies.createReview.calls.length, 0, 'API should not be called in dry run mode');
+  });
 });

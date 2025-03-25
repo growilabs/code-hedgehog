@@ -140,8 +140,13 @@ export class GitHubVCS extends BaseVCS {
    * Creates a review on the pull request with the provided comments
    * Skips API call if no comments are provided
    */
-  async createReviewBatch(comments: IReviewComment[]): Promise<void> {
+  async createReviewBatch(comments: IReviewComment[], dryRun = false): Promise<void> {
     if (comments.length === 0) {
+      return;
+    }
+
+    if (dryRun) {
+      core.debug(`[DRY RUN] Would create review with ${comments.length} comments`);
       return;
     }
 

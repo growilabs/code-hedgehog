@@ -10,6 +10,9 @@ export class ActionRunner {
   constructor(private readonly config: ActionConfig) {}
 
   async run(): Promise<void> {
+    const dryRunEnvVar = process.env.CODE_HEDGEHOG_DRY_RUN_VCS_PROCESSING;
+    const dryRun = dryRunEnvVar === 'true' || dryRunEnvVar === '1';
+
     try {
       const githubConfig = this.createGitHubConfig();
 
@@ -22,12 +25,16 @@ export class ActionRunner {
       core.info('Fetching pull request information...');
       const prInfo = await vcsClient.getPullRequestInfo();
 
-      // Process files in batches and get reviews
       core.info('Starting code review...');
+      if (dryRun) {
+        core.info('::: DRY RUN :::');
+      }
+
+      // Process files in batches and get reviews
       for await (const files of fileManager.collectChangedFiles()) {
         const { comments } = await processor.process(prInfo, files);
         if (comments != null && comments.length > 0) {
-          await vcsClient.createReviewBatch(comments);
+          await vcsClient.createReviewBatch(comments, dryRun);
           core.info(`Posted ${comments.length} review comments`);
         }
       }

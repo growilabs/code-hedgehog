@@ -16,7 +16,7 @@ export abstract class BaseVCS implements IVersionControlSystem {
 
   abstract getPullRequestInfo(): Promise<IPullRequestInfo>;
   abstract getPullRequestChangesStream(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
-  abstract createReviewBatch(comments: IReviewComment[]): Promise<void>;
+  abstract createReviewBatch(comments: IReviewComment[], dryRun?: boolean): Promise<void>;
 
   /**
    * Get repository owner and name from URL

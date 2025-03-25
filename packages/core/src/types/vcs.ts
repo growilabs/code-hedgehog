@@ -87,6 +87,7 @@ export interface IVersionControlSystem {
   /**
    * Creates a review with a batch of comments
    * @param comments Array of review comments to post
+   * @param dryRun If true, only simulate the review creation
    */
-  createReviewBatch(comments: IReviewComment[]): Promise<void>;
+  createReviewBatch(comments: IReviewComment[], dryRun?: boolean): Promise<void>;
 }
