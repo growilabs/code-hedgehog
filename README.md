@@ -16,9 +16,13 @@
     GITHUB_TOKEN=XXXXXXXXXX
     ```
 
+    ```.act.env
+    CODE_HEDGEHOG_DRY_RUN_VCS_PROCESSING=1
+    ```
+
 1. Run act
     
     ```bash
-    ./bin/act -e .github/test-events/pull_request.json
+    ./bin/act -e .github/act/test-events/pull_request_1.json
     ```
 

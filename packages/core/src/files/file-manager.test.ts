@@ -1,10 +1,9 @@
 import { assertEquals, assertRejects } from '@std/assert';
-import { assertSpyCalls } from '@std/testing/mock';
 
-import type { IGitHubClient } from '../github/mod.ts';
 import type { IFileChange } from '../types/file.ts';
-import type { IPullRequestInfo } from '../types/github.ts';
+import type { IPullRequestInfo } from '../types/vcs.ts';
 
+import type { IVersionControlSystem } from '../types/mod.ts';
 import { FileManager } from './file-manager.ts';
 
 function createMockFile(path: string, changes = 10, status: IFileChange['status'] = 'modified'): IFileChange {
@@ -16,8 +15,9 @@ function createMockFile(path: string, changes = 10, status: IFileChange['status'
   };
 }
 
-function createMockGithubClient(generator: () => AsyncGenerator<IFileChange[]>): IGitHubClient {
+function createVCS(generator: () => AsyncGenerator<IFileChange[]>): IVersionControlSystem {
   return {
+    type: 'github',
     getPullRequestChangesStream: generator,
     getPullRequestInfo: async (): Promise<IPullRequestInfo> => ({
       title: 'test PR',
@@ -33,11 +33,11 @@ function createMockGithubClient(generator: () => AsyncGenerator<IFileChange[]>):
 
 Deno.test('FileManager.collectChangedFiles', async (t) => {
   await t.step('should filter files based on maxChanges', async () => {
-    const mockGithubClient = createMockGithubClient(async function* () {
+    const mockVCS = createVCS(async function* () {
       yield [createMockFile('small.ts', 10), createMockFile('large.ts', 100)];
     });
 
-    const manager = new FileManager(mockGithubClient, {
+    const manager = new FileManager(mockVCS, {
       maxChanges: 50,
     });
 
@@ -51,11 +51,11 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
   });
 
   await t.step('should filter files based on status', async () => {
-    const mockGithubClient = createMockGithubClient(async function* () {
+    const mockVCS = createVCS(async function* () {
       yield [createMockFile('added.ts', 10, 'added'), createMockFile('removed.ts', 10, 'removed'), createMockFile('modified.ts', 10, 'modified')];
     });
 
-    const manager = new FileManager(mockGithubClient, {
+    const manager = new FileManager(mockVCS, {
       allowedStatuses: ['added', 'modified'],
     });
 
@@ -72,11 +72,11 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
   });
 
   await t.step('should apply include and exclude patterns', async () => {
-    const mockGithubClient = createMockGithubClient(async function* () {
+    const mockVCS = createVCS(async function* () {
       yield [createMockFile('src/index.ts'), createMockFile('src/generated/types.ts'), createMockFile('src/util.js')];
     });
 
-    const manager = new FileManager(mockGithubClient, {
+    const manager = new FileManager(mockVCS, {
       include: ['**/*.ts'],
       exclude: ['**/generated/**'],
     });
@@ -91,13 +91,13 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
   });
 
   await t.step('should handle batch size correctly', async () => {
-    const mockGithubClient = createMockGithubClient(async function* () {
+    const mockVCS = createVCS(async function* () {
       yield Array(25)
         .fill(null)
         .map((_, i) => createMockFile(`file${i}.ts`));
     });
 
-    const manager = new FileManager(mockGithubClient);
+    const manager = new FileManager(mockVCS);
     const batchSize = 10;
     const batches: IFileChange[][] = [];
 
@@ -112,12 +112,12 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
   });
 
   await t.step('should handle errors during file collection', async () => {
-    const mockGithubClient = createMockGithubClient(async function* () {
+    const mockVCS = createVCS(async function* () {
       yield []; // Empty batch to simulate initial successful connection
       throw new Error('Stream error');
     });
 
-    const manager = new FileManager(mockGithubClient);
+    const manager = new FileManager(mockVCS);
 
     await assertRejects(
       async () => {
