@@ -10,11 +10,12 @@
   "compilerOptions": {
     "strict": true
   },
-  "workspace": ["./packages/action", "./packages/core", "./packages/processors/acme", "./packages/processors/dify"],
+  "workspace": ["./packages/action", "./packages/core", "./packages/processors/acme", "./packages/processors/dify", "./packages/processors/openai"],
   "imports": {
     "@biomejs/biome": "npm:@biomejs/biome@^1.9.4",
     "@std/assert": "jsr:@std/assert@^1.0.11",
-    "@std/testing": "jsr:@std/testing@^1.0.9"
+    "@std/testing": "jsr:@std/testing@^1.0.9",
+    "zod": "npm:zod@^3.24.2"
   },
   "tasks": {
     "test": "deno test -A --parallel packages",
