@@ -3,7 +3,6 @@
 import process from 'node:process';
 import * as core from '@actions/core';
 import { FileManager, type IFileFilter, type IPullRequestProcessor, type IVCSConfig, createVCS } from '@code-hedgehog/core';
-import { AcmeProcessor } from '@code-hedgehog/processor-acme';
 import type { ActionConfig } from './config.ts';
 
 export class ActionRunner {
@@ -19,7 +18,7 @@ export class ActionRunner {
       // Initialize components
       const vcsClient = createVCS(githubConfig);
       const fileManager = new FileManager(vcsClient, this.getFileFilter());
-      const processor = this.createProcessor();
+      const processor = await this.createProcessor();
 
       // Get PR information
       core.info('Fetching pull request information...');
@@ -34,7 +33,11 @@ export class ActionRunner {
       for await (const files of fileManager.collectChangedFiles()) {
         const { comments } = await processor.process(prInfo, files);
         if (comments != null && comments.length > 0) {
-          await vcsClient.createReviewBatch(comments, dryRun);
+          if (dryRun) {
+            core.info(comments.map((comment) => `- ${JSON.stringify(comment, null, 2)}`).join('\n'));
+          } else {
+            await vcsClient.createReviewBatch(comments, dryRun);
+          }
           core.info(`Posted ${comments.length} review comments`);
         }
       }
@@ -92,12 +95,19 @@ export class ActionRunner {
     };
   }
 
-  private createProcessor(): IPullRequestProcessor {
-    // Currently only supporting ACME processor
-    if (this.config.processor !== 'acme') {
-      throw new Error(`Unsupported processor: ${this.config.processor}`);
+  private async createProcessor(): Promise<IPullRequestProcessor> {
+    switch (this.config.processor) {
+      case 'acme': {
+        const AcmeProcessor = (await import('@code-hedgehog/processor-acme')).AcmeProcessor;
+        return new AcmeProcessor();
+      }
+      case 'openai': {
+        const OpenaiProcessor = (await import('@code-hedgehog/processor-openai')).OpenaiProcessor;
+        return new OpenaiProcessor();
+      }
+      default:
+        throw new Error(`Unsupported processor: ${this.config.processor}`);
     }
-    return new AcmeProcessor();
   }
 
   private getFileFilter(): IFileFilter {

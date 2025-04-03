@@ -4,7 +4,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  process-acme:
+  process-openai:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,11 +22,11 @@ jobs:
         working-directory: packages/action
         run: deno task build
 
-      - name: Run Acme processor
+      - name: Run OpenAI processor
         uses: ./packages/action
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          processor: 'acme'
+          processor: 'openai'
           exclude: |
             ["**/dist/**", "deno.lock"]
           max-changes: "300"
