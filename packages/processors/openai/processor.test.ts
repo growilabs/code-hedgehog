@@ -1,10 +1,15 @@
+import process from 'node:process';
+import { zodResponseFormat } from '@openai/openai/helpers/zod';
 import { assertEquals } from '@std/assert';
 import { test } from '@std/testing/bdd';
-import { assertSpyCall, spy } from '@std/testing/mock';
+import { type Spy, spy } from '@std/testing/mock';
 import type { IFileChange } from '../../core/mod.ts';
 import { OpenaiProcessor } from './processor.ts';
+import { ReviewResponseSchema } from './schema.ts';
 
-const mockApiKey = 'test-api-key';
+// prepare API key for OpenAI
+process.env.OPENAI_API_KEY = 'test-key';
+
 const mockPrInfo = {
   title: 'Test PR',
   body: 'Test PR description',
@@ -12,17 +17,23 @@ const mockPrInfo = {
   headBranch: 'feature',
 };
 
-// OpenAI API request parameters type
-type OpenAIRequest = {
+type MockRequest = {
   messages: { role: string; content: string }[];
   model: string;
-  response_format: { type: string };
+  response_format: ReturnType<typeof zodResponseFormat>;
   temperature: number;
 };
 
-test('OpenaiProcessor processes review comments correctly', async () => {
-  const processor = new OpenaiProcessor(mockApiKey);
-  const mockCreate = spy((params: OpenAIRequest) =>
+type MockResponse = {
+  choices: Array<{
+    message: {
+      content: string;
+    };
+  }>;
+};
+
+function createMockSpy(): Spy<unknown, [MockRequest], Promise<MockResponse>> {
+  return spy((request: MockRequest) =>
     Promise.resolve({
       choices: [
         {
@@ -42,6 +53,11 @@ test('OpenaiProcessor processes review comments correctly', async () => {
       ],
     }),
   );
+}
+
+test('OpenaiProcessor processes review comments correctly', async () => {
+  const processor = new OpenaiProcessor();
+  const mockCreate = createMockSpy();
 
   // @ts-ignore: For mocking purposes
   processor.openai = { chat: { completions: { create: mockCreate } } };
@@ -65,22 +81,19 @@ test('OpenaiProcessor processes review comments correctly', async () => {
 
   assertEquals(summaryComment?.body.includes('Overall good quality'), true);
 
-  // Verify API request
-  assertSpyCall(mockCreate, 0, {
-    args: [
-      {
-        messages: [{ role: 'user', content: mockCreate.calls[0].args[0].messages[0].content }],
-        model: 'gpt-4-turbo-preview',
-        response_format: { type: 'json_object' },
-        temperature: 0.7,
-      },
-    ],
-  });
+  // Verify API call configuration
+  assertEquals(mockCreate.calls.length, 1);
+  const request = mockCreate.calls[0]?.args[0];
+  if (!request) throw new Error('No request made');
+
+  assertEquals(request.model, 'gpt-4o');
+  assertEquals(request.response_format, zodResponseFormat(ReviewResponseSchema, 'review_response'));
+  assertEquals(request.temperature, 0.7);
 });
 
 test('OpenaiProcessor handles API error gracefully', async () => {
-  const processor = new OpenaiProcessor(mockApiKey);
-  const mockCreate = spy((params: OpenAIRequest) => Promise.reject(new Error('API Error')));
+  const processor = new OpenaiProcessor();
+  const mockCreate = spy((request: MockRequest) => Promise.reject(new Error('API Error')));
 
   // @ts-ignore: For mocking purposes
   processor.openai = { chat: { completions: { create: mockCreate } } };
@@ -99,8 +112,8 @@ test('OpenaiProcessor handles API error gracefully', async () => {
 });
 
 test('OpenaiProcessor handles invalid JSON response', async () => {
-  const processor = new OpenaiProcessor(mockApiKey);
-  const mockCreate = spy((params: OpenAIRequest) =>
+  const processor = new OpenaiProcessor();
+  const mockCreate = spy((request: MockRequest) =>
     Promise.resolve({
       choices: [
         {
@@ -128,8 +141,8 @@ test('OpenaiProcessor handles invalid JSON response', async () => {
 });
 
 test('OpenaiProcessor processes multiple files', async () => {
-  const processor = new OpenaiProcessor(mockApiKey);
-  const mockCreate = spy((params: OpenAIRequest) =>
+  const processor = new OpenaiProcessor();
+  const mockCreate = spy((request: MockRequest) =>
     Promise.resolve({
       choices: [
         {
@@ -172,17 +185,13 @@ test('OpenaiProcessor processes multiple files', async () => {
   assertEquals(result.comments?.length, 4); // 2 files × (inline + summary)
   assertEquals(mockCreate.calls.length, 2); // 2 API calls
 
-  // Verify each API call
-  for (let i = 0; i < 2; i++) {
-    assertSpyCall(mockCreate, i, {
-      args: [
-        {
-          messages: [{ role: 'user', content: mockCreate.calls[i].args[0].messages[0].content }],
-          model: 'gpt-4-turbo-preview',
-          response_format: { type: 'json_object' },
-          temperature: 0.7,
-        },
-      ],
-    });
+  // Verify both API calls had correct configuration
+  for (const call of mockCreate.calls) {
+    const request = call.args[0];
+    if (!request) throw new Error('No request made');
+
+    assertEquals(request.model, 'gpt-4o');
+    assertEquals(request.response_format, zodResponseFormat(ReviewResponseSchema, 'review_response'));
+    assertEquals(request.temperature, 0.7);
   }
 });

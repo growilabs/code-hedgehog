@@ -1,33 +1,15 @@
-import OpenAI from 'npm:openai';
-import { z } from 'npm:zod';
+import OpenAI from '@openai/openai';
+import { zodResponseFormat } from '@openai/openai/helpers/zod';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig } from '../../core/mod.ts';
 import { BaseProcessor } from '../base/mod.ts';
-
-/**
- * Schema for a review comment structure
- */
-const reviewCommentSchema = z.object({
-  message: z.string(),
-  suggestion: z.string().optional(),
-  line_number: z.number().optional(),
-});
-
-/**
- * Schema for the file review result
- */
-const fileReviewSchema = z.object({
-  comments: z.array(reviewCommentSchema),
-  summary: z.string(),
-});
+import { type Comment, ReviewResponseSchema } from './schema.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
 
-  constructor(apiKey: string) {
+  constructor() {
     super();
-    this.openai = new OpenAI({
-      apiKey,
-    });
+    this.openai = new OpenAI();
   }
 
   /**
@@ -43,8 +25,8 @@ export class OpenaiProcessor extends BaseProcessor {
       try {
         const completion = await this.openai.chat.completions.create({
           messages: [{ role: 'user', content: prompt }],
-          model: 'gpt-4-turbo-preview',
-          response_format: { type: 'json_object' },
+          model: 'gpt-4o',
+          response_format: zodResponseFormat(ReviewResponseSchema, 'review_response'),
           temperature: 0.7,
         });
 
@@ -97,7 +79,7 @@ export class OpenaiProcessor extends BaseProcessor {
   private async parseReview(content: string, path: string) {
     try {
       const json = JSON.parse(content);
-      return fileReviewSchema.parse(json);
+      return ReviewResponseSchema.parse(json);
     } catch (error) {
       console.error(`Failed to parse review for ${path}:`, error);
       return null;
@@ -107,7 +89,7 @@ export class OpenaiProcessor extends BaseProcessor {
   /**
    * Format a review comment with optional suggestion
    */
-  private formatComment(comment: z.infer<typeof reviewCommentSchema>): string {
+  private formatComment(comment: Comment): string {
     let body = comment.message;
 
     if (comment.suggestion) {

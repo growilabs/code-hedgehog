@@ -1,10 +1,10 @@
 {
   "imports": {
     "@code-hedgehog/core": "../../core/mod.ts",
-    "openai": "npm:openai@^4.0.0"
+    "@openai/openai": "jsr:@openai/openai@^4.91.1"
   },
   "tasks": {
-    "test": "deno test",
+    "test": "deno test -A",
     "test:cov": "rm -rf ./coverage && deno test -A --parallel --coverage --doc && deno coverage ./coverage",
     "lint": "biome lint .",
     "health": "deno task lint && deno task test:cov"
