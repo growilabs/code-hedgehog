@@ -128,6 +128,9 @@ type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 - 早期リターンで条件分岐をフラット化
 - エラーとユースケースの列挙型定義
 
+## 言語
+- プログラムのコード内コメントは全て英語で記述する
+
 ## テスト戦略
 
 - 純粋関数の単体テストを優先
@@ -678,7 +681,6 @@ TypeScriptでのコーディングにおける一般的なベストプラクテ�
 このプロジェクトには以下のモードが定義されています:
 - deno-script Deno:Script at .cline/roomodes/deno-script.md
 - library-searcher LibraryResearcher at .cline/roomodes/library-searcher.md
-- mizchi-writer mizchi:writer at .cline/roomodes/mizchi-writer.md
 - deno-refactor Deno:RefactorModule at .cline/roomodes/deno-refactor.md
 - deno-module Deno:Module at .cline/roomodes/deno-module.md
 - deno-tdd Deno:TDD at .cline/roomodes/deno-tdd.md
