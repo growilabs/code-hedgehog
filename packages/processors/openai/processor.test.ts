@@ -12,7 +12,7 @@ const mockPrInfo = {
   headBranch: 'feature',
 };
 
-// OpenAI API のリクエストパラメータ型
+// OpenAI API request parameters type
 type OpenAIRequest = {
   messages: { role: string; content: string }[];
   model: string;
@@ -31,8 +31,6 @@ test('OpenaiProcessor processes review comments correctly', async () => {
               comments: [
                 {
                   message: 'This could be improved',
-                  severity: 'warning',
-                  category: 'maintainability',
                   suggestion: 'Consider using const',
                   line_number: 10,
                 },
@@ -45,7 +43,7 @@ test('OpenaiProcessor processes review comments correctly', async () => {
     }),
   );
 
-  // @ts-ignore: モックのため
+  // @ts-ignore: For mocking purposes
   processor.openai = { chat: { completions: { create: mockCreate } } };
 
   const result = await processor.process(mockPrInfo, [
@@ -57,18 +55,17 @@ test('OpenaiProcessor processes review comments correctly', async () => {
     },
   ]);
 
-  assertEquals(result.comments?.length, 2); // インラインコメントとサマリー
+  assertEquals(result.comments?.length, 2); // One inline comment and one summary
   const inlineComment = result.comments?.find((c) => c.type === 'inline');
   const summaryComment = result.comments?.find((c) => c.type === 'pr');
 
   assertEquals(inlineComment?.path, 'test.ts');
   assertEquals(inlineComment?.position, 10);
-  assertEquals(inlineComment?.body.includes('[MAINTAINABILITY]'), true, 'Should include category');
-  assertEquals(inlineComment?.body.includes('⚠️'), true, 'Should include severity emoji');
+  assertEquals(inlineComment?.body, 'This could be improved\n\n**Suggestion:**\nConsider using const');
 
   assertEquals(summaryComment?.body.includes('Overall good quality'), true);
 
-  // APIリクエストの検証
+  // Verify API request
   assertSpyCall(mockCreate, 0, {
     args: [
       {
@@ -85,7 +82,7 @@ test('OpenaiProcessor handles API error gracefully', async () => {
   const processor = new OpenaiProcessor(mockApiKey);
   const mockCreate = spy((params: OpenAIRequest) => Promise.reject(new Error('API Error')));
 
-  // @ts-ignore: モックのため
+  // @ts-ignore: For mocking purposes
   processor.openai = { chat: { completions: { create: mockCreate } } };
 
   const result = await processor.process(mockPrInfo, [
@@ -115,7 +112,7 @@ test('OpenaiProcessor handles invalid JSON response', async () => {
     }),
   );
 
-  // @ts-ignore: モックのため
+  // @ts-ignore: For mocking purposes
   processor.openai = { chat: { completions: { create: mockCreate } } };
 
   const result = await processor.process(mockPrInfo, [
@@ -141,8 +138,7 @@ test('OpenaiProcessor processes multiple files', async () => {
               comments: [
                 {
                   message: 'Test comment',
-                  severity: 'info',
-                  category: 'testing',
+                  suggestion: 'Test suggestion',
                 },
               ],
               summary: 'Test summary',
@@ -153,7 +149,7 @@ test('OpenaiProcessor processes multiple files', async () => {
     }),
   );
 
-  // @ts-ignore: モックのため
+  // @ts-ignore: For mocking purposes
   processor.openai = { chat: { completions: { create: mockCreate } } };
 
   const files: IFileChange[] = [
@@ -173,10 +169,10 @@ test('OpenaiProcessor processes multiple files', async () => {
 
   const result = await processor.process(mockPrInfo, files);
 
-  assertEquals(result.comments?.length, 4); // 2ファイル × (インライン + サマリー)
-  assertEquals(mockCreate.calls.length, 2); // 2回のAPI呼び出し
+  assertEquals(result.comments?.length, 4); // 2 files × (inline + summary)
+  assertEquals(mockCreate.calls.length, 2); // 2 API calls
 
-  // 各API呼び出しの検証
+  // Verify each API call
   for (let i = 0; i < 2; i++) {
     assertSpyCall(mockCreate, i, {
       args: [

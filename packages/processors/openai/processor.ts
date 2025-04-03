@@ -4,28 +4,16 @@ import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IRevie
 import { BaseProcessor } from '../base/mod.ts';
 
 /**
- * レビューコメントの重要度
- */
-export const severitySchema = z.enum(['info', 'warning', 'critical']);
-
-/**
- * レビューコメントの種類
- */
-export const categorySchema = z.enum(['security', 'performance', 'maintainability', 'testing', 'error_handling']);
-
-/**
- * レビューコメントの構造
+ * Schema for a review comment structure
  */
 const reviewCommentSchema = z.object({
   message: z.string(),
-  severity: severitySchema,
-  category: categorySchema,
   suggestion: z.string().optional(),
   line_number: z.number().optional(),
 });
 
 /**
- * ファイルレビューの結果
+ * Schema for the file review result
  */
 const fileReviewSchema = z.object({
   comments: z.array(reviewCommentSchema),
@@ -69,7 +57,7 @@ export class OpenaiProcessor extends BaseProcessor {
         const review = await this.parseReview(content, file.path);
         if (!review) continue;
 
-        // インラインコメントを作成
+        // Create inline comments
         for (const comment of review.comments) {
           comments.push({
             path: file.path,
@@ -79,7 +67,7 @@ export class OpenaiProcessor extends BaseProcessor {
           });
         }
 
-        // サマリーコメントを追加
+        // Add summary comment
         if (review.summary) {
           comments.push({
             path: file.path,
@@ -104,7 +92,7 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * レビュー結果をパースする
+   * Parse the review result from JSON content
    */
   private async parseReview(content: string, path: string) {
     try {
@@ -117,13 +105,10 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * コメントをフォーマットする
+   * Format a review comment with optional suggestion
    */
   private formatComment(comment: z.infer<typeof reviewCommentSchema>): string {
-    const severity = this.getSeverityEmoji(comment.severity);
-    const category = comment.category.replace('_', ' ').toUpperCase();
-
-    let body = `${severity} **[${category}]**\n\n${comment.message}`;
+    let body = comment.message;
 
     if (comment.suggestion) {
       body += `\n\n**Suggestion:**\n${comment.suggestion}`;
@@ -132,50 +117,30 @@ export class OpenaiProcessor extends BaseProcessor {
     return body;
   }
 
-  /**
-   * 重要度に応じた絵文字を返す
-   */
-  private getSeverityEmoji(severity: z.infer<typeof severitySchema>): string {
-    switch (severity) {
-      case 'info':
-        return 'ℹ️';
-      case 'warning':
-        return '⚠️';
-      case 'critical':
-        return '🚨';
-    }
-  }
-
   private createPrompt(file: IFileChange, instructions: string, prInfo: IPullRequestInfo): string {
-    return `あなたはコードレビュアーです。以下のコードをレビューし、JSON形式でレスポンスを返してください。
+    return `You are a code reviewer. Please review the following code and respond in JSON format.
 
-ファイル: ${file.path}
-PR タイトル: ${prInfo.title}
-${instructions ? `\n追加の指示:\n${instructions}` : ''}
-変更内容:
+File: ${file.path}
+PR Title: ${prInfo.title}
+${instructions ? `\nAdditional Instructions:\n${instructions}` : ''}
+Changes:
 \`\`\`diff
-${file.patch || '変更内容なし'}
+${file.patch || 'No changes'}
 \`\`\`
 
-以下の点に注意してレビューを行い、JSON形式で回答してください：
-1. コードの品質と保守性 (maintainability)
-2. エラーハンドリング (error_handling)
-3. パフォーマンス (performance)
-4. セキュリティ (security)
-5. テストの網羅性（テストファイルの場合）(testing)
+Please provide specific and constructive review comments.
+Include improvement suggestions when appropriate.
 
-期待するJSONフォーマット:
+Expected JSON Format:
 {
   "comments": [
     {
-      "message": "レビューコメント",
-      "severity": "info" | "warning" | "critical",
-      "category": "security" | "performance" | "maintainability" | "testing" | "error_handling",
-      "suggestion": "改善提案（任意）",
-      "line_number": 行番号（任意）
+      "message": "Review comment",
+      "suggestion": "Improvement suggestion (optional)",
+      "line_number": Line number (optional)
     }
   ],
-  "summary": "全体的な評価と改善点のまとめ"
+  "summary": "Overall evaluation and improvement points"
 }`;
   }
 }
