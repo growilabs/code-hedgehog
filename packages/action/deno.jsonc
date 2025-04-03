@@ -1,7 +1,6 @@
 {
   "imports": {
     "@actions/core": "npm:@actions/core@1.11.1",
-    "@actions/github": "npm:@actions/github@6.0.0",
     "@code-hedgehog/core": "../core/mod.ts",
     "@code-hedgehog/processor-acme": "../processors/acme/mod.ts",
     "@code-hedgehog/processor-openai": "../processors/openai/mod.ts"
