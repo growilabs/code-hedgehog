@@ -89,7 +89,7 @@ export class ActionRunner {
 
     return {
       type: 'github',
-      token: this.config.githubToken,
+      token: process.env.GITHUB_TOKEN ?? '',
       repositoryUrl: `https://github.com/${owner}/${repo}`,
       pullRequestId: pullNumber,
     };
@@ -103,7 +103,7 @@ export class ActionRunner {
       }
       case 'openai': {
         const OpenaiProcessor = (await import('@code-hedgehog/processor-openai')).OpenaiProcessor;
-        return new OpenaiProcessor();
+        return new OpenaiProcessor(process.env.OPENAI_API_KEY);
       }
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);

@@ -24,8 +24,10 @@ jobs:
 
       - name: Run OpenAI processor
         uses: ./packages/action
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           processor: 'openai'
           exclude: |
             ["**/dist/**", "deno.lock"]

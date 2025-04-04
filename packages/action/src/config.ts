@@ -2,14 +2,16 @@ import * as core from '@actions/core';
 
 export interface ActionConfig {
   /**
-   * GitHub token for API access
-   */
-  githubToken: string;
-
-  /**
    * Selected processor name
    */
   processor: string;
+
+  /**
+   * Processor options
+   */
+  processorOptions?: {
+    [key: string]: unknown;
+  };
 
   /**
    * File filtering configuration
@@ -33,7 +35,6 @@ export function getConfig(): ActionConfig {
   const maxChanges = maxChangesInput ? Number.parseInt(maxChangesInput, 10) : undefined;
 
   return {
-    githubToken: core.getInput('github-token', { required: true }),
     processor: core.getInput('processor', { required: true }),
     filter: {
       include,
