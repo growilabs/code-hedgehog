@@ -7,9 +7,9 @@ import { type Comment, ReviewResponseSchema } from './schema.ts';
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
 
-  constructor() {
+  constructor(apiKey?: string) {
     super();
-    this.openai = new OpenAI();
+    this.openai = new OpenAI({ apiKey });
   }
 
   /**
@@ -18,19 +18,34 @@ export class OpenaiProcessor extends BaseProcessor {
   override async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
 
+    const responseFormat = zodResponseFormat(ReviewResponseSchema, 'review_response');
+
     for (const file of files) {
       const instructions = this.getInstructionsForFile(file.path, config);
       const prompt = this.createPrompt(file, instructions, prInfo);
 
       try {
-        const completion = await this.openai.chat.completions.create({
-          messages: [{ role: 'user', content: prompt }],
+        const response = await this.openai.responses.create({
           model: 'gpt-4o',
-          response_format: zodResponseFormat(ReviewResponseSchema, 'review_response'),
+          input: [
+            {
+              role: 'user',
+              content: prompt,
+              type: 'message',
+            },
+          ],
+          text: {
+            format: {
+              name: responseFormat.json_schema.name,
+              type: responseFormat.type,
+              schema: responseFormat.json_schema.schema ?? {},
+            },
+          },
           temperature: 0.7,
         });
 
-        const content = completion.choices[0]?.message?.content;
+        // output_text contains the generated JSON response
+        const content = response.output_text;
         if (!content) {
           console.warn(`No review generated for ${file.path}`);
           continue;
