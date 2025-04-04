@@ -1,4 +1,5 @@
 import process from 'node:process';
+import type { OpenAI } from '@openai/openai';
 import { zodResponseFormat } from '@openai/openai/helpers/zod';
 import { assertEquals } from '@std/assert';
 import { test } from '@std/testing/bdd';
@@ -17,50 +18,32 @@ const mockPrInfo = {
   headBranch: 'feature',
 };
 
-type MockRequest = {
-  messages: { role: string; content: string }[];
-  model: string;
-  response_format: ReturnType<typeof zodResponseFormat>;
-  temperature: number;
-};
-
-type MockResponse = {
-  choices: Array<{
-    message: {
-      content: string;
-    };
-  }>;
-};
-
-function createMockSpy(): Spy<unknown, [MockRequest], Promise<MockResponse>> {
-  return spy((request: MockRequest) =>
+function createMockSpy(): Spy<unknown, [OpenAI.Responses.ResponseCreateParams], Promise<OpenAI.Responses.Response>> {
+  return spy((_params: OpenAI.Responses.ResponseCreateParams) =>
     Promise.resolve({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              comments: [
-                {
-                  message: 'This could be improved',
-                  suggestion: 'Consider using const',
-                  line_number: 10,
-                },
-              ],
-              summary: 'Overall good quality',
-            }),
+      id: 'mock-id',
+      created_at: new Date().getTime(),
+      output_text: JSON.stringify({
+        comments: [
+          {
+            message: 'This could be improved',
+            suggestion: 'Consider using const',
+            line_number: 10,
           },
-        },
-      ],
-    }),
+        ],
+        summary: 'Overall good quality',
+      }),
+    } as OpenAI.Responses.Response),
   );
 }
 
 test('OpenaiProcessor processes review comments correctly', async () => {
   const processor = new OpenaiProcessor();
   const mockCreate = createMockSpy();
-
-  // @ts-ignore: For mocking purposes
-  processor.openai = { chat: { completions: { create: mockCreate } } };
+  // テスト用にprivateプロパティを上書き
+  Object.defineProperty(processor, 'openai', {
+    value: { responses: { create: mockCreate } },
+  });
 
   const result = await processor.process(mockPrInfo, [
     {
@@ -87,16 +70,18 @@ test('OpenaiProcessor processes review comments correctly', async () => {
   if (!request) throw new Error('No request made');
 
   assertEquals(request.model, 'gpt-4o');
-  assertEquals(request.response_format, zodResponseFormat(ReviewResponseSchema, 'review_response'));
+  const format = zodResponseFormat(ReviewResponseSchema, 'review_response');
+  assertEquals(request.text?.format?.type, format.type);
   assertEquals(request.temperature, 0.7);
 });
 
 test('OpenaiProcessor handles API error gracefully', async () => {
   const processor = new OpenaiProcessor();
-  const mockCreate = spy((request: MockRequest) => Promise.reject(new Error('API Error')));
-
-  // @ts-ignore: For mocking purposes
-  processor.openai = { chat: { completions: { create: mockCreate } } };
+  const mockCreate = spy(() => Promise.reject(new Error('API Error')));
+  // テスト用にprivateプロパティを上書き
+  Object.defineProperty(processor, 'openai', {
+    value: { responses: { create: mockCreate } },
+  });
 
   const result = await processor.process(mockPrInfo, [
     {
@@ -113,20 +98,17 @@ test('OpenaiProcessor handles API error gracefully', async () => {
 
 test('OpenaiProcessor handles invalid JSON response', async () => {
   const processor = new OpenaiProcessor();
-  const mockCreate = spy((request: MockRequest) =>
+  const mockCreate = spy(() =>
     Promise.resolve({
-      choices: [
-        {
-          message: {
-            content: 'Invalid JSON',
-          },
-        },
-      ],
-    }),
+      id: 'mock-response',
+      created_at: new Date().getTime(),
+      output_text: 'Invalid JSON',
+    } as OpenAI.Responses.Response),
   );
-
-  // @ts-ignore: For mocking purposes
-  processor.openai = { chat: { completions: { create: mockCreate } } };
+  // テスト用にprivateプロパティを上書き
+  Object.defineProperty(processor, 'openai', {
+    value: { responses: { create: mockCreate } },
+  });
 
   const result = await processor.process(mockPrInfo, [
     {
@@ -142,28 +124,25 @@ test('OpenaiProcessor handles invalid JSON response', async () => {
 
 test('OpenaiProcessor processes multiple files', async () => {
   const processor = new OpenaiProcessor();
-  const mockCreate = spy((request: MockRequest) =>
+  const mockCreate = spy((_request: OpenAI.Responses.ResponseCreateParams) =>
     Promise.resolve({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({
-              comments: [
-                {
-                  message: 'Test comment',
-                  suggestion: 'Test suggestion',
-                },
-              ],
-              summary: 'Test summary',
-            }),
+      id: 'mock-response',
+      created_at: new Date().getTime(),
+      output_text: JSON.stringify({
+        comments: [
+          {
+            message: 'Test comment',
+            suggestion: 'Test suggestion',
           },
-        },
-      ],
-    }),
+        ],
+        summary: 'Test summary',
+      }),
+    } as OpenAI.Responses.Response),
   );
-
-  // @ts-ignore: For mocking purposes
-  processor.openai = { chat: { completions: { create: mockCreate } } };
+  // テスト用にprivateプロパティを上書き
+  Object.defineProperty(processor, 'openai', {
+    value: { responses: { create: mockCreate } },
+  });
 
   const files: IFileChange[] = [
     {
@@ -191,7 +170,8 @@ test('OpenaiProcessor processes multiple files', async () => {
     if (!request) throw new Error('No request made');
 
     assertEquals(request.model, 'gpt-4o');
-    assertEquals(request.response_format, zodResponseFormat(ReviewResponseSchema, 'review_response'));
+    const format = zodResponseFormat(ReviewResponseSchema, 'review_response');
+    assertEquals(request.text?.format?.type, format.type);
     assertEquals(request.temperature, 0.7);
   }
 });
