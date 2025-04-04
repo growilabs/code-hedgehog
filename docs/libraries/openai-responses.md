@@ -59,6 +59,9 @@ const response = await openai.responses.create({
     } 
   }
 });
+
+// レスポンステキストの取得
+console.log(response.output_text);
 ```
 
 ### 構造化出力 (JSON)
@@ -67,12 +70,14 @@ const response = await openai.responses.create({
 import { zodResponseFormat } from "@openai/openai/helpers/zod";
 import { z } from "zod";
 
-const schema = z.object({
+// スキーマ定義
+const UserSchema = z.object({
   name: z.string(),
   age: z.number()
 });
 
-const responseFormat = zodResponseFormat(schema, 'user_info');
+// レスポンスフォーマットの設定
+const responseFormat = zodResponseFormat(UserSchema, 'user_info');
 
 const response = await openai.responses.create({
   model: "gpt-4o",
@@ -90,12 +95,12 @@ const response = await openai.responses.create({
   }
 });
 
-// レスポンスの解析
+// 構造化データの解析
 try {
-  const parsedData = schema.parse(JSON.parse(response.output_text));
-  console.log("検証済みデータ:", parsedData);
+  const result = UserSchema.parse(JSON.parse(response.output_text));
+  console.log("検証済みデータ:", result);
 } catch (error) {
-  console.error("データの検証に失敗:", error);
+  console.error("データの解析エラー:", error);
 }
 ```
 
@@ -124,16 +129,16 @@ interface ResponseFormatJSONSchema {
 
 ## レスポンス処理
 
-### レスポンス型の構造
+### Response型の構造
 
 ```typescript
 interface Response {
   id: string;
   created_at: number;
   model: string;
-  // 生成されたテキスト
+  // 生成されたテキスト応答
   output_text: string;
-  // 詳細な出力内容
+  // 詳細な出力内容の配列
   output: Array<ResponseOutputItem>;
   // レスポンスのステータス
   status: "completed" | "failed" | "in_progress" | "incomplete";
@@ -141,27 +146,15 @@ interface Response {
   error: ResponseError | null;
 }
 
-// レスポンス処理の例
-const response = await openai.responses.create({
-  model: "gpt-4o",
-  input: [{ 
-    role: "user", 
-    content: "Hello!",
-    type: "message"
-  }]
-});
-
-// ステータスチェックとエラー処理
+// ステータス処理の例
 if (response.status === "completed") {
   console.log(response.output_text);
 } else if (response.error) {
   console.error("エラー:", response.error);
-} else if (response.status === "incomplete") {
-  console.warn("不完全なレスポンス");
 }
 ```
 
-### ストリーミングレスポンスのイベント処理
+### ストリーミングレスポンスの処理
 
 ```typescript
 const stream = await openai.responses.create({
@@ -183,10 +176,6 @@ for await (const chunk of stream) {
     case "response.text.done":
       // テキスト生成完了
       console.log("生成完了");
-      break;
-    case "response.error":
-      // エラー発生
-      console.error("エラー:", chunk.error);
       break;
   }
 }
