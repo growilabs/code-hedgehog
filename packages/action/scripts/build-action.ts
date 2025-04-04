@@ -10,6 +10,16 @@ const result = await esbuild.build({
   format: 'cjs',
   plugins: [...denoPlugins()],
   sourcemap: true,
+  // The File class, which is a Web API used by Deno, is not included by default in the Node.js environment, so add it to globalThis.
+  define: {
+    File: 'globalThis.File',
+  },
+  banner: {
+    js: `
+      const { File } = require('node:buffer');
+      globalThis.File = File;
+    `,
+  },
 });
 
 if (result.errors.length > 0) {
