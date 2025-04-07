@@ -42,7 +42,7 @@ export class OpenaiProcessor extends BaseProcessor {
       try {
         const prompt = this.createSummarizePrompt(file, prInfo, baseResult);
         const response = await this.openai.responses.create({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4o-mini',
           input: [{
             role: 'user',
             content: prompt,
