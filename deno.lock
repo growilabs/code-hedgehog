@@ -24,8 +24,10 @@
     "npm:@octokit/plugin-rest-endpoint-methods@^10.4.1": "10.4.1_@octokit+core@5.2.1",
     "npm:@types/node@*": "22.12.0",
     "npm:esbuild@~0.25.1": "0.25.1",
+    "npm:gpt-tokenizer@*": "2.9.0",
     "npm:minimatch@10.0.1": "10.0.1",
     "npm:openai@*": "4.91.1_zod@3.24.2",
+    "npm:tiktoken@*": "1.0.20",
     "npm:zod@*": "3.24.2",
     "npm:zod@3": "3.24.2",
     "npm:zod@^3.24.2": "3.24.2"
@@ -488,6 +490,9 @@
     "gopd@1.2.0": {
       "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg=="
     },
+    "gpt-tokenizer@2.9.0": {
+      "integrity": "sha512-YSpexBL/k4bfliAzMrRqn3M6+it02LutVyhVpDeMKrC/O9+pCe/5s8U2hYKa2vFLD5/vHhsKc8sOn/qGqII8Kg=="
+    },
     "has-symbols@1.1.0": {
       "integrity": "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ=="
     },
@@ -557,6 +562,9 @@
         "node-fetch",
         "zod"
       ]
+    },
+    "tiktoken@1.0.20": {
+      "integrity": "sha512-zVIpXp84kth/Ni2me1uYlJgl2RZ2EjxwDaWLeDY/s6fZiyO9n1QoTOM5P7ZSYfToPvAvwYNMbg5LETVYVKyzfQ=="
     },
     "tr46@0.0.3": {
       "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw=="

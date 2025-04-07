@@ -13,10 +13,38 @@ export interface PathInstruction {
 }
 
 /**
+ * トリアージ結果
+ * 各ファイルの変更が詳細なレビューを必要とするかを判定
+ */
+export interface TriageResult {
+  /** 詳細なレビューが必要かどうか */
+  needsReview: boolean;
+  /** トリアージの理由（例: "フォーマット変更のみ" "ロジック変更を含む" など） */
+  reason: string;
+}
+
+/**
+ * モデル選択設定
+ * 軽量モデルと重量モデルの設定
+ */
+export interface ModelConfig {
+  light: {
+    name: string;
+    maxTokens: number;
+  };
+  heavy: {
+    name: string;
+    maxTokens: number;
+  };
+}
+
+/**
  * Review configuration including path based instructions
  */
 export interface ReviewConfig {
   path_instructions: PathInstruction[];
+  model?: ModelConfig;
+  skipSimpleChanges?: boolean;
 }
 
 export type IPullRequestProcessedResult = {
@@ -24,19 +52,37 @@ export type IPullRequestProcessedResult = {
   comments?: IReviewComment[];
 };
 
+/**
+ * 2段階のレビュープロセスを実装するプロセッサのインターフェース
+ */
 export interface IPullRequestProcessor {
   /**
-   * Performs code review on file changes
+   * トリアージフェーズ - ファイルの変更を軽量に分析し、詳細なレビューが必要かを判定
+   * 
    * @param prInfo Pull request information
    * @param files List of file changes to review
-   * @param config Optional review configuration including path based instructions
+   * @param config Optional review configuration
+   * @returns Map of file paths to triage results
+   */
+  triage(
+    prInfo: IPullRequestInfo, 
+    files: IFileChange[], 
+    config?: ReviewConfig
+  ): Promise<Map<string, TriageResult>>;
+
+  /**
+   * レビューフェーズ - トリアージ結果に基づいて詳細なレビューを実行
+   * 
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param triageResults Previous triage results
+   * @param config Optional review configuration
    * @returns Review comments and optionally updated PR info
    */
-  process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult>;
-
-  // TODO: will be implemented in the future
-  // getPullRequestInfo(): Promise<IPullRequestInfo>;
-  // updatePullRequestTitle(title: string): Promise<void>;
-  // updatePullRequestBody(body: string): Promise<void>;
-  // addLabels(labels: string[]): Promise<void>;
+  review(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    triageResults: Map<string, TriageResult>,
+    config?: ReviewConfig
+  ): Promise<IPullRequestProcessedResult>;
 }

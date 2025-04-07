@@ -10,6 +10,14 @@ export const CommentSchema = z.object({
 });
 
 /**
+ * Schema for triage result
+ */
+export const TriageResponseSchema = z.object({
+  status: z.enum(['NEEDS_REVIEW', 'APPROVED']),
+  reason: z.string(),
+});
+
+/**
  * Schema for the file review result
  */
 export const ReviewResponseSchema = z.object({
@@ -21,6 +29,11 @@ export const ReviewResponseSchema = z.object({
  * Type for a single comment
  */
 export type Comment = z.infer<typeof CommentSchema>;
+
+/**
+ * Type for the triage response
+ */
+export type TriageResponse = z.infer<typeof TriageResponseSchema>;
 
 /**
  * Type for the review response
