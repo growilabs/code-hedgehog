@@ -23,6 +23,6 @@
 1. Run act
     
     ```bash
-    ./bin/act -e .github/act/test-events/pull_request_1.json
+    ./bin/act -e .github/act/test-events/pull_request_2.json
     ```
 
