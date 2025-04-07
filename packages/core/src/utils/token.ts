@@ -1,17 +1,17 @@
 import { encode } from '../../deps.ts';
 
 /**
- * トークン推定の設定
+ * Token estimation configuration
  */
 export interface TokenConfig {
-  /** トークンの余裕を持たせる量 */
+  /** Token margin to maintain */
   margin: number;
   /** モデルの最大トークン数 */
   maxTokens: number;
 }
 
 /**
- * トークン推定に関する例外
+ * Exception related to token estimation
  */
 export class TokenEstimationError extends Error {
   constructor(message: string) {
@@ -21,10 +21,10 @@ export class TokenEstimationError extends Error {
 }
 
 /**
- * 与えられたテキストのトークン数を計算
- * 
- * @param text トークン数を計算するテキスト
- * @returns トークン数
+ * Calculate token count for given text
+ *
+ * @param text Text to calculate token count for
+ * @returns Token count
  */
 export function estimateTokenCount(text: string): number {
   try {
@@ -37,11 +37,11 @@ export function estimateTokenCount(text: string): number {
 }
 
 /**
- * 与えられたテキストが制限内に収まるかチェック
- * 
- * @param text チェックするテキスト
- * @param config トークン設定
- * @returns 制限内に収まる場合はtrue
+ * Check if given text is within token limit
+ *
+ * @param text Text to check
+ * @param config Token configuration
+ * @returns true if text is within limit
  */
 export function isWithinLimit(text: string, config: TokenConfig): boolean {
   const count = estimateTokenCount(text);
@@ -49,11 +49,11 @@ export function isWithinLimit(text: string, config: TokenConfig): boolean {
 }
 
 /**
- * テキストを指定されたトークン制限に収まるように分割
- * 
- * @param text 分割するテキスト
- * @param config トークン設定
- * @returns 分割されたテキストの配列
+ * Split text to fit within specified token limit
+ *
+ * @param text Text to split
+ * @param config Token configuration
+ * @returns Array of split text chunks
  */
 export function splitByTokenLimit(text: string, config: TokenConfig): string[] {
   const tokens = encode(text);

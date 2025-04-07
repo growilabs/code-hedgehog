@@ -13,19 +13,19 @@ export interface PathInstruction {
 }
 
 /**
- * トリアージ結果
- * 各ファイルの変更が詳細なレビューを必要とするかを判定
+ * Triage result
+ * Determines if each file change requires detailed review
  */
 export interface TriageResult {
-  /** 詳細なレビューが必要かどうか */
+  /** Whether detailed review is needed */
   needsReview: boolean;
-  /** トリアージの理由（例: "フォーマット変更のみ" "ロジック変更を含む" など） */
+  /** Triage reason (e.g. "Format changes only", "Contains logic changes") */
   reason: string;
 }
 
 /**
- * モデル選択設定
- * 軽量モデルと重量モデルの設定
+ * Model selection configuration
+ * Settings for light and heavy models
  */
 export interface ModelConfig {
   light: {
@@ -53,12 +53,12 @@ export type IPullRequestProcessedResult = {
 };
 
 /**
- * 2段階のレビュープロセスを実装するプロセッサのインターフェース
+ * Interface for processor implementing two-phase review process
  */
 export interface IPullRequestProcessor {
   /**
-   * トリアージフェーズ - ファイルの変更を軽量に分析し、詳細なレビューが必要かを判定
-   * 
+   * Triage phase - Lightly analyze file changes to determine if detailed review is needed
+   *
    * @param prInfo Pull request information
    * @param files List of file changes to review
    * @param config Optional review configuration
@@ -71,8 +71,8 @@ export interface IPullRequestProcessor {
   ): Promise<Map<string, TriageResult>>;
 
   /**
-   * レビューフェーズ - トリアージ結果に基づいて詳細なレビューを実行
-   * 
+   * Review phase - Execute detailed review based on triage results
+   *
    * @param prInfo Pull request information
    * @param files List of file changes to review
    * @param triageResults Previous triage results

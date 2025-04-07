@@ -13,7 +13,7 @@ export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
   private readonly tokenConfig = {
     margin: 100,
-    maxTokens: 4000, // デフォルト値、設定から上書き可能
+    maxTokens: 4000, // Default value, can be overridden by configuration
   };
 
   constructor(apiKey?: string) {
@@ -22,8 +22,8 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * トリアージフェーズの実装
-   * GPT-3.5を使用して軽量な分析を行う
+   * Implementation of triage phase
+   * Performs lightweight analysis using GPT-3.5
    */
   override async triage(
     prInfo: IPullRequestInfo,
@@ -38,7 +38,7 @@ export class OpenaiProcessor extends BaseProcessor {
         ? { ...this.tokenConfig, maxTokens: config.model.light.maxTokens }
         : this.tokenConfig;
 
-      // 基本的なトークンチェックとシンプル変更の判定
+      // Basic token check and simple change detection
       const baseResult = await this.shouldPerformDetailedReview(file, tokenConfig);
       
       if (!baseResult.needsReview) {
@@ -46,7 +46,7 @@ export class OpenaiProcessor extends BaseProcessor {
         continue;
       }
 
-      // GPT-3.5でトリアージ
+      // Triage using GPT-3.5
       try {
         const prompt = this.createTriagePrompt(file, prInfo);
         const response = await this.openai.responses.create({
@@ -94,8 +94,8 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * レビューフェーズの実装
-   * GPT-4を使用して詳細なレビューを行う
+   * Implementation of review phase
+   * Performs detailed review using GPT-4
    */
   override async review(
     prInfo: IPullRequestInfo,
@@ -149,7 +149,7 @@ export class OpenaiProcessor extends BaseProcessor {
         const review = await this.parseReview(content, file.path);
         if (!review) continue;
 
-        // インラインコメントを作成
+        // Create inline comments
         for (const comment of review.comments) {
           comments.push({
             path: file.path,
@@ -159,7 +159,7 @@ export class OpenaiProcessor extends BaseProcessor {
           });
         }
 
-        // サマリーコメントを追加
+        // Add summary comment
         if (review.summary) {
           comments.push({
             path: file.path,
@@ -182,7 +182,7 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * トリアージ用のプロンプトを作成
+   * Create prompt for triage
    */
   private createTriagePrompt(file: IFileChange, prInfo: IPullRequestInfo): string {
     return `You are a code reviewer. Please analyze these changes and determine if they need detailed review.
@@ -206,7 +206,7 @@ Expected JSON Format:
   }
 
   /**
-   * レビュー用のプロンプトを作成
+   * Create prompt for review
    */
   private createReviewPrompt(file: IFileChange, prInfo: IPullRequestInfo, instructions: string): string {
     return `You are a code reviewer. Please review the following code and provide specific and constructive feedback.
@@ -234,7 +234,7 @@ Expected JSON Format:
   }
 
   /**
-   * レビューコメントをフォーマット
+   * Format review comment
    */
   private formatComment(comment: Comment): string {
     let body = comment.message;
@@ -247,7 +247,7 @@ Expected JSON Format:
   }
 
   /**
-   * レビュー結果をパース
+   * Parse review result
    */
   private async parseReview(content: string, path: string) {
     try {

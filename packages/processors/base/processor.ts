@@ -28,14 +28,14 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * 共通のトリアージロジック
-   * トークン数とファイルの性質に基づいて詳細レビューの要否を判定
+   * Common triage logic
+   * Determines need for detailed review based on token count and file characteristics
    */
   protected async shouldPerformDetailedReview(
     file: IFileChange,
     tokenConfig: TokenConfig
   ): Promise<TriageResult> {
-    // トークン数チェック
+    // Check token count
     if (!file.patch) {
       return {
         needsReview: false,
@@ -43,7 +43,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       };
     }
 
-    // パッチのトークン数を計算
+    // Calculate patch token count
     const tokenCount = estimateTokenCount(file.patch);
     if (!isWithinLimit(file.patch, tokenConfig)) {
       return {
@@ -52,7 +52,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       };
     }
 
-    // 単純な変更かどうかを判定
+    // Determine if changes are simple
     const isSimpleChange = this.isSimpleChange(file.patch);
     if (isSimpleChange) {
       return {
@@ -68,7 +68,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * 単純な変更（フォーマット、コメントのみなど）かどうかを判定
+   * Determine if changes are simple (formatting, comments only, etc.)
    */
   protected isSimpleChange(patch: string): boolean {
     const lines = patch.split('\n');
@@ -78,7 +78,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       if (!line.startsWith('+') && !line.startsWith('-')) continue;
 
       const code = line.slice(1).trim();
-      // 空行、コメント、インデント変更のみの行をスキップ
+      // Skip lines that are empty, comments, or indentation changes only
       if (code === '' || code.startsWith('//') || code.startsWith('/*') || code.startsWith('*')) {
         continue;
       }
@@ -91,7 +91,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * トリアージフェーズの実装
+   * Implementation of triage phase
    */
   abstract triage(
     prInfo: IPullRequestInfo,
@@ -100,7 +100,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<Map<string, TriageResult>>;
 
   /**
-   * レビューフェーズの実装
+   * Implementation of review phase
    */
   abstract review(
     prInfo: IPullRequestInfo,
@@ -110,17 +110,17 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<IPullRequestProcessedResult>;
 
   /**
-   * メインの処理フロー
+   * Main processing flow
    */
   async process(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     config?: ReviewConfig
   ): Promise<IPullRequestProcessedResult> {
-    // 1. トリアージ実行
+    // 1. Execute triage
     const triageResults = await this.triage(prInfo, files, config);
     
-    // 2. トリアージ結果に基づいてレビュー実行
+    // 2. Execute review based on triage results
     return this.review(prInfo, files, triageResults, config);
   }
 }

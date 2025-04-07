@@ -4,12 +4,12 @@ import { BaseProcessor } from '../base/mod.ts';
 export class DifyProcessor extends BaseProcessor {
   private readonly tokenConfig: TokenConfig = {
     margin: 100,
-    maxTokens: 4000, // デフォルト値、設定から上書き可能
+    maxTokens: 4000, // Default value, can be overridden by configuration
   };
 
   /**
-   * トリアージフェーズの実装
-   * 各ファイルの変更を軽量に分析し、詳細なレビューが必要かを判定
+   * Implementation of triage phase
+   * Analyze each file change lightly to determine if detailed review is needed
    */
   override async triage(
     prInfo: IPullRequestInfo,
@@ -23,7 +23,7 @@ export class DifyProcessor extends BaseProcessor {
         ? { ...this.tokenConfig, maxTokens: config.model.light.maxTokens }
         : this.tokenConfig;
 
-      // BaseProcessorの共通ロジックを使用
+      // Use BaseProcessor's common logic
       const result = await this.shouldPerformDetailedReview(file, tokenConfig);
       results.set(file.path, result);
     }
@@ -32,8 +32,8 @@ export class DifyProcessor extends BaseProcessor {
   }
 
   /**
-   * レビューフェーズの実装
-   * トリアージ結果に基づいて詳細なレビューを実行
+   * Implementation of review phase
+   * Execute detailed review based on triage results
    */
   override async review(
     prInfo: IPullRequestInfo,
@@ -52,7 +52,7 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       if (!triageResult.needsReview) {
-        // 簡易コメントのみ追加
+        // Add simple comment only
         comments.push({
           path: file.path,
           body: `Skipped detailed review: ${triageResult.reason}`,
@@ -63,7 +63,7 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       const instructions = this.getInstructionsForFile(file.path, config);
-      // TODO: Difyワークフローを使用して詳細なレビューを実行
+      // TODO: Execute detailed review using Dify workflow
       comments.push({
         path: file.path,
         position: 1,
