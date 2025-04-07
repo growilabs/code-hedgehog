@@ -1,4 +1,4 @@
-import { OpenAI, zodResponseFormat } from '../deps.ts';
+import { OpenAI, zodResponseFormat, BaseProcessor } from './deps.ts';
 import type {
   IFileChange,
   IPullRequestInfo,
@@ -6,8 +6,7 @@ import type {
   IReviewComment,
   ReviewConfig,
   TriageResult
-} from '../deps.ts';
-import { BaseProcessor } from '../base/mod.ts';
+} from './deps.ts';
 import { type Comment, type TriageResponse, ReviewResponseSchema, TriageResponseSchema } from './schema.ts';
 
 export class OpenaiProcessor extends BaseProcessor {

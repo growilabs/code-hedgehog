@@ -1,5 +1,4 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from '../../core/mod.ts';
-import type { TokenConfig } from '../../core/src/types/token.ts';
+import type { TokenConfig, IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
 import { BaseProcessor } from '../base/mod.ts';
 
 export class DifyProcessor extends BaseProcessor {

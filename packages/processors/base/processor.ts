@@ -3,12 +3,11 @@ import type {
   IPullRequestInfo,
   IPullRequestProcessor,
   IPullRequestProcessedResult,
-  IReviewComment,
   ReviewConfig,
   TriageResult,
   TokenConfig,
-} from '../deps.ts';
-import { estimateTokenCount, isWithinLimit, matchesGlobPattern } from '../deps.ts';
+} from './deps.ts';
+import { estimateTokenCount, isWithinLimit, matchesGlobPattern } from './deps.ts';
 
 /**
  * Base class for pull request processors
