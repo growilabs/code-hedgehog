@@ -12,9 +12,10 @@ export const CommentSchema = z.object({
 /**
  * Schema for triage result
  */
-export const TriageResponseSchema = z.object({
-  status: z.enum(['NEEDS_REVIEW', 'APPROVED']),
-  reason: z.string(),
+export const SummarizeResponseSchema = z.object({
+  summary: z.string(),
+  status: z.enum(['NEEDS_REVIEW', 'APPROVED']).optional(),
+  reason: z.string().optional(),
 });
 
 /**
@@ -31,9 +32,9 @@ export const ReviewResponseSchema = z.object({
 export type Comment = z.infer<typeof CommentSchema>;
 
 /**
- * Type for the triage response
+ * Type for the summary response
  */
-export type TriageResponse = z.infer<typeof TriageResponseSchema>;
+export type SummarizeResponse = z.infer<typeof SummarizeResponseSchema>;
 
 /**
  * Type for the review response

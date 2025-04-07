@@ -7,7 +7,8 @@ import type {
   ReviewConfig,
   TriageResult
 } from './deps.ts';
-import { type Comment, type TriageResponse, ReviewResponseSchema, TriageResponseSchema } from './schema.ts';
+import { summarizePrompt, triagePrompt } from "./internal/prompts.ts";
+import { type Comment, type SummarizeResponse, ReviewResponseSchema, SummarizeResponseSchema } from './schema.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -31,26 +32,17 @@ export class OpenaiProcessor extends BaseProcessor {
     config?: ReviewConfig
   ): Promise<Map<string, TriageResult>> {
     const results = new Map<string, TriageResult>();
-    const triageResponseFormat = zodResponseFormat(TriageResponseSchema, 'triage_response');
+    const summarizeResponseFormat = zodResponseFormat(SummarizeResponseSchema, 'summarize_response');
     
     for (const file of files) {
-      const tokenConfig = config?.model?.light?.maxTokens
-        ? { ...this.tokenConfig, maxTokens: config.model.light.maxTokens }
-        : this.tokenConfig;
-
       // Basic token check and simple change detection
-      const baseResult = await this.shouldPerformDetailedReview(file, tokenConfig);
+      const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
       
-      if (!baseResult.needsReview) {
-        results.set(file.path, baseResult);
-        continue;
-      }
-
-      // Triage using GPT-3.5
+      // Summarize using GPT-3.5
       try {
-        const prompt = this.createTriagePrompt(file, prInfo);
+        const prompt = this.createSummarizePrompt(file, prInfo, baseResult);
         const response = await this.openai.responses.create({
-          model: config?.model?.light?.name ?? 'gpt-3.5-turbo',
+          model: 'gpt-3.5-turbo',
           input: [{
             role: 'user',
             content: prompt,
@@ -58,9 +50,9 @@ export class OpenaiProcessor extends BaseProcessor {
           }],
           text: {
             format: {
-              name: triageResponseFormat.json_schema.name,
-              type: triageResponseFormat.type,
-              schema: triageResponseFormat.json_schema.schema ?? {},
+              name: summarizeResponseFormat.json_schema.name,
+              type: summarizeResponseFormat.type,
+              schema: summarizeResponseFormat.json_schema.schema ?? {},
             },
           },
           temperature: 0.3,
@@ -70,22 +62,22 @@ export class OpenaiProcessor extends BaseProcessor {
         if (!content) {
           results.set(file.path, {
             needsReview: true,
-            reason: "Failed to get triage response"
+            reason: "Failed to get summary response"
           });
           continue;
         }
 
         // Parse structured response
-        const triageResponse = TriageResponseSchema.parse(JSON.parse(content));
+        const summaryResponse = SummarizeResponseSchema.parse(JSON.parse(content));
         results.set(file.path, {
-          needsReview: triageResponse.status === 'NEEDS_REVIEW',
-          reason: triageResponse.reason
+          needsReview: baseResult.needsReview && summaryResponse.status === 'NEEDS_REVIEW',
+          reason: summaryResponse.reason
         });
       } catch (error) {
-        console.error(`Triage error for ${file.path}:`, error);
+        console.error(`Summarize error for ${file.path}:`, error);
         results.set(file.path, {
           needsReview: true,
-          reason: "Error during triage"
+          reason: "Error during summarize"
         });
       }
     }
@@ -124,7 +116,7 @@ export class OpenaiProcessor extends BaseProcessor {
 
       try {
         const response = await this.openai.responses.create({
-          model: config?.model?.heavy?.name ?? 'gpt-4',
+          model: 'gpt-4o',
           input: [{
             role: 'user',
             content: prompt,
@@ -184,25 +176,18 @@ export class OpenaiProcessor extends BaseProcessor {
   /**
    * Create prompt for triage
    */
-  private createTriagePrompt(file: IFileChange, prInfo: IPullRequestInfo): string {
-    return `You are a code reviewer. Please analyze these changes and determine if they need detailed review.
-Respond in JSON format with 'status' (NEEDS_REVIEW or APPROVED) and 'reason' explaining your decision.
+  private createSummarizePrompt(file: IFileChange, prInfo: IPullRequestInfo, triageResult: TriageResult): string {
+    let prompt = summarizePrompt({
+      title: prInfo.title,
+      description: prInfo.body,
+      fileDiff: file.patch || 'No changes',
+    });
 
-File: ${file.path}
-PR Title: ${prInfo.title}
-Changes:
-\`\`\`diff
-${file.patch || 'No changes'}
-\`\`\`
+    if (triageResult.needsReview) {
+      prompt += triagePrompt;
+    }
 
-- Approve if changes are simple (formatting, comments, etc)
-- Request review if changes affect logic or behavior
-
-Expected JSON Format:
-{
-  "status": "NEEDS_REVIEW" or "APPROVED",
-  "reason": "Explanation of the decision"
-}`;
+    return prompt;
   }
 
   /**

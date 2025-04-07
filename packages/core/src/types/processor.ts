@@ -20,22 +20,9 @@ export interface TriageResult {
   /** Whether detailed review is needed */
   needsReview: boolean;
   /** Triage reason (e.g. "Format changes only", "Contains logic changes") */
-  reason: string;
-}
-
-/**
- * Model selection configuration
- * Settings for light and heavy models
- */
-export interface ModelConfig {
-  light: {
-    name: string;
-    maxTokens: number;
-  };
-  heavy: {
-    name: string;
-    maxTokens: number;
-  };
+  reason?: string;
+  /** Optional summary of changes */
+  summary?: string;
 }
 
 /**
@@ -43,7 +30,6 @@ export interface ModelConfig {
  */
 export interface ReviewConfig {
   path_instructions: PathInstruction[];
-  model?: ModelConfig;
   skipSimpleChanges?: boolean;
 }
 

@@ -2,10 +2,6 @@ import type { TokenConfig, IFileChange, IPullRequestInfo, IPullRequestProcessedR
 import { BaseProcessor } from '../base/mod.ts';
 
 export class DifyProcessor extends BaseProcessor {
-  private readonly tokenConfig: TokenConfig = {
-    margin: 100,
-    maxTokens: 4000, // Default value, can be overridden by configuration
-  };
 
   /**
    * Implementation of triage phase
@@ -19,12 +15,8 @@ export class DifyProcessor extends BaseProcessor {
     const results = new Map<string, TriageResult>();
 
     for (const file of files) {
-      const tokenConfig = config?.model?.light?.maxTokens
-        ? { ...this.tokenConfig, maxTokens: config.model.light.maxTokens }
-        : this.tokenConfig;
-
       // Use BaseProcessor's common logic
-      const result = await this.shouldPerformDetailedReview(file, tokenConfig);
+      const result = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
       results.set(file.path, result);
     }
 
