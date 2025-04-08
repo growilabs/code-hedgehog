@@ -14,16 +14,6 @@ export const DifyResponseSchema = z.object({
 
 export type DifyResponse = z.infer<typeof DifyResponseSchema>;
 
-/**
- * Schema for review aspects
- */
-export const ReviewAspectSchema = z.object({
-  key: z.string(),
-  description: z.string(),
-  priority: z.number(),
-});
-
-export type ReviewAspect = z.infer<typeof ReviewAspectSchema>;
 
 /**
  * Response format for triage workflow
@@ -37,9 +27,30 @@ export const SummaryResponseSchema = z.object({
 export type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
 
 /**
- * Response format for grouping workflow's aspect summaries
+ * Schema for review aspects
  */
-export const GroupingAspectResponseSchema = z.object({
+export const ReviewAspectSchema = z.object({
+  key: z.string(),
+  description: z.string(),
+  priority: z.number(),
+});
+
+/**
+ * Review aspect definition
+ * Represents a specific focus area or concern for code review
+ * 
+ * @param key - Unique identifier for the aspect
+ * @param description - Human-readable description of what this aspect covers
+ * @param priority - Priority level for reviewing this aspect (higher number = higher priority)
+ */
+export type ReviewAspect = z.infer<typeof ReviewAspectSchema>;
+
+
+/**
+ * Schema for grouping workflow response
+ * Contains a description and aspect mappings
+ */
+const ReviewAspectMappingsSchema = z.object({
   aspect: ReviewAspectSchema,
   summary: z.string(),
   impactLevel: z.nativeEnum(ImpactLevel),
@@ -51,7 +62,7 @@ export const GroupingAspectResponseSchema = z.object({
  */
 export const GroupingResponseSchema = z.object({
   description: z.string(),
-  aspectSummaries: z.array(GroupingAspectResponseSchema),
+  aspectMappins: z.array(ReviewAspectMappingsSchema),
   crossCuttingConcerns: z.array(z.string()).optional(),
 });
 

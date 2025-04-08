@@ -8,6 +8,21 @@ export enum ImpactLevel {
 }
 
 /**
+ * Triage result
+ * Determines if each file change requires detailed review
+ */
+export interface TriageResult {
+  /** Whether detailed review is needed */
+  needsReview: boolean;
+  /** Triage reason (e.g. "Format changes only", "Contains logic changes") */
+  reason?: string;
+  /** Optional summary of changes */
+  summary?: string;
+  /** Review aspects relevant to this file */
+  aspects: ReviewAspect[];
+}
+
+/**
  * Review aspect definition
  * Represents a specific focus area or concern for code review
  */
@@ -42,19 +57,4 @@ export interface OverallSummary {
   aspectSummaries: AspectSummary[];
   /** Issues that affect multiple aspects */
   crossCuttingConcerns?: string[];
-}
-
-/**
- * Triage result
- * Determines if each file change requires detailed review
- */
-export interface TriageResult {
-  /** Whether detailed review is needed */
-  needsReview: boolean;
-  /** Triage reason (e.g. "Format changes only", "Contains logic changes") */
-  reason?: string;
-  /** Optional summary of changes */
-  summary?: string;
-  /** Review aspects relevant to this file */
-  aspects: ReviewAspect[];
 }

@@ -104,34 +104,24 @@ export class DifyProcessor extends BaseProcessor {
       const input = JSON.stringify({
         title: prInfo.title,
         description: prInfo.body || "",
-        changes: files.map(file => ({
-          path: file.path,
-          patch: file.patch || "No changes",
-          summary: triageResults.get(file.path)?.summary,
-          needsReview: triageResults.get(file.path)?.needsReview,
+        files,
+        triageResults: Array.from(triageResults.entries()).map(([path, result]) => ({
+          path,
+          summary: result.summary,
+          needsReview: result.needsReview,
+          reason: result.reason,
         })),
       });
 
       const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, input);
       const groupingResponse = GroupingResponseSchema.parse(JSON.parse(response));
 
-      // Update triageResults with aspects from grouping
-      for (const summary of groupingResponse.aspectSummaries) {
-        for (const filePath of summary.files) {
-          const result = triageResults.get(filePath);
-          if (result) {
-            result.aspects.push(summary.aspect);
-          }
-        }
-      }
-
-      // Convert grouping response to OverallSummary
       return {
         description: groupingResponse.description,
-        aspectSummaries: groupingResponse.aspectSummaries.map(summary => ({
-          aspect: summary.aspect,
-          summary: summary.summary,
-          impactLevel: summary.impactLevel,
+        aspectSummaries: groupingResponse.aspectMappins.map((reviewAspectMapping) => ({
+          aspect: reviewAspectMapping.aspect,
+          summary: reviewAspectMapping.summary,
+          impactLevel: reviewAspectMapping.impactLevel,
         })),
         crossCuttingConcerns: groupingResponse.crossCuttingConcerns,
       };
