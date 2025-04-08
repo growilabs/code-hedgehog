@@ -5,10 +5,16 @@ import type {
   IPullRequestProcessedResult,
   ReviewConfig,
   TokenConfig,
+  TriageResult,
+  OverallSummary,
 } from './deps.ts';
-import { estimateTokenCount, isWithinLimit, matchesGlobPattern } from './deps.ts';
 
-import type { TriageResult } from './types.ts';
+import { matchesGlobPattern } from './deps.ts';
+
+import {
+  estimateTokenCount,
+  isWithinLimit,
+} from './utils/token.ts';
 
 /**
  * Base class for pull request processors
@@ -40,7 +46,8 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     if (!file.patch) {
       return {
         needsReview: false,
-        reason: "No changes detected in file"
+        reason: "No changes detected in file",
+        aspects: []
       };
     }
 
@@ -49,7 +56,8 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     if (!isWithinLimit(file.patch, tokenConfig)) {
       return {
         needsReview: false,
-        reason: `Token count (${tokenCount}) exceeds limit`
+        reason: `Token count (${tokenCount}) exceeds limit`,
+        aspects: []
       };
     }
 
@@ -58,13 +66,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     if (isSimpleChange) {
       return {
         needsReview: false,
-        reason: "Changes appear to be simple (formatting, comments, etc.)"
+        reason: "Changes appear to be simple (formatting, comments, etc.)",
+        aspects: []
       };
     }
 
     return {
       needsReview: true,
-      reason: "Changes require detailed review"
+      reason: "Changes require detailed review",
+      aspects: []
     };
   }
 
@@ -92,6 +102,48 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
+   * Updates triage results with aspects from the overall summary
+   */
+  protected updateTriageResultsWithAspects(
+    triageResults: Map<string, TriageResult>,
+    overallSummary: OverallSummary
+  ): void {
+    // Update aspects based on the overall summary
+    for (const summary of overallSummary.aspectSummaries) {
+      const aspect = summary.aspect;
+      // Find all files that relate to this aspect by checking their content
+      for (const [filePath, result] of triageResults.entries()) {
+        if (result.summary && this.isAspectRelevantToFile(aspect, result.summary)) {
+          result.aspects.push(aspect);
+        }
+      }
+    }
+  }
+
+  /**
+   * Determines if an aspect is relevant to a file based on its summary
+   * This is a basic implementation that can be overridden by processors
+   */
+  protected isAspectRelevantToFile(aspect: { key: string; description: string }, summary: string): boolean {
+    const searchTerms = [aspect.key.toLowerCase(), ...aspect.description.toLowerCase().split(' ')];
+    const normalizedSummary = summary.toLowerCase();
+    return searchTerms.some(term => normalizedSummary.includes(term));
+  }
+
+  /**
+   * Generate summaries grouped by review aspects
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param triageResults Previous triage results
+   * @returns Overall summary of changes, or undefined if summary cannot be generated
+   */
+  protected abstract generateOverallSummary(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    triageResults: Map<string, TriageResult>
+  ): Promise<OverallSummary | undefined>;
+
+  /**
    * Triage phase - Lightly analyze file changes to determine if detailed review is needed
    *
    * @param prInfo Pull request information
@@ -112,17 +164,19 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param files List of file changes to review
    * @param triageResults Previous triage results
    * @param config Optional review configuration
+   * @param overallSummary Overall summary of changes to provide context, if available
    * @returns Review comments and optionally updated PR info
    */
   abstract review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     triageResults: Map<string, TriageResult>,
-    config?: ReviewConfig
+    config?: ReviewConfig,
+    overallSummary?: OverallSummary
   ): Promise<IPullRequestProcessedResult>;
 
   /**
-   * Main processing flow
+   * Main processing flow - now with 3 phases
    */
   async process(
     prInfo: IPullRequestInfo,
@@ -132,7 +186,19 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     // 1. Execute triage
     const triageResults = await this.triage(prInfo, files, config);
     
-    // 2. Execute review based on triage results
-    return this.review(prInfo, files, triageResults, config);
+    // 2. Generate overall summary
+    const overallSummary = await this.generateOverallSummary(
+      prInfo,
+      files,
+      triageResults
+    );
+
+    // 3. Update triage results with aspects if summary is available
+    if (overallSummary != null) {
+      this.updateTriageResultsWithAspects(triageResults, overallSummary);
+    }
+    
+    // 4. Execute detailed review with context
+    return this.review(prInfo, files, triageResults, config, overallSummary);
   }
 }

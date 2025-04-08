@@ -1,13 +1,13 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
-import { BaseProcessor } from '../base/processor.ts';
-import { ReviewResponseSchema, SummaryResponseSchema } from './schema.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult, OverallSummary } from './deps.ts';
+import { BaseProcessor } from './deps.ts';
+import { GroupingResponseSchema, ReviewResponseSchema, SummaryResponseSchema } from './schema.ts';
 import { runWorkflow } from './internal/run-workflow.ts';
-
 
 type DifyProcessorConfig = {
   baseUrl: string;
   apiKeyTriage: string;
   apiKeyReview: string;
+  apiKeyGrouping: string;
 };
 
 /**
@@ -18,9 +18,7 @@ export class DifyProcessor extends BaseProcessor {
 
   /**
    * Constructor for DifyProcessor
-   * @param baseUrl - Base URL for Dify API
-   * @param apiKeyTriage - API key for triage workflow 
-   * @param apiKeyReview - API key for review workflow
+   * @param config - Configuration for Dify processor
    */
   constructor(config: Partial<DifyProcessorConfig>) {
     super();
@@ -34,13 +32,18 @@ export class DifyProcessor extends BaseProcessor {
     if (config.apiKeyReview == null) {
       throw new Error('API key for review workflow is required');
     }
+    if (config.apiKeyGrouping == null) {
+      throw new Error('API key for grouping workflow is required');
+    }
 
     this.config = {
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
       apiKeyTriage: config.apiKeyTriage,
       apiKeyReview: config.apiKeyReview,
+      apiKeyGrouping: config.apiKeyGrouping,
     }
   }
+
   /**
    * Implementation of triage phase
    * Analyze each file change lightly to determine if detailed review is needed
@@ -72,13 +75,15 @@ export class DifyProcessor extends BaseProcessor {
           needsReview: baseResult.needsReview && summaryResponse.needsReview === true,
           reason: summaryResponse.reason,
           summary: summaryResponse.summary,
+          aspects: [], // Will be populated by the grouping phase
         });
       } catch (error) {
         console.error(`Triage error for ${file.path}:`, error);
         const errorMessage = error instanceof Error ? error.message : String(error);
         results.set(file.path, {
           needsReview: true,
-          reason: `Error during triage: ${errorMessage}`
+          reason: `Error during triage: ${errorMessage}`,
+          aspects: [],
         });
       }
     }
@@ -87,14 +92,65 @@ export class DifyProcessor extends BaseProcessor {
   }
 
   /**
+   * Implementation of overall summary generation
+   * Groups file changes by aspects and generates impact summaries
+   */
+  protected async generateOverallSummary(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    triageResults: Map<string, TriageResult>
+  ): Promise<OverallSummary | undefined> {
+    try {
+      const input = JSON.stringify({
+        title: prInfo.title,
+        description: prInfo.body || "",
+        changes: files.map(file => ({
+          path: file.path,
+          patch: file.patch || "No changes",
+          summary: triageResults.get(file.path)?.summary,
+          needsReview: triageResults.get(file.path)?.needsReview,
+        })),
+      });
+
+      const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, input);
+      const groupingResponse = GroupingResponseSchema.parse(JSON.parse(response));
+
+      // Update triageResults with aspects from grouping
+      for (const summary of groupingResponse.aspectSummaries) {
+        for (const filePath of summary.files) {
+          const result = triageResults.get(filePath);
+          if (result) {
+            result.aspects.push(summary.aspect);
+          }
+        }
+      }
+
+      // Convert grouping response to OverallSummary
+      return {
+        description: groupingResponse.description,
+        aspectSummaries: groupingResponse.aspectSummaries.map(summary => ({
+          aspect: summary.aspect,
+          summary: summary.summary,
+          impactLevel: summary.impactLevel,
+        })),
+        crossCuttingConcerns: groupingResponse.crossCuttingConcerns,
+      };
+    } catch (error) {
+      console.error("Error generating overall summary:", error);
+      return undefined;
+    }
+  }
+
+  /**
    * Implementation of review phase
-   * Execute detailed review based on triage results
+   * Execute detailed review based on triage results and overall summary
    */
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     triageResults: Map<string, TriageResult>,
-    config?: ReviewConfig
+    config?: ReviewConfig,
+    overallSummary?: OverallSummary
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
 
@@ -118,6 +174,8 @@ export class DifyProcessor extends BaseProcessor {
           filePath: file.path,
           patch: file.patch || "No changes",
           instructions: this.getInstructionsForFile(file.path, config),
+          aspects: triageResult.aspects,
+          overallSummary,
         });
 
         const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, input);
@@ -154,7 +212,6 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // Always return comments array to ensure type safety
     return {
       comments: comments
     };

@@ -24,7 +24,6 @@
     "npm:@octokit/plugin-rest-endpoint-methods@^10.4.1": "10.4.1_@octokit+core@5.2.1",
     "npm:@types/node@*": "22.12.0",
     "npm:esbuild@~0.25.1": "0.25.1",
-    "npm:gpt-tokenizer@*": "2.9.0",
     "npm:gpt-tokenizer@^2.1.1": "2.9.0",
     "npm:minimatch@10.0.1": "10.0.1",
     "npm:openai@*": "4.91.1_zod@3.24.2",
@@ -613,7 +612,6 @@
       "jsr:@std/assert@^1.0.11",
       "jsr:@std/testing@^1.0.9",
       "npm:@biomejs/biome@^1.9.4",
-      "npm:gpt-tokenizer@^2.1.1",
       "npm:zod@^3.24.2"
     ],
     "members": {
@@ -630,6 +628,11 @@
           "npm:@octokit/plugin-paginate-rest@^9.2.2",
           "npm:@octokit/plugin-rest-endpoint-methods@^10.4.1",
           "npm:minimatch@10.0.1"
+        ]
+      },
+      "packages/processors/base": {
+        "dependencies": [
+          "npm:gpt-tokenizer@^2.1.1"
         ]
       },
       "packages/processors/openai": {

@@ -1,7 +1,7 @@
 // Core dependencies
 export * from '../../core/mod.ts';
 
-export { BaseProcessor, type TriageResult } from '../base/mod.ts';
+export { BaseProcessor, type TriageResult } from '@code-hedgehog/base-processor';
 
 // External dependencies
 export { z } from 'zod';

@@ -1,6 +1,7 @@
 {
   "imports": {
-    "@code-hedgehog/core": "../../core/mod.ts"
+    "@code-hedgehog/core": "../../core/mod.ts",
+    "@code-hedgehog/base-processor": "../base/mod.ts"
   },
   "tasks": {
     "test": "deno test",
