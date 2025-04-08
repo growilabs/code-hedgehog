@@ -1,42 +1,49 @@
-import { z } from 'npm:zod';
+import { z } from './deps.ts';
+import { ImpactLevel } from './deps.ts';
 
 /**
- * Schema for a review comment structure
- */
-export const CommentSchema = z.object({
-  message: z.string(),
-  suggestion: z.string().optional(),
-  line_number: z.number().optional(),
-});
-
-/**
- * Schema for triage result
+ * Response schema for triage phase
  */
 export const SummarizeResponseSchema = z.object({
   summary: z.string(),
-  status: z.enum(['NEEDS_REVIEW', 'APPROVED']).optional(),
+  needsReview: z.boolean(),
   reason: z.string().optional(),
 });
 
+type SummarizeResponse = z.infer<typeof SummarizeResponseSchema>;
+
 /**
- * Schema for the file review result
+ * Schema for changes grouped by aspects
  */
-export const ReviewResponseSchema = z.object({
-  comments: z.array(CommentSchema),
-  summary: z.string(),
+export const GroupingResponseSchema = z.object({
+  description: z.string(),
+  aspects: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    files: z.array(z.string()),
+    impact: z.nativeEnum(ImpactLevel),
+  })),
+  crossCuttingConcerns: z.array(z.string()),
 });
 
-/**
- * Type for a single comment
- */
-export type Comment = z.infer<typeof CommentSchema>;
+export type GroupingResponse = z.infer<typeof GroupingResponseSchema>;
 
 /**
- * Type for the summary response
+ * Response schema for review phase
  */
-export type SummarizeResponse = z.infer<typeof SummarizeResponseSchema>;
+export interface Comment {
+  message: string;
+  suggestion?: string;
+  line_number?: number;
+}
 
-/**
- * Type for the review response
- */
+export const ReviewResponseSchema = z.object({
+  comments: z.array(z.object({
+    message: z.string(),
+    suggestion: z.string().optional(),
+    line_number: z.number().optional(),
+  })),
+  summary: z.string().optional(),
+});
+
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;

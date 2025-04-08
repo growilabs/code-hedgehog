@@ -1,59 +1,154 @@
 /**
- * Prompt templates for OpenAI processor
+ * OpenAI processor prompt templates
  */
-
-
 
 /**
- * Template for generating file change summary 
+ * Template for triage phase prompt
  */
-export const summarizePrompt = ({title, description, fileDiff}: {title: string, description: string, fileDiff: string}) => `## GitHub PR Title
+export const createTriagePrompt = ({
+  title,
+  description,
+  filePath,
+  patch,
+}: {
+  title: string;
+  description: string;
+  filePath: string;
+  patch: string;
+}) => `You are a code reviewer performing initial triage of changes.
+Please analyze the following code changes and determine if detailed review is needed.
 
-\`${title}\`
+## Pull Request
 
-## Description
+Title: ${title}
+Description: ${description}
 
-\`\`\`
-${description}
-\`\`\`
+## File Changes
 
-## File Diff
+File: ${filePath}
 
 \`\`\`diff
-${fileDiff}
+${patch}
 \`\`\`
 
-## Add summary
+Respond in JSON format with:
+- summary: Brief description of changes (100 words or less)
+- needsReview: true if changes require detailed review
+- reason: Explanation for the review decision
 
-Your task is to succinctly summarize the diff within 100 words.
-Your summary should include:
-- Changes to function signatures
-- Changes to global data structures
-- Changes that affect external interfaces
-- Changes that affect code behavior
-
-Respond with the following JSON format:
+Expected JSON format:
 {
-  "summary": "The previously generated summary"
+  "summary": string,
+  "needsReview": boolean,
+  "reason": string
+}
+
+Consider these factors:
+- Logic or functionality changes require review
+- Simple formatting or comment changes may not need review
+- Impact on code behavior and structure
+`;
+
+/**
+ * Template for grouping/overall summary phase prompt
+ */
+export const createGroupingPrompt = ({
+  title,
+  description,
+  files,
+  triageResults,
+}: {
+  title: string;
+  description: string;
+  files: { path: string; patch: string }[];
+  triageResults: { path: string; summary?: string; needsReview: boolean }[];
+}) => `You are analyzing the overall changes in a pull request to group related changes.
+
+## Pull Request
+
+Title: ${title}
+Description: ${description}
+
+## Files Changed
+
+${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')}
+
+## Triage Results
+
+${triageResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
+
+Analyze these changes and respond with:
+1. Overall description of changes
+2. Group related changes into aspects
+3. Identify cross-cutting concerns
+
+Expected JSON format:
+{
+  "description": string,
+  "aspects": [
+    {
+      "name": string,
+      "description": string,
+      "files": string[],
+      "impact": "high" | "medium" | "low"
+    }
+  ],
+  "crossCuttingConcerns": string[]
 }
 `;
 
 /**
- * Template for triage decision
+ * Template for detailed review phase prompt
  */
-export const triagePrompt = `## Add triage information
+export const createReviewPrompt = ({
+  title,
+  description, 
+  filePath,
+  patch,
+  instructions,
+  aspects,
+}: {
+  title: string;
+  description: string;
+  filePath: string;
+  patch: string;
+  instructions?: string;
+  aspects?: { name: string; description: string }[];
+}) => `You are a code reviewer performing detailed analysis.
+Please review the following code changes and provide specific feedback.
 
-And additionally, please triage the diff as NEEDS_REVIEW or APPROVED based on:
+## Context
 
-- If any logic or functionality is modified, mark as NEEDS_REVIEW including:
-  - Control structure changes
-  - Function call changes
-  - Variable assignment changes
-- If changes are formatting/comments only, mark as APPROVED
+PR Title: ${title}
+Description: ${description}
+File: ${filePath}
 
-Respond with the following JSON format:
+${aspects?.length ? `## Review Aspects\n\n${aspects.map(a => `- ${a.name}: ${a.description}`).join('\n')}` : ''}
+
+${instructions ? `## Additional Instructions\n\n${instructions}` : ''}
+
+## Changes
+
+\`\`\`diff
+${patch}
+\`\`\`
+
+Provide a thorough review focusing on:
+- Code correctness and potential bugs
+- Performance implications
+- Security considerations
+- Design and architectural impacts
+- Maintainability and readability
+
+Respond in JSON format with:
 {
-  "status": "NEEDS_REVIEW" or "APPROVED",
-  "reason": "Explanation for the decision"
+  "comments": [
+    {
+      "message": string,      // Review comment
+      "suggestion"?: string,  // Optional improvement suggestion
+      "line_number"?: number  // Optional line number reference
+    }
+  ],
+  "summary": string          // Overall evaluation of changes
 }
 `;

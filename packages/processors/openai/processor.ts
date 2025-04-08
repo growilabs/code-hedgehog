@@ -11,14 +11,19 @@ import type {
   AspectSummary,
   ImpactLevel
 } from './deps.ts';
-import { summarizePrompt, triagePrompt } from "./internal/prompts.ts";
-import { type Comment, ReviewResponseSchema, SummarizeResponseSchema } from './schema.ts';
+import { createTriagePrompt, createGroupingPrompt, createReviewPrompt } from "./internal/prompts.ts";
+import {
+  type Comment,
+  ReviewResponseSchema,
+  SummarizeResponseSchema,
+  GroupingResponseSchema
+} from './schema.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
   private readonly tokenConfig = {
     margin: 100,
-    maxTokens: 4000, // Default value, can be overridden by configuration
+    maxTokens: 4000,
   };
 
   constructor(apiKey?: string) {
@@ -43,11 +48,16 @@ export class OpenaiProcessor extends BaseProcessor {
     
     for (const file of files) {
       // Basic token check and simple change detection
-      const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
+      const baseResult = await this.shouldPerformDetailedReview(file, this.tokenConfig);
       
-      // Summarize using GPT-3.5
       try {
-        const prompt = this.createSummarizePrompt(file, prInfo, baseResult);
+        const prompt = createTriagePrompt({
+          title: prInfo.title,
+          description: prInfo.body || "",
+          filePath: file.path,
+          patch: file.patch || 'No changes',
+        });
+
         const response = await this.openai.responses.create({
           model: 'gpt-4o-mini',
           input: [{
@@ -69,26 +79,27 @@ export class OpenaiProcessor extends BaseProcessor {
         if (!content) {
           results.set(file.path, {
             needsReview: true,
-            reason: "Failed to get summary response",
-            aspects: []
+            reason: "Failed to get triage response",
+            aspects: [],
+            summary: undefined,
           });
           continue;
         }
 
         // Parse structured response
-        const summaryResponse = SummarizeResponseSchema.parse(JSON.parse(content));
+        const triageResponse = SummarizeResponseSchema.parse(JSON.parse(content));
         results.set(file.path, {
-          needsReview: baseResult.needsReview && summaryResponse.status === 'NEEDS_REVIEW',
-          reason: summaryResponse.reason,
-          summary: summaryResponse.summary,
-          aspects: []
+          needsReview: baseResult.needsReview && triageResponse.needsReview,
+          reason: triageResponse.reason,
+          summary: triageResponse.summary,
+          aspects: [],
         });
       } catch (error) {
-        console.error(`Summarize error for ${file.path}:`, error);
+        console.error(`Triage error for ${file.path}:`, error);
         results.set(file.path, {
           needsReview: true,
-          reason: "Error during summarize",
-          aspects: []
+          reason: `Error during triage: ${error instanceof Error ? error.message : String(error)}`,
+          aspects: [],
         });
       }
     }
@@ -104,23 +115,56 @@ export class OpenaiProcessor extends BaseProcessor {
     files: IFileChange[],
     triageResults: Map<string, TriageResult>
   ): Promise<OverallSummary | undefined> {
-    const allSummaries = Array.from(triageResults.values())
-      .filter(result => result.summary)
-      .map(result => result.summary);
-    
-    if (allSummaries.length === 0) {
-      return undefined;
-    }
-
     try {
-      // Generate overall description
-      const description = `Pull Request "${prInfo.title}" updates ${files.length} files. ` +
-        `Changes include: ${allSummaries.join(". ")}`;
+      const fileInfos = files.map(file => ({
+        path: file.path,
+        patch: file.patch || 'No changes',
+      }));
+
+      const triageInfos = Array.from(triageResults.entries()).map(([path, result]) => ({
+        path,
+        summary: result.summary,
+        needsReview: result.needsReview,
+      }));
+
+      const prompt = createGroupingPrompt({
+        title: prInfo.title,
+        description: prInfo.body || "",
+        files: fileInfos,
+        triageResults: triageInfos,
+      });
+
+      const response = await this.openai.responses.create({
+        model: 'gpt-4o',
+        input: [{
+          role: 'user',
+          content: prompt,
+          type: 'message',
+        }],
+        temperature: 0.3,
+      });
+
+      const content = response.output_text;
+      if (!content) {
+        console.error("No grouping response generated");
+        return undefined;
+      }
+
+      const result = GroupingResponseSchema.parse(JSON.parse(content));
+      const aspectSummaries: AspectSummary[] = result.aspects.map((aspect) => ({
+        aspect: {
+          key: aspect.name,
+          description: aspect.description,
+          priority: 1,
+        },
+        summary: aspect.description,
+        impactLevel: aspect.impact,
+      }));
 
       return {
-        description,
-        aspectSummaries: [], // Empty array for now
-        crossCuttingConcerns: []
+        description: result.description,
+        aspectSummaries,
+        crossCuttingConcerns: result.crossCuttingConcerns,
       };
     } catch (error) {
       console.error("Error generating overall summary:", error);
@@ -151,14 +195,22 @@ export class OpenaiProcessor extends BaseProcessor {
       }
 
       if (!triageResult.needsReview) {
-        console.info(`Skipped detailed review: ${file.path} (${triageResult.reason})`);
-        continue;
+        console.info(`Light review for ${file.path}: ${triageResult.reason}`);
       }
 
-      const instructions = this.getInstructionsForFile(file.path, config);
-      const prompt = this.createReviewPrompt(file, prInfo, instructions);
-
       try {
+        const prompt = createReviewPrompt({
+          title: prInfo.title,
+          description: prInfo.body || "",
+          filePath: file.path,
+          patch: file.patch || 'No changes',
+          instructions: this.getInstructionsForFile(file.path, config),
+          aspects: triageResult.aspects.map(aspect => ({
+            name: aspect.key,
+            description: aspect.description,
+          })),
+        });
+
         const response = await this.openai.responses.create({
           model: 'gpt-4o',
           input: [{
@@ -182,8 +234,7 @@ export class OpenaiProcessor extends BaseProcessor {
           continue;
         }
 
-        const review = await this.parseReview(content, file.path);
-        if (!review) continue;
+        const review = ReviewResponseSchema.parse(JSON.parse(content));
 
         // Create inline comments
         for (const comment of review.comments) {
@@ -208,7 +259,7 @@ export class OpenaiProcessor extends BaseProcessor {
         comments.push({
           path: file.path,
           position: 1,
-          body: 'Failed to generate review due to an error.',
+          body: `Failed to generate review: ${error instanceof Error ? error.message : String(error)}`,
           type: 'inline',
         });
       }
@@ -218,73 +269,13 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * Create prompt for triage
-   */
-  private createSummarizePrompt(file: IFileChange, prInfo: IPullRequestInfo, triageResult: TriageResult): string {
-    let prompt = summarizePrompt({
-      title: prInfo.title,
-      description: prInfo.body || "",
-      fileDiff: file.patch || 'No changes',
-    });
-
-    if (triageResult.needsReview) {
-      prompt += triagePrompt;
-    }
-
-    return prompt;
-  }
-
-  /**
-   * Create prompt for review
-   */
-  private createReviewPrompt(file: IFileChange, prInfo: IPullRequestInfo, instructions: string): string {
-    return `You are a code reviewer. Please review the following code and provide specific and constructive feedback.
-Respond in JSON format with comments array and overall summary.
-
-File: ${file.path}
-PR Title: ${prInfo.title}
-${instructions ? `\nAdditional Instructions:\n${instructions}` : ''}
-Changes:
-\`\`\`diff
-${file.patch || 'No changes'}
-\`\`\`
-
-Expected JSON Format:
-{
-  "comments": [
-    {
-      "message": "Review comment",
-      "suggestion": "Improvement suggestion (optional)",
-      "line_number": Line number (optional)
-    }
-  ],
-  "summary": "Overall evaluation and improvement points"
-}`;
-  }
-
-  /**
    * Format review comment
    */
   private formatComment(comment: Comment): string {
     let body = comment.message;
-
     if (comment.suggestion) {
       body += `\n\n**Suggestion:**\n${comment.suggestion}`;
     }
-
     return body;
-  }
-
-  /**
-   * Parse review result
-   */
-  private async parseReview(content: string, path: string) {
-    try {
-      const json = JSON.parse(content);
-      return ReviewResponseSchema.parse(json);
-    } catch (error) {
-      console.error(`Failed to parse review for ${path}:`, error);
-      return null;
-    }
   }
 }
