@@ -1,8 +1,29 @@
-import type { TokenConfig, IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
 import { BaseProcessor } from '../base/mod.ts';
+import type { ReviewResponse, TriageResponse } from './schema.ts';
+import { runWorkflow } from './internal/run-workflow.ts';
 
+/**
+ * Processor implementation for Dify AI Service
+ */
 export class DifyProcessor extends BaseProcessor {
+  private readonly baseUrl: string;
+  private readonly triageApiKey: string;
+  private readonly reviewApiKey: string;
 
+  /**
+   * Constructor for DifyProcessor
+   * @param baseUrl - Base URL for Dify API
+   * @param triageApiKey - API key for triage workflow 
+   * @param reviewApiKey - API key for review workflow
+   */
+  constructor(baseUrl: string, triageApiKey: string, reviewApiKey: string) {
+    super();
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    this.triageApiKey = triageApiKey;
+    this.reviewApiKey = reviewApiKey;
+  }
+/**
   /**
    * Implementation of triage phase
    * Analyze each file change lightly to determine if detailed review is needed
@@ -13,11 +34,35 @@ export class DifyProcessor extends BaseProcessor {
     config?: ReviewConfig
   ): Promise<Map<string, TriageResult>> {
     const results = new Map<string, TriageResult>();
-
+    
     for (const file of files) {
-      // Use BaseProcessor's common logic
-      const result = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
-      results.set(file.path, result);
+      // Basic token check and simple change detection
+      const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
+      
+      try {
+        const input = JSON.stringify({
+          title: prInfo.title,
+          description: prInfo.body || "",
+          filePath: file.path,
+          patch: file.patch || "No changes",
+          baseResult: baseResult
+        });
+
+        const response = await runWorkflow(this.baseUrl, this.triageApiKey, input);
+        const triageResponse = JSON.parse(response) as TriageResponse;
+
+        results.set(file.path, {
+          needsReview: baseResult.needsReview && triageResponse.needsReview,
+          reason: triageResponse.reason
+        });
+      } catch (error) {
+        console.error(`Triage error for ${file.path}:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        results.set(file.path, {
+          needsReview: true,
+          reason: `Error during triage: ${errorMessage}`
+        });
+      }
     }
 
     return results;
@@ -43,29 +88,57 @@ export class DifyProcessor extends BaseProcessor {
         continue;
       }
 
+      // Always execute review for summary generation
       if (!triageResult.needsReview) {
-        // Add simple comment only
-        comments.push({
-          path: file.path,
-          body: `Skipped detailed review: ${triageResult.reason}`,
-          type: 'inline',
-          position: 1,
-        });
-        continue;
+        console.info(`Light review for ${file.path}: ${triageResult.reason}`);
       }
 
-      const instructions = this.getInstructionsForFile(file.path, config);
-      // TODO: Execute detailed review using Dify workflow
-      comments.push({
-        path: file.path,
-        position: 1,
-        body: `[DIFY] Processed ${file.path}\n\nPR: ${prInfo.title}${instructions ? `\n\nInstructions:\n${instructions}` : ''}`,
-        type: 'inline',
-      });
+      try {
+        const input = JSON.stringify({
+          title: prInfo.title,
+          description: prInfo.body || "",
+          filePath: file.path,
+          patch: file.patch || "No changes",
+          instructions: this.getInstructionsForFile(file.path, config),
+        });
+
+        const response = await runWorkflow(this.baseUrl, this.reviewApiKey, input);
+        const review = JSON.parse(response) as ReviewResponse;
+
+        if (review.comments) {
+          for (const comment of review.comments) {
+            comments.push({
+              path: file.path,
+              body: comment.suggestion
+                ? `${comment.content}\n\n**Suggestion:**\n${comment.suggestion}`
+                : comment.content,
+              type: 'inline',
+              position: comment.line || 1,
+            });
+          }
+        }
+
+        if (review.summary) {
+          comments.push({
+            path: file.path,
+            body: `## Review Summary\n\n${review.summary}`,
+            type: 'pr',
+          });
+        }
+      } catch (error) {
+        console.error(`Review error for ${file.path}:`, error);
+        comments.push({
+          path: file.path,
+          position: 1,
+          body: `Failed to generate review due to an error: ${error instanceof Error ? error.message : String(error)}`,
+          type: 'inline',
+        });
+      }
     }
 
+    // レスポンスの型を保証するため、必須のcommentsプロパティを常に配列として返す
     return {
-      comments,
+      comments: comments
     };
   }
 }
