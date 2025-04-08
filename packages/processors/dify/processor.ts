@@ -1,6 +1,6 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
 import { BaseProcessor } from '../base/mod.ts';
-import type { ReviewResponse, TriageResponse } from './schema.ts';
+import type { ReviewResponse, SummaryResponse } from './schema.ts';
 import { runWorkflow } from './internal/run-workflow.ts';
 
 /**
@@ -23,7 +23,6 @@ export class DifyProcessor extends BaseProcessor {
     this.triageApiKey = triageApiKey;
     this.reviewApiKey = reviewApiKey;
   }
-/**
   /**
    * Implementation of triage phase
    * Analyze each file change lightly to determine if detailed review is needed
@@ -49,11 +48,12 @@ export class DifyProcessor extends BaseProcessor {
         });
 
         const response = await runWorkflow(this.baseUrl, this.triageApiKey, input);
-        const triageResponse = JSON.parse(response) as TriageResponse;
+        const summaryResponse = JSON.parse(response) as SummaryResponse;
 
         results.set(file.path, {
-          needsReview: baseResult.needsReview && triageResponse.needsReview,
-          reason: triageResponse.reason
+          needsReview: baseResult.needsReview && summaryResponse.needsReview === true,
+          reason: summaryResponse.reason,
+          summary: summaryResponse.summary,
         });
       } catch (error) {
         console.error(`Triage error for ${file.path}:`, error);
@@ -136,7 +136,7 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // レスポンスの型を保証するため、必須のcommentsプロパティを常に配列として返す
+    // Always return comments array to ensure type safety
     return {
       comments: comments
     };

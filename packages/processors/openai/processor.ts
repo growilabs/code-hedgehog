@@ -71,7 +71,8 @@ export class OpenaiProcessor extends BaseProcessor {
         const summaryResponse = SummarizeResponseSchema.parse(JSON.parse(content));
         results.set(file.path, {
           needsReview: baseResult.needsReview && summaryResponse.status === 'NEEDS_REVIEW',
-          reason: summaryResponse.reason
+          reason: summaryResponse.reason,
+          summary: summaryResponse.summary,
         });
       } catch (error) {
         console.error(`Summarize error for ${file.path}:`, error);

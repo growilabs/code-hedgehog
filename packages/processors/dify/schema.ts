@@ -1,7 +1,4 @@
-/**
- * Dify API レスポンスの基本形式
- */
-interface DifyResponse {
+export interface DifyResponse {
   choices: Array<{
     message: {
       content: string;
@@ -10,15 +7,16 @@ interface DifyResponse {
 }
 
 /**
- * トリアージワークフロー用のレスポンス形式
+ * Response format for triage workflow
  */
-export interface TriageResponse {
-  needsReview: boolean;
-  reason: string;
+export interface SummaryResponse {
+  summary: string;
+  needsReview?: boolean;
+  reason?: string;
 }
 
 /**
- * レビューコメントの構造
+ * Structure for review comments
  */
 export interface ReviewComment {
   content: string;
@@ -27,11 +25,9 @@ export interface ReviewComment {
 }
 
 /**
- * レビューワークフロー用のレスポンス形式
+ * Response format for review workflow
  */
 export interface ReviewResponse {
-  comments: ReviewComment[];  // レビューコメントを必須に変更
-  summary?: string;  // 全体のサマリー（オプション）
+  comments: ReviewComment[];  // Required array of review comments
+  summary?: string;  // Optional overall summary
 }
-
-export type { DifyResponse };

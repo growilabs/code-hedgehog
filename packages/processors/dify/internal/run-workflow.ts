@@ -1,11 +1,11 @@
 import type { DifyResponse } from '../schema.ts';
 
 /**
- * Dify ワークフローを実行する関数
- * @param baseUrl - Dify API のベース URL
- * @param apiKey - ワークフロー用の API キー
- * @param input - ワークフローへの入力
- * @returns ワークフローの実行結果
+ * Execute a Dify workflow with retry logic
+ * @param baseUrl - Base URL for Dify API
+ * @param apiKey - API key for the workflow
+ * @param input - Input for the workflow
+ * @returns Result from the workflow execution
  */
 export async function runWorkflow(baseUrl: string, apiKey: string, input: string): Promise<string> {
   const maxRetries = 3;
