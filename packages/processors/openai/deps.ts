@@ -1,7 +1,9 @@
 // Core dependencies
-export * from '../../core/mod.ts';
+export type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig } from '@code-hedgehog/core';
 
-export { BaseProcessor, type TriageResult } from '@code-hedgehog/base-processor';
+// Base processor
+export { BaseProcessor } from '@code-hedgehog/base-processor';
+export type { TriageResult, OverallSummary, AspectSummary, ReviewAspect, ImpactLevel } from '@code-hedgehog/base-processor';
 
 // External dependencies
 export { z } from 'zod';

@@ -5,7 +5,11 @@ import type {
   IPullRequestProcessedResult,
   IReviewComment,
   ReviewConfig,
-  TriageResult
+  TriageResult,
+  OverallSummary,
+  ReviewAspect,
+  AspectSummary,
+  ImpactLevel
 } from './deps.ts';
 import { summarizePrompt, triagePrompt } from "./internal/prompts.ts";
 import { type Comment, ReviewResponseSchema, SummarizeResponseSchema } from './schema.ts';
@@ -19,6 +23,9 @@ export class OpenaiProcessor extends BaseProcessor {
 
   constructor(apiKey?: string) {
     super();
+    if (!apiKey) {
+      throw new Error("OpenAI API key is required");
+    }
     this.openai = new OpenAI({ apiKey });
   }
 
@@ -62,7 +69,8 @@ export class OpenaiProcessor extends BaseProcessor {
         if (!content) {
           results.set(file.path, {
             needsReview: true,
-            reason: "Failed to get summary response"
+            reason: "Failed to get summary response",
+            aspects: []
           });
           continue;
         }
@@ -73,17 +81,51 @@ export class OpenaiProcessor extends BaseProcessor {
           needsReview: baseResult.needsReview && summaryResponse.status === 'NEEDS_REVIEW',
           reason: summaryResponse.reason,
           summary: summaryResponse.summary,
+          aspects: []
         });
       } catch (error) {
         console.error(`Summarize error for ${file.path}:`, error);
         results.set(file.path, {
           needsReview: true,
-          reason: "Error during summarize"
+          reason: "Error during summarize",
+          aspects: []
         });
       }
     }
 
     return results;
+  }
+
+  /**
+   * Implementation of overall summary generation
+   */
+  protected async generateOverallSummary(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    triageResults: Map<string, TriageResult>
+  ): Promise<OverallSummary | undefined> {
+    const allSummaries = Array.from(triageResults.values())
+      .filter(result => result.summary)
+      .map(result => result.summary);
+    
+    if (allSummaries.length === 0) {
+      return undefined;
+    }
+
+    try {
+      // Generate overall description
+      const description = `Pull Request "${prInfo.title}" updates ${files.length} files. ` +
+        `Changes include: ${allSummaries.join(". ")}`;
+
+      return {
+        description,
+        aspectSummaries: [], // Empty array for now
+        crossCuttingConcerns: []
+      };
+    } catch (error) {
+      console.error("Error generating overall summary:", error);
+      return undefined;
+    }
   }
 
   /**
@@ -94,7 +136,8 @@ export class OpenaiProcessor extends BaseProcessor {
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     triageResults: Map<string, TriageResult>,
-    config?: ReviewConfig
+    config?: ReviewConfig,
+    overallSummary?: OverallSummary
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
     const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema, 'review_response');
@@ -180,7 +223,7 @@ export class OpenaiProcessor extends BaseProcessor {
   private createSummarizePrompt(file: IFileChange, prInfo: IPullRequestInfo, triageResult: TriageResult): string {
     let prompt = summarizePrompt({
       title: prInfo.title,
-      description: prInfo.body,
+      description: prInfo.body || "",
       fileDiff: file.patch || 'No changes',
     });
 
