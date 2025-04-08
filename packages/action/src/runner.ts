@@ -105,6 +105,14 @@ export class ActionRunner {
         const OpenaiProcessor = (await import('@code-hedgehog/processor-openai')).OpenaiProcessor;
         return new OpenaiProcessor(process.env.OPENAI_API_KEY);
       }
+      case 'dify': {
+        const DifyProcessor = (await import('@code-hedgehog/processor-dify')).DifyProcessor;
+        return new DifyProcessor({
+          baseUrl: process.env.DIFY_API_BASE_URL,
+          apiKeyTriage: process.env.DIFY_API_KEY_TRIAGE,
+          apiKeyReview: process.env.DIFY_API_KEY_REVIEW,
+         });
+      }
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);
     }

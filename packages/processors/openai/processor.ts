@@ -8,7 +8,7 @@ import type {
   TriageResult
 } from './deps.ts';
 import { summarizePrompt, triagePrompt } from "./internal/prompts.ts";
-import { type Comment, type SummarizeResponse, ReviewResponseSchema, SummarizeResponseSchema } from './schema.ts';
+import { type Comment, ReviewResponseSchema, SummarizeResponseSchema } from './schema.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;

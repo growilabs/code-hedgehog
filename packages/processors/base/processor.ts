@@ -4,10 +4,11 @@ import type {
   IPullRequestProcessor,
   IPullRequestProcessedResult,
   ReviewConfig,
-  TriageResult,
   TokenConfig,
 } from './deps.ts';
 import { estimateTokenCount, isWithinLimit, matchesGlobPattern } from './deps.ts';
+
+import type { TriageResult } from './types.ts';
 
 /**
  * Base class for pull request processors
@@ -91,7 +92,12 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Implementation of triage phase
+   * Triage phase - Lightly analyze file changes to determine if detailed review is needed
+   *
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param config Optional review configuration
+   * @returns Map of file paths to triage results
    */
   abstract triage(
     prInfo: IPullRequestInfo,
@@ -100,7 +106,13 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<Map<string, TriageResult>>;
 
   /**
-   * Implementation of review phase
+   * Review phase - Execute detailed review based on triage results
+   *
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param triageResults Previous triage results
+   * @param config Optional review configuration
+   * @returns Review comments and optionally updated PR info
    */
   abstract review(
     prInfo: IPullRequestInfo,

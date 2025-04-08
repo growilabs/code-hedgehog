@@ -1,27 +1,45 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
-import { BaseProcessor } from '../base/mod.ts';
+import { BaseProcessor } from '../base/processor.ts';
 import { ReviewResponseSchema, SummaryResponseSchema } from './schema.ts';
 import { runWorkflow } from './internal/run-workflow.ts';
+
+
+type DifyProcessorConfig = {
+  baseUrl: string;
+  apiKeyTriage: string;
+  apiKeyReview: string;
+};
 
 /**
  * Processor implementation for Dify AI Service
  */
 export class DifyProcessor extends BaseProcessor {
-  private readonly baseUrl: string;
-  private readonly triageApiKey: string;
-  private readonly reviewApiKey: string;
+  private readonly config: DifyProcessorConfig;
 
   /**
    * Constructor for DifyProcessor
    * @param baseUrl - Base URL for Dify API
-   * @param triageApiKey - API key for triage workflow 
-   * @param reviewApiKey - API key for review workflow
+   * @param apiKeyTriage - API key for triage workflow 
+   * @param apiKeyReview - API key for review workflow
    */
-  constructor(baseUrl: string, triageApiKey: string, reviewApiKey: string) {
+  constructor(config: Partial<DifyProcessorConfig>) {
     super();
-    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    this.triageApiKey = triageApiKey;
-    this.reviewApiKey = reviewApiKey;
+
+    if (config.baseUrl == null) {
+      throw new Error('Base URL for Dify API is required');
+    }
+    if (config.apiKeyTriage == null) {
+      throw new Error('API key for triage workflow is required');
+    }
+    if (config.apiKeyReview == null) {
+      throw new Error('API key for review workflow is required');
+    }
+
+    this.config = {
+      baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
+      apiKeyTriage: config.apiKeyTriage,
+      apiKeyReview: config.apiKeyReview,
+    }
   }
   /**
    * Implementation of triage phase
@@ -47,7 +65,7 @@ export class DifyProcessor extends BaseProcessor {
           baseResult: baseResult
         });
 
-        const response = await runWorkflow(this.baseUrl, this.triageApiKey, input);
+        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyTriage, input);
         const summaryResponse = SummaryResponseSchema.parse(JSON.parse(response));
 
         results.set(file.path, {
@@ -102,7 +120,7 @@ export class DifyProcessor extends BaseProcessor {
           instructions: this.getInstructionsForFile(file.path, config),
         });
 
-        const response = await runWorkflow(this.baseUrl, this.reviewApiKey, input);
+        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, input);
         const review = ReviewResponseSchema.parse(JSON.parse(response));
 
         if (review.comments) {
