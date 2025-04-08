@@ -1,6 +1,6 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult } from './deps.ts';
 import { BaseProcessor } from '../base/mod.ts';
-import type { ReviewResponse, SummaryResponse } from './schema.ts';
+import { ReviewResponseSchema, SummaryResponseSchema } from './schema.ts';
 import { runWorkflow } from './internal/run-workflow.ts';
 
 /**
@@ -48,7 +48,7 @@ export class DifyProcessor extends BaseProcessor {
         });
 
         const response = await runWorkflow(this.baseUrl, this.triageApiKey, input);
-        const summaryResponse = JSON.parse(response) as SummaryResponse;
+        const summaryResponse = SummaryResponseSchema.parse(JSON.parse(response));
 
         results.set(file.path, {
           needsReview: baseResult.needsReview && summaryResponse.needsReview === true,
@@ -103,7 +103,7 @@ export class DifyProcessor extends BaseProcessor {
         });
 
         const response = await runWorkflow(this.baseUrl, this.reviewApiKey, input);
-        const review = JSON.parse(response) as ReviewResponse;
+        const review = ReviewResponseSchema.parse(JSON.parse(response));
 
         if (review.comments) {
           for (const comment of review.comments) {

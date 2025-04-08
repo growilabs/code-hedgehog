@@ -1,4 +1,4 @@
-import type { DifyResponse } from '../schema.ts';
+import { DifyResponseSchema } from '../schema.ts';
 
 /**
  * Execute a Dify workflow with retry logic
@@ -34,8 +34,12 @@ export async function runWorkflow(baseUrl: string, apiKey: string, input: string
         throw new Error(`HTTP ${response.status}: ${await response.text()}`);
       }
 
-      const result = await response.json() as DifyResponse;
-      if (!result?.choices?.[0]?.message?.content) {
+      // Parse and validate response using zod schema
+      const rawResult = await response.json();
+      const result = DifyResponseSchema.parse(rawResult);
+      
+      // Ensure required data exists
+      if (!result.choices[0]?.message?.content) {
         throw new Error('Invalid response format from Dify API');
       }
 
