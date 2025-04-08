@@ -8,6 +8,11 @@
 3. Clone the repository
 4. Open in Dev Container
 
+### Install act
+
+Install act according to https://nektosact.com/installation/
+
+
 ### Test with act
 
 1. Add secret
@@ -18,6 +23,11 @@
 
     ```.act.env
     CODE_HEDGEHOG_DRY_RUN_VCS_PROCESSING=1
+    ```
+
+    1. (opt) Add OpenAI API Key if you use with `processor: 'openai'`
+    ```.act.secrets
+    GITHUB_TOKEN=XXXXXXXXXX
     ```
 
 1. Run act
