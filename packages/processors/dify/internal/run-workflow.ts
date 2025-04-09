@@ -1,4 +1,6 @@
-import { DifyResponseSchema } from '../schema.ts';
+import type { DifyRequestBody } from './schema.ts';
+import { DifyResponseSchema } from './schema.ts';
+
 
 /**
  * Execute a Dify workflow with retry logic
@@ -7,7 +9,7 @@ import { DifyResponseSchema } from '../schema.ts';
  * @param input - Input for the workflow
  * @returns Result from the workflow execution
  */
-export async function runWorkflow(baseUrl: string, apiKey: string, input: string): Promise<string> {
+export async function runWorkflow<T extends object>(baseUrl: string, apiKey: string, body: DifyRequestBody): Promise<string> {
   const maxRetries = 3;
   const retryDelay = 1000; // 1 second
 
@@ -21,13 +23,7 @@ export async function runWorkflow(baseUrl: string, apiKey: string, input: string
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          messages: [{
-            role: 'user',
-            content: input,
-          }],
-          temperature: 0.3,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {

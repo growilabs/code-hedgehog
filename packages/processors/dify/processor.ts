@@ -5,10 +5,11 @@ import {
   OverallSummarySchema,
   ReviewResponseSchema
 } from './deps.ts';
-import { runWorkflow } from './internal/run-workflow.ts';
+import { runWorkflow } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
+  user: string;
   apiKeySummarize: string;
   apiKeyGrouping: string;
   apiKeyReview: string;
@@ -30,6 +31,9 @@ export class DifyProcessor extends BaseProcessor {
     if (config.baseUrl == null || config.baseUrl.length === 0) {
       throw new Error('Base URL for Dify API is required');
     }
+    if (config.user == null || config.user.length === 0) {
+      throw new Error('API execution user is required');
+    }
     if (config.apiKeySummarize == null || config.apiKeySummarize.length === 0) {
       throw new Error('API key for summarize workflow is required');
     }
@@ -42,6 +46,7 @@ export class DifyProcessor extends BaseProcessor {
 
     this.config = {
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
+      user: config.user,
       apiKeySummarize: config.apiKeySummarize,
       apiKeyReview: config.apiKeyReview,
       apiKeyGrouping: config.apiKeyGrouping,
@@ -64,15 +69,18 @@ export class DifyProcessor extends BaseProcessor {
       const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
       
       try {
-        const input = JSON.stringify({
-          title: prInfo.title,
-          description: prInfo.body || "",
-          filePath: file.path,
-          patch: file.patch || "No changes",
-          needsReviewPre: baseResult.needsReview,
+        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeySummarize, {
+          inputs: {
+            title: prInfo.title,
+            description: prInfo.body || "",
+            filePath: file.path,
+            patch: file.patch || "No changes",
+            needsReviewPre: baseResult.needsReview,
+          },
+          response_mode: 'blocking' as const,
+          user: this.config.user,
         });
 
-        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyTriage, input);
         const summaryResponse = SummaryResponseSchema.parse(JSON.parse(response));
 
         results.set(file.path, {
@@ -104,19 +112,21 @@ export class DifyProcessor extends BaseProcessor {
     summarizeResults: Map<string, SummarizeResult>
   ): Promise<OverallSummary | undefined> {
     try {
-      const input = JSON.stringify({
-        title: prInfo.title,
-        description: prInfo.body || "",
-        files,
-        summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
-          path,
-          summary: result.summary,
-          needsReview: result.needsReview,
-          reason: result.reason,
-        })),
+      const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, {
+        inputs: {
+          title: prInfo.title,
+          description: prInfo.body || "",
+          files,
+          summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
+            path,
+            summary: result.summary,
+            needsReview: result.needsReview,
+            reason: result.reason,
+          })),
+        },
+        response_mode: 'blocking' as const,
+        user: this.config.user,
       });
-
-      const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, input);
       return OverallSummarySchema.parse(JSON.parse(response));
 
     } catch (error) {
@@ -152,20 +162,22 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       try {
-        const input = JSON.stringify({
-          title: prInfo.title,
-          description: prInfo.body || "",
-          filePath: file.path,
-          patch: file.patch || "No changes",
-          instructions: this.getInstructionsForFile(file.path, config),
-          aspects: summarizeResult.aspects,
-          overallSummary: {
-            description: overallSummary?.description,
-            crossCuttingConcerns: overallSummary?.crossCuttingConcerns,
+        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, {
+          inputs: {
+            title: prInfo.title,
+            description: prInfo.body || "",
+            filePath: file.path,
+            patch: file.patch || "No changes",
+            instructions: this.getInstructionsForFile(file.path, config),
+            aspects: summarizeResult.aspects,
+            overallSummary: {
+              description: overallSummary?.description,
+              crossCuttingConcerns: overallSummary?.crossCuttingConcerns,
+            },
           },
+          response_mode: 'blocking' as const,
+          user: this.config.user,
         });
-
-        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, input);
         const review = ReviewResponseSchema.parse(JSON.parse(response));
 
         if (review.comments) {
