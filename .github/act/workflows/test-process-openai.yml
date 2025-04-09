@@ -1,4 +1,4 @@
-name: Test Action
+name: Test Action (OpenAI)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -27,9 +27,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          DIFY_API_BASE_URL: ${{ env.DIFY_API_BASE_URL }}
-          DIFY_API_KEY_TRIAGE: ${{ secrets.DIFY_API_KEY_TRIAGE }}
-          DIFY_API_KEY_REVIEW: ${{ secrets.DIFY_API_KEY_REVIEW }}
         with:
           processor: 'openai'
           exclude: |

@@ -1,0 +1,37 @@
+name: Test Action
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  process-dify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        run: |
+          deno install
+
+      - name: Build
+        working-directory: packages/action
+        run: deno task build
+
+      - name: Run Dify processor
+        uses: ./packages/action
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIFY_API_BASE_URL: ${{ env.DIFY_API_BASE_URL }}
+          DIFY_API_KEY_SUMMARIZE: ${{ secrets.DIFY_API_KEY_SUMMARIZE }}
+          DIFY_API_KEY_GROUPING: ${{ secrets.DIFY_API_KEY_GROUPING }}
+          DIFY_API_KEY_REVIEW: ${{ secrets.DIFY_API_KEY_REVIEW }}
+        with:
+          processor: 'dify'
+          exclude: |
+            ["**/dist/**", "deno.lock"]
+          max-changes: "300"
