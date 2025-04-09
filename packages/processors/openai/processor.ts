@@ -109,22 +109,19 @@ export class OpenaiProcessor extends BaseProcessor {
   ): Promise<OverallSummary | undefined> {
     const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
 
-    const fileInfos = files.map((file) => ({
-      path: file.path,
-      patch: file.patch || 'No changes',
-    }));
-
-    const summarizedInfos = Array.from(summarizeResults.entries()).map(([path, result]) => ({
-      path,
-      summary: result.summary,
-      needsReview: result.needsReview,
-    }));
-
     const prompt = createGroupingPrompt({
       title: prInfo.title,
       description: prInfo.body || '',
-      files: fileInfos,
-      summarizeResults: summarizedInfos,
+      files: files.map((file) => ({
+        path: file.path,
+        patch: file.patch || 'No changes',
+      })),
+      summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
+        path,
+        summary: result.summary,
+        needsReview: result.needsReview,
+        reason: result.reason,
+      })),
     });
 
     try {

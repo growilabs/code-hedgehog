@@ -159,7 +159,10 @@ export class DifyProcessor extends BaseProcessor {
           patch: file.patch || "No changes",
           instructions: this.getInstructionsForFile(file.path, config),
           aspects: summarizeResult.aspects,
-          overallSummary,
+          overallSummary: {
+            description: overallSummary?.description,
+            crossCuttingConcerns: overallSummary?.crossCuttingConcerns,
+          },
         });
 
         const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, input);
