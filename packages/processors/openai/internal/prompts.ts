@@ -99,10 +99,8 @@ Expected JSON format:
       "aspect": {
         "key": string,
         "description": string,
-        "priority": number
+        "impact": string // Impact level (high, medium, low)
       },
-      "summary": string,
-      "impactLevel": "high" | "medium" | "low",
       "files": string[],
     }
   ],
