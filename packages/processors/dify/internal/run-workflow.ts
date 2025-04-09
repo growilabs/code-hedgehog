@@ -9,7 +9,7 @@ import { DifyResponseSchema } from './schema.ts';
  * @param input - Input for the workflow
  * @returns Result from the workflow execution
  */
-export async function runWorkflow<T extends object>(baseUrl: string, apiKey: string, body: DifyRequestBody): Promise<string> {
+export async function runWorkflow(baseUrl: string, apiKey: string, body: DifyRequestBody): Promise<string> {
   const maxRetries = 3;
   const retryDelay = 1000; // 1 second
 
