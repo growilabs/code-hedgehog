@@ -1,6 +1,10 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, TriageResult, OverallSummary } from './deps.ts';
-import { BaseProcessor } from './deps.ts';
-import { GroupingResponseSchema, ReviewResponseSchema, SummaryResponseSchema } from './schema.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, SummarizeResult, OverallSummary } from './deps.ts';
+import {
+  BaseProcessor,
+  SummaryResponseSchema,
+  OverallSummarySchema,
+  ReviewResponseSchema
+} from './deps.ts';
 import { runWorkflow } from './internal/run-workflow.ts';
 
 type DifyProcessorConfig = {
@@ -45,15 +49,15 @@ export class DifyProcessor extends BaseProcessor {
   }
 
   /**
-   * Implementation of triage phase
+   * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
-  override async triage(
+  override async summarize(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     config?: ReviewConfig
-  ): Promise<Map<string, TriageResult>> {
-    const results = new Map<string, TriageResult>();
+  ): Promise<Map<string, SummarizeResult>> {
+    const results = new Map<string, SummarizeResult>();
     
     for (const file of files) {
       // Basic token check and simple change detection
@@ -72,9 +76,8 @@ export class DifyProcessor extends BaseProcessor {
         const summaryResponse = SummaryResponseSchema.parse(JSON.parse(response));
 
         results.set(file.path, {
+          ...summaryResponse,
           needsReview: baseResult.needsReview && summaryResponse.needsReview === true,
-          reason: summaryResponse.reason,
-          summary: summaryResponse.summary,
           aspects: [], // Will be populated by the grouping phase
         });
       } catch (error) {
@@ -98,14 +101,14 @@ export class DifyProcessor extends BaseProcessor {
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
-    triageResults: Map<string, TriageResult>
+    summarizeResults: Map<string, SummarizeResult>
   ): Promise<OverallSummary | undefined> {
     try {
       const input = JSON.stringify({
         title: prInfo.title,
         description: prInfo.body || "",
         files,
-        triageResults: Array.from(triageResults.entries()).map(([path, result]) => ({
+        summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
           path,
           summary: result.summary,
           needsReview: result.needsReview,
@@ -114,17 +117,8 @@ export class DifyProcessor extends BaseProcessor {
       });
 
       const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, input);
-      const groupingResponse = GroupingResponseSchema.parse(JSON.parse(response));
+      return OverallSummarySchema.parse(JSON.parse(response));
 
-      return {
-        description: groupingResponse.description,
-        aspectSummaries: groupingResponse.aspectMappins.map((reviewAspectMapping) => ({
-          aspect: reviewAspectMapping.aspect,
-          summary: reviewAspectMapping.summary,
-          impactLevel: reviewAspectMapping.impactLevel,
-        })),
-        crossCuttingConcerns: groupingResponse.crossCuttingConcerns,
-      };
     } catch (error) {
       console.error("Error generating overall summary:", error);
       return undefined;
@@ -133,19 +127,19 @@ export class DifyProcessor extends BaseProcessor {
 
   /**
    * Implementation of review phase
-   * Execute detailed review based on triage results and overall summary
+   * Execute detailed review based on summarized results and overall summary
    */
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
-    triageResults: Map<string, TriageResult>,
+    summarizeResults: Map<string, SummarizeResult>,
     config?: ReviewConfig,
     overallSummary?: OverallSummary
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
 
     for (const file of files) {
-      const triageResult = triageResults.get(file.path);
+      const triageResult = summarizeResults.get(file.path);
       
       if (!triageResult) {
         console.warn(`No triage result for ${file.path}`);

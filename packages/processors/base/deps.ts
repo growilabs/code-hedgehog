@@ -1,3 +1,4 @@
+export { z } from 'zod';
 export { encode } from 'gpt-tokenizer';
 
 // Core dependencies
@@ -8,12 +9,6 @@ export type {
   IPullRequestProcessedResult,
   ReviewConfig,
   TokenConfig,
-} from '../../core/mod.ts';
+} from '@code-hedgehog/core';
 
-export { matchesGlobPattern } from '../../core/mod.ts';
-
-// Local types
-export type {
-  TriageResult,
-  OverallSummary,
-} from './types.ts';
+export { matchesGlobPattern } from '@code-hedgehog/core';

@@ -56,12 +56,12 @@ export const createGroupingPrompt = ({
   title,
   description,
   files,
-  triageResults,
+  summarizeResults,
 }: {
   title: string;
   description: string;
   files: { path: string; patch: string }[];
-  triageResults: { path: string; summary?: string; needsReview: boolean }[];
+  summarizeResults: { path: string; summary?: string; needsReview: boolean }[];
 }) => `You are analyzing the overall changes in a pull request to group related changes.
 
 ## Pull Request
@@ -73,28 +73,26 @@ Description: ${description}
 
 ${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')}
 
-## Triage Results
+## summarized results
 
-${triageResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
+${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
 
 Analyze these changes and respond with:
-1. Overall description of changes
-2. Group related changes into aspects
-3. Identify cross-cutting concerns
+1. Aspect summaries for each review aspect based on the summaries in the summarized results
 
 Expected JSON format:
-{
-  "description": string,
-  "aspects": [
-    {
-      "name": string,
+[
+  {
+    "aspect": {
+      "key": string,
       "description": string,
-      "files": string[],
-      "impact": "high" | "medium" | "low"
-    }
-  ],
-  "crossCuttingConcerns": string[]
-}
+      "priority": number
+    },
+    "summary": string,
+    "impactLevel": "high" | "medium" | "low",
+    "files": string[],
+  }
+]
 `;
 
 /**

@@ -1,14 +1,15 @@
 // Core dependencies
-export * from '../../core/mod.ts';
+export * from '@code-hedgehog/core';
 
 // Base processor dependencies
 export {
   BaseProcessor,
-  type TriageResult,
-  type ReviewAspect,
-  type AspectSummary,
+  type SummarizeResult,
   type OverallSummary,
   ImpactLevel,
+  SummaryResponseSchema,
+  OverallSummarySchema,
+  ReviewResponseSchema,
 } from '@code-hedgehog/base-processor';
 
 // External dependencies

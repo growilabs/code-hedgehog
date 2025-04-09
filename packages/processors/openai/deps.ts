@@ -2,8 +2,16 @@
 export type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig } from '@code-hedgehog/core';
 
 // Base processor
-export { BaseProcessor, ImpactLevel } from '@code-hedgehog/base-processor';
-export type { TriageResult, OverallSummary, AspectSummary, ReviewAspect } from '@code-hedgehog/base-processor';
+export {
+  type SummarizeResult,
+  type OverallSummary,
+  type ReviewComment,
+  BaseProcessor,
+  SummaryResponseSchema,
+  ReviewAspectMappingsSchema,
+  OverallSummarySchema,
+  ReviewResponseSchema,
+} from '@code-hedgehog/base-processor';
 
 // External dependencies
 export { z } from 'zod';

@@ -1,20 +1,10 @@
-import type {
-  IFileChange,
-  IPullRequestInfo,
-  IPullRequestProcessor,
-  IPullRequestProcessedResult,
-  ReviewConfig,
-  TokenConfig,
-  TriageResult,
-  OverallSummary,
-} from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
 
 import { matchesGlobPattern } from './deps.ts';
+import type { OverallSummary } from './schema.ts';
+import type { SummarizeResult } from './types.ts';
 
-import {
-  estimateTokenCount,
-  isWithinLimit,
-} from './utils/token.ts';
+import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 
 /**
  * Base class for pull request processors
@@ -38,16 +28,13 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Common triage logic
    * Determines need for detailed review based on token count and file characteristics
    */
-  protected async shouldPerformDetailedReview(
-    file: IFileChange,
-    tokenConfig: TokenConfig
-  ): Promise<TriageResult> {
+  protected async shouldPerformDetailedReview(file: IFileChange, tokenConfig: TokenConfig): Promise<SummarizeResult> {
     // Check token count
     if (!file.patch) {
       return {
         needsReview: false,
-        reason: "No changes detected in file",
-        aspects: []
+        reason: 'No changes detected in file',
+        aspects: [],
       };
     }
 
@@ -57,7 +44,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       return {
         needsReview: false,
         reason: `Token count (${tokenCount}) exceeds limit`,
-        aspects: []
+        aspects: [],
       };
     }
 
@@ -66,15 +53,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     if (isSimpleChange) {
       return {
         needsReview: false,
-        reason: "Changes appear to be simple (formatting, comments, etc.)",
-        aspects: []
+        reason: 'Changes appear to be simple (formatting, comments, etc.)',
+        aspects: [],
       };
     }
 
     return {
       needsReview: true,
-      reason: "Changes require detailed review",
-      aspects: []
+      reason: 'Changes require detailed review',
+      aspects: [],
     };
   }
 
@@ -102,19 +89,17 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Updates triage results with aspects from the overall summary
+   * Updates summarized results with aspects from the overall summary
    */
-  protected updateTriageResultsWithAspects(
-    triageResults: Map<string, TriageResult>,
-    overallSummary: OverallSummary
-  ): void {
+  protected updatesummarizeResultsWithAspects(summarizeResults: Map<string, SummarizeResult>, overallSummary: OverallSummary): void {
     // Update aspects based on the overall summary
-    for (const summary of overallSummary.aspectSummaries) {
+    for (const summary of overallSummary.aspectMappings) {
       const aspect = summary.aspect;
       // Find all files that relate to this aspect by checking their content
-      for (const [filePath, result] of triageResults.entries()) {
-        if (result.summary && this.isAspectRelevantToFile(aspect, result.summary)) {
-          result.aspects.push(aspect);
+      for (const [filePath, result] of summarizeResults.entries()) {
+        if (summary.files.includes(filePath)) {
+          // Add the aspect to the triage result if it's relevant
+          result.aspects = Array.from(new Set([...result.aspects, aspect]));
         }
       }
     }
@@ -127,42 +112,38 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   protected isAspectRelevantToFile(aspect: { key: string; description: string }, summary: string): boolean {
     const searchTerms = [aspect.key.toLowerCase(), ...aspect.description.toLowerCase().split(' ')];
     const normalizedSummary = summary.toLowerCase();
-    return searchTerms.some(term => normalizedSummary.includes(term));
+    return searchTerms.some((term) => normalizedSummary.includes(term));
   }
 
   /**
    * Generate summaries grouped by review aspects
    * @param prInfo Pull request information
    * @param files List of file changes to review
-   * @param triageResults Previous triage results
+   * @param summarizeResults Previous summarized results
    * @returns Overall summary of changes, or undefined if summary cannot be generated
    */
   protected abstract generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
-    triageResults: Map<string, TriageResult>
+    summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined>;
 
   /**
-   * Triage phase - Lightly analyze file changes to determine if detailed review is needed
+   * Summarize phase - Lightly analyze file changes to determine if detailed review is needed
    *
    * @param prInfo Pull request information
    * @param files List of file changes to review
    * @param config Optional review configuration
-   * @returns Map of file paths to triage results
+   * @returns Map of file paths to summarized results
    */
-  abstract triage(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-    config?: ReviewConfig
-  ): Promise<Map<string, TriageResult>>;
+  abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>>;
 
   /**
-   * Review phase - Execute detailed review based on triage results
+   * Review phase - Execute detailed review based on summarized results
    *
    * @param prInfo Pull request information
    * @param files List of file changes to review
-   * @param triageResults Previous triage results
+   * @param summarizeResults Previous summarized results
    * @param config Optional review configuration
    * @param overallSummary Overall summary of changes to provide context, if available
    * @returns Review comments and optionally updated PR info
@@ -170,35 +151,27 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   abstract review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
-    triageResults: Map<string, TriageResult>,
+    summarizeResults: Map<string, SummarizeResult>,
     config?: ReviewConfig,
-    overallSummary?: OverallSummary
+    overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult>;
 
   /**
    * Main processing flow - now with 3 phases
    */
-  async process(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-    config?: ReviewConfig
-  ): Promise<IPullRequestProcessedResult> {
-    // 1. Execute triage
-    const triageResults = await this.triage(prInfo, files, config);
-    
-    // 2. Generate overall summary
-    const overallSummary = await this.generateOverallSummary(
-      prInfo,
-      files,
-      triageResults
-    );
+  async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
+    // 1. Execute summarize
+    const summarizeResults = await this.summarize(prInfo, files, config);
 
-    // 3. Update triage results with aspects if summary is available
+    // 2. Generate overall summary
+    const overallSummary = await this.generateOverallSummary(prInfo, files, summarizeResults);
+
+    // 3. Update summarized results with aspects if summary is available
     if (overallSummary != null) {
-      this.updateTriageResultsWithAspects(triageResults, overallSummary);
+      this.updatesummarizeResultsWithAspects(summarizeResults, overallSummary);
     }
-    
+
     // 4. Execute detailed review with context
-    return this.review(prInfo, files, triageResults, config, overallSummary);
+    return this.review(prInfo, files, summarizeResults, config, overallSummary);
   }
 }
