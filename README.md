@@ -25,7 +25,7 @@ Install act according to https://nektosact.com/installation/
     CODE_HEDGEHOG_DRY_RUN_VCS_PROCESSING=1
     ```
 
-1. Run act
+1. Run all workflows
     
     ```bash
     ./bin/act -e .github/act/test-events/pull_request_2.json
@@ -37,6 +37,12 @@ Install act according to https://nektosact.com/installation/
 
     ```.act.secrets
     OPENAI_API_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    ```
+
+1. Run the workflow
+    
+    ```bash
+    ./bin/act -j process-openai -e .github/act/test-events/pull_request_2.json
     ```
 
 ### Test with DifyProcessor
@@ -53,3 +59,8 @@ Install act according to https://nektosact.com/installation/
     DIFY_API_KEY_REVIEW=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
 
+1. Run the workflow
+    
+    ```bash
+    ./bin/act -j process-dify -e .github/act/test-events/pull_request_2.json
+    ```
