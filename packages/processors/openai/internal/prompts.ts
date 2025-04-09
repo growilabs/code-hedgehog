@@ -10,11 +10,13 @@ export const createTriagePrompt = ({
   description,
   filePath,
   patch,
+  needsReviewPre,
 }: {
   title: string;
   description: string;
   filePath: string;
   patch: string;
+  needsReviewPre: boolean;
 }) => `You are a code reviewer performing initial triage of changes.
 Please analyze the following code changes and determine if detailed review is needed.
 
@@ -33,14 +35,20 @@ ${patch}
 
 Respond in JSON format with:
 - summary: Brief description of changes (100 words or less)
-- needsReview: true if changes require detailed review
-- reason: Explanation for the review decision only when 'needsReview' is false (5 words or less)
+${needsReviewPre
+  ? '- needsReview: true if changes require detailed review'
+  : '- needsReview: false (fixed value for this prompt)'
+}
+${needsReviewPre
+  ? '- reason: Explanation for the review decision only when \'needsReview\' is false (5 words or less)'
+  : ''
+}
 
 Expected JSON format:
 {
   "summary": string,
   "needsReview": boolean,
-  "reason": string
+  "reason": string (optional)
 }
 
 Consider these factors:

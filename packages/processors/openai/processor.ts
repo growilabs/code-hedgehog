@@ -44,6 +44,7 @@ export class OpenaiProcessor extends BaseProcessor {
           description: prInfo.body || '',
           filePath: file.path,
           patch: file.patch || 'No changes',
+          needsReviewPre: baseResult.needsReview,
         });
 
         const response = await this.openai.responses.create({

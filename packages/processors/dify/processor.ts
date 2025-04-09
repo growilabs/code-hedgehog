@@ -69,7 +69,7 @@ export class DifyProcessor extends BaseProcessor {
           description: prInfo.body || "",
           filePath: file.path,
           patch: file.patch || "No changes",
-          baseResult: baseResult
+          needsReviewPre: baseResult.needsReview,
         });
 
         const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyTriage, input);
