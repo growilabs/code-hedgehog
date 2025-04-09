@@ -178,15 +178,15 @@ export class OpenaiProcessor extends BaseProcessor {
     const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema, 'review_response');
 
     for (const file of files) {
-      const triageResult = summarizeResults.get(file.path);
+      const summarizeResult = summarizeResults.get(file.path);
 
-      if (!triageResult) {
+      if (!summarizeResult) {
         console.warn(`No triage result for ${file.path}`);
         continue;
       }
 
-      if (!triageResult.needsReview) {
-        console.info(`Light review for ${file.path}: ${triageResult.reason}`);
+      if (!summarizeResult.needsReview) {
+        console.info(`Light review for ${file.path}: ${summarizeResult.reason}`);
       }
 
       try {
@@ -196,7 +196,7 @@ export class OpenaiProcessor extends BaseProcessor {
           filePath: file.path,
           patch: file.patch || 'No changes',
           instructions: this.getInstructionsForFile(file.path, config),
-          aspects: triageResult.aspects.map((aspect) => ({
+          aspects: summarizeResult.aspects.map((aspect) => ({
             name: aspect.key,
             description: aspect.description,
           })),

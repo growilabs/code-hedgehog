@@ -139,16 +139,16 @@ export class DifyProcessor extends BaseProcessor {
     const comments: IReviewComment[] = [];
 
     for (const file of files) {
-      const triageResult = summarizeResults.get(file.path);
+      const summarizeResult = summarizeResults.get(file.path);
       
-      if (!triageResult) {
+      if (!summarizeResult) {
         console.warn(`No triage result for ${file.path}`);
         continue;
       }
 
       // Always execute review for summary generation
-      if (!triageResult.needsReview) {
-        console.info(`Light review for ${file.path}: ${triageResult.reason}`);
+      if (!summarizeResult.needsReview) {
+        console.info(`Light review for ${file.path}: ${summarizeResult.reason}`);
       }
 
       try {
@@ -158,7 +158,7 @@ export class DifyProcessor extends BaseProcessor {
           filePath: file.path,
           patch: file.patch || "No changes",
           instructions: this.getInstructionsForFile(file.path, config),
-          aspects: triageResult.aspects,
+          aspects: summarizeResult.aspects,
           overallSummary,
         });
 
