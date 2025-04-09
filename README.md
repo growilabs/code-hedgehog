@@ -43,8 +43,11 @@ Install act according to https://nektosact.com/installation/
 
 1. Add Dify base URL and API Keys
 
-    ```.act.secrets
+    ```.act.env
     DIFY_API_BASE_URL=https://dify.example.com/v1
+    ```
+
+    ```.act.secrets
     DIFY_API_KEY_TRIAGE=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     DIFY_API_KEY_REVIEW=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     ```
