@@ -34,7 +34,7 @@ ${patch}
 Respond in JSON format with:
 - summary: Brief description of changes (100 words or less)
 - needsReview: true if changes require detailed review
-- reason: Explanation for the review decision
+- reason: Explanation for the review decision only when 'needsReview' is false (5 words or less)
 
 Expected JSON format:
 {
