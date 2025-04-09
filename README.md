@@ -51,6 +51,7 @@ Install act according to https://nektosact.com/installation/
 
     ```.act.env
     DIFY_API_BASE_URL=https://dify.example.com/v1
+    DIFY_API_EXEC_USER=user-123
     ```
 
     ```.act.secrets

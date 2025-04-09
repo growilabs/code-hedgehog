@@ -25,31 +25,28 @@ export class DifyProcessor extends BaseProcessor {
    * Constructor for DifyProcessor
    * @param config - Configuration for Dify processor
    */
-  constructor(config: Partial<DifyProcessorConfig>) {
+  constructor(config: DifyProcessorConfig) {
     super();
 
-    if (config.baseUrl == null || config.baseUrl.length === 0) {
+    if (config.baseUrl.length === 0) {
       throw new Error('Base URL for Dify API is required');
     }
-    if (config.user == null || config.user.length === 0) {
+    if (config.user.length === 0) {
       throw new Error('API execution user is required');
     }
-    if (config.apiKeySummarize == null || config.apiKeySummarize.length === 0) {
+    if (config.apiKeySummarize.length === 0) {
       throw new Error('API key for summarize workflow is required');
     }
-    if (config.apiKeyGrouping == null || config.apiKeyGrouping.length === 0) {
+    if (config.apiKeyGrouping.length === 0) {
       throw new Error('API key for grouping workflow is required');
     }
-    if (config.apiKeyReview == null || config.apiKeyReview.length === 0) {
+    if (config.apiKeyReview.length === 0) {
       throw new Error('API key for review workflow is required');
     }
 
     this.config = {
+      ...config,
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
-      user: config.user,
-      apiKeySummarize: config.apiKeySummarize,
-      apiKeyReview: config.apiKeyReview,
-      apiKeyGrouping: config.apiKeyGrouping,
     }
   }
 

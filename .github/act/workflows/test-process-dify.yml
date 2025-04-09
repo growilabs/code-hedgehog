@@ -27,6 +27,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIFY_API_BASE_URL: ${{ env.DIFY_API_BASE_URL }}
+          DIFY_API_EXEC_USER: ${{ env.DIFY_API_EXEC_USER }}
           DIFY_API_KEY_SUMMARIZE: ${{ secrets.DIFY_API_KEY_SUMMARIZE }}
           DIFY_API_KEY_GROUPING: ${{ secrets.DIFY_API_KEY_GROUPING }}
           DIFY_API_KEY_REVIEW: ${{ secrets.DIFY_API_KEY_REVIEW }}
