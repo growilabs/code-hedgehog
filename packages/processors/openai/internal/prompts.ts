@@ -69,7 +69,7 @@ export const createGroupingPrompt = ({
   title: string;
   description: string;
   files: { path: string; patch: string }[];
-  summarizeResults: { path: string; summary?: string; needsReview: boolean }[];
+  summarizeResults: { path: string; needsReview: boolean, summary?: string, reason?: string }[];
 }) => `You are analyzing the overall changes in a pull request to group related changes.
 
 ## Pull Request
@@ -86,21 +86,28 @@ ${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')
 ${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
 
 Analyze these changes and respond with:
-1. Aspect summaries for each review aspect based on the summaries in the summarized results
+1. Overall description of changes
+2. Aspect summaries for each review aspect based on the summaries in the summarized results
+3. Identify cross-cutting concerns
 
 Expected JSON format:
-[
-  {
-    "aspect": {
-      "key": string,
-      "description": string,
-      "priority": number
-    },
-    "summary": string,
-    "impactLevel": "high" | "medium" | "low",
-    "files": string[],
-  }
-]
+{
+
+  "description": string, // Overall description of changes
+  "aspectMappings": [
+    {
+      "aspect": {
+        "key": string,
+        "description": string,
+        "priority": number
+      },
+      "summary": string,
+      "impactLevel": "high" | "medium" | "low",
+      "files": string[],
+    }
+  ],
+  "crossCuttingConcerns": string[] // Optional cross-cutting concerns
+}
 `;
 
 /**
