@@ -9,9 +9,9 @@ import { runWorkflow } from './internal/run-workflow.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
-  apiKeyTriage: string;
-  apiKeyReview: string;
+  apiKeySummarize: string;
   apiKeyGrouping: string;
+  apiKeyReview: string;
 };
 
 /**
@@ -27,22 +27,22 @@ export class DifyProcessor extends BaseProcessor {
   constructor(config: Partial<DifyProcessorConfig>) {
     super();
 
-    if (config.baseUrl == null) {
+    if (config.baseUrl == null || config.baseUrl.length === 0) {
       throw new Error('Base URL for Dify API is required');
     }
-    if (config.apiKeyTriage == null) {
-      throw new Error('API key for triage workflow is required');
+    if (config.apiKeySummarize == null || config.apiKeySummarize.length === 0) {
+      throw new Error('API key for summarize workflow is required');
     }
-    if (config.apiKeyReview == null) {
-      throw new Error('API key for review workflow is required');
-    }
-    if (config.apiKeyGrouping == null) {
+    if (config.apiKeyGrouping == null || config.apiKeyGrouping.length === 0) {
       throw new Error('API key for grouping workflow is required');
+    }
+    if (config.apiKeyReview == null || config.apiKeyReview.length === 0) {
+      throw new Error('API key for review workflow is required');
     }
 
     this.config = {
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
-      apiKeyTriage: config.apiKeyTriage,
+      apiKeySummarize: config.apiKeySummarize,
       apiKeyReview: config.apiKeyReview,
       apiKeyGrouping: config.apiKeyGrouping,
     }

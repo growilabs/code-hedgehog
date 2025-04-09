@@ -109,7 +109,8 @@ export class ActionRunner {
         const DifyProcessor = (await import('@code-hedgehog/processor-dify')).DifyProcessor;
         return new DifyProcessor({
           baseUrl: process.env.DIFY_API_BASE_URL,
-          apiKeyTriage: process.env.DIFY_API_KEY_TRIAGE,
+          apiKeySummarize: process.env.DIFY_API_KEY_SUMMARIZE,
+          apiKeyGrouping: process.env.DIFY_API_KEY_GROUPING,
           apiKeyReview: process.env.DIFY_API_KEY_REVIEW,
          });
       }
