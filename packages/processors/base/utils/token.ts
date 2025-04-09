@@ -1,4 +1,4 @@
-import { encode } from '../../deps.ts';
+import { encode } from '../deps.ts';
 
 /**
  * Token estimation configuration

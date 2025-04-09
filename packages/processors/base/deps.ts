@@ -1,3 +1,5 @@
+export { encode } from 'gpt-tokenizer';
+
 // Core dependencies
 export type {
   IFileChange,
