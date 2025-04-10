@@ -108,13 +108,15 @@ export class OpenaiProcessor extends BaseProcessor {
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
-    const BATCH_SIZE = 2; // 一度に処理するファイル数
-    const results: OverallSummary[] = [];
+    const BATCH_SIZE = 1; // 一度に処理するファイル数
     const entries = Array.from(summarizeResults.entries());
     const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
     const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
 
     console.debug(`Processing ${entries.length} files in ${totalBatches} batches`);
+
+    let accumulatedResult: OverallSummary | undefined;
+    let previousAnalysis: string | undefined;
 
     // バッチ処理
     for (let i = 0; i < entries.length; i += BATCH_SIZE) {
@@ -127,6 +129,9 @@ export class OpenaiProcessor extends BaseProcessor {
       );
 
       console.debug(`Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+      if (previousAnalysis) {
+        console.debug('Previous cumulative analysis:', previousAnalysis);
+      }
 
       try {
         const prompt = createGroupingPrompt({
@@ -142,6 +147,7 @@ export class OpenaiProcessor extends BaseProcessor {
             needsReview: result.needsReview,
             reason: result.reason,
           })),
+          previousAnalysis,
         });
 
         const response = await this.openai.responses.create({
@@ -169,25 +175,29 @@ export class OpenaiProcessor extends BaseProcessor {
           continue;
         }
 
-        const result = OverallSummarySchema.parse(JSON.parse(content));
-        console.debug(`Batch ${batchNumber} analysis complete:`, JSON.stringify(result, null, 2));
-        results.push(result);
+        const batchResult = OverallSummarySchema.parse(JSON.parse(content));
+
+        // 累積結果の更新
+        if (accumulatedResult) {
+          accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
+        } else {
+          accumulatedResult = batchResult;
+        }
+
+        // 次のバッチのために累積分析結果を更新
+        previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
+        console.debug(`Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
       } catch (error) {
         console.error(`Error in batch ${batchNumber}/${totalBatches}:`, error);
       }
     }
 
-    if (results.length === 0) {
+    if (!accumulatedResult) {
       console.error('No results generated from any batch');
       return undefined;
     }
 
-    // バッチ結果のマージ
-    console.debug(`Merging results from ${results.length} batches`);
-    const mergedResult = this.mergeOverallSummaries(results);
-    console.debug('Final merged results:', JSON.stringify(mergedResult, null, 2));
-
-    return mergedResult;
+    return accumulatedResult;
   }
 
   /**
@@ -315,6 +325,29 @@ export class OpenaiProcessor extends BaseProcessor {
     }
 
     return { comments };
+  }
+
+  /**
+   * Format previous analysis result for next batch
+   */
+  private formatPreviousAnalysis(result: OverallSummary): string {
+    return `Previous Batch Analysis:
+{
+  "description": "${result.description}",
+  "aspectMappings": [
+${result.aspectMappings.map(mapping => `    {
+      "aspect": {
+        "key": "${mapping.aspect.key}",
+        "description": "${mapping.aspect.description}",
+        "impact": "${mapping.aspect.impact}"
+      },
+      "files": ${JSON.stringify(mapping.files)}
+    }`).join(',\n')}
+  ],
+  "crossCuttingConcerns": [
+${result.crossCuttingConcerns?.map(concern => `    "${concern}"`).join(',\n') || '    // No concerns'}
+  ]
+}`;
   }
 
   /**
