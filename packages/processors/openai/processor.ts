@@ -100,65 +100,123 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * Implementation of overall summary generation
+   * Implementation of overall summary generation with batch processing
    */
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
+    console.debug('Starting overall summary generation with batch processing');
+    const BATCH_SIZE = 2; // 一度に処理するファイル数
+    const results: OverallSummary[] = [];
+    const entries = Array.from(summarizeResults.entries());
+    const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
     const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
 
-    const prompt = createGroupingPrompt({
-      title: prInfo.title,
-      description: prInfo.body || '',
-      files: files.map((file) => ({
-        path: file.path,
-        patch: file.patch || 'No changes',
-      })),
-      summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
-        path,
-        summary: result.summary,
-        needsReview: result.needsReview,
-        reason: result.reason,
-      })),
-    });
+    console.debug(`Processing ${entries.length} files in ${totalBatches} batches`);
 
-    try {
-      const response = await this.openai.responses.create({
-        model: 'gpt-4o',
-        input: [
-          {
-            role: 'user',
-            content: prompt,
-            type: 'message',
-          },
-        ],
-        text: {
-          format: {
-            name: overallSummaryFormat.json_schema.name,
-            type: overallSummaryFormat.type,
-            schema: overallSummaryFormat.json_schema.schema ?? {},
-          },
-        },
-        temperature: 0.2,
-      });
+    // バッチ処理
+    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+      console.debug(`Processing batch ${batchNumber}/${totalBatches}`);
 
-      const content = response.output_text;
-      if (!content) {
-        console.error('No grouping response generated');
-        return undefined;
+      const batchEntries = entries.slice(i, i + BATCH_SIZE);
+      const batchFiles = files.filter(f =>
+        batchEntries.some(([path]) => path === f.path)
+      );
+
+      console.debug(`Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+
+      try {
+        const prompt = createGroupingPrompt({
+          title: prInfo.title,
+          description: prInfo.body || '',
+          files: batchFiles.map(f => ({
+            path: f.path,
+            patch: f.patch || 'No changes',
+          })),
+          summarizeResults: batchEntries.map(([path, result]) => ({
+            path,
+            summary: result.summary,
+            needsReview: result.needsReview,
+            reason: result.reason,
+          })),
+        });
+
+        const response = await this.openai.responses.create({
+          model: 'gpt-4o',
+          input: [
+            {
+              role: 'user',
+              content: prompt,
+              type: 'message',
+            },
+          ],
+          text: {
+            format: {
+              name: overallSummaryFormat.json_schema.name,
+              type: overallSummaryFormat.type,
+              schema: overallSummaryFormat.json_schema.schema ?? {},
+            },
+          },
+          temperature: 0.2,
+        });
+
+        const content = response.output_text;
+        if (!content) {
+          console.error(`No response generated for batch ${batchNumber}`);
+          continue;
+        }
+
+        const result = OverallSummarySchema.parse(JSON.parse(content));
+        console.debug(`Batch ${batchNumber} analysis complete:`, JSON.stringify(result, null, 2));
+        results.push(result);
+      } catch (error) {
+        console.error(`Error in batch ${batchNumber}/${totalBatches}:`, error);
       }
+    }
 
-      const result = OverallSummarySchema.parse(JSON.parse(content));
-
-      console.debug('OpenAI overall summary results:', JSON.stringify(result, null, 2));
-
-      return result;
-    } catch (error) {
-      console.error('Error generating overall summary:', error);
+    if (results.length === 0) {
+      console.error('No results generated from any batch');
       return undefined;
     }
+
+    // バッチ結果のマージ
+    console.debug(`Merging results from ${results.length} batches`);
+    const mergedResult = this.mergeOverallSummaries(results);
+    console.debug('Final merged results:', JSON.stringify(mergedResult, null, 2));
+
+    return mergedResult;
+  }
+
+  /**
+   * Merge multiple OverallSummary results into one
+   */
+  private mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
+    return {
+      // 説明を結合
+      description: summaries.map(s => s.description).join('\n\n'),
+
+      // アスペクトマッピングをマージ（同じkeyのものは統合）
+      aspectMappings: summaries.flatMap(s => s.aspectMappings)
+        .reduce((acc, mapping) => {
+          const existing = acc.find(m => m.aspect.key === mapping.aspect.key);
+          if (existing) {
+            // 同じkeyのaspectが存在する場合はファイル一覧をマージ
+            existing.files = [...new Set([...existing.files, ...mapping.files])];
+          } else {
+            // 新しいaspectの場合はそのまま追加
+            acc.push({ ...mapping });
+          }
+          return acc;
+        }, [] as OverallSummary['aspectMappings']),
+
+      // 横断的な懸念事項の重複を除去
+      crossCuttingConcerns: [...new Set(
+        summaries.flatMap(s => s.crossCuttingConcerns ?? [])
+      )],
+    };
   }
 
   /**
