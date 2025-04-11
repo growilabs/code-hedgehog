@@ -2,6 +2,9 @@
  * OpenAI processor prompt templates
  */
 
+import type { ReviewAspect } from './aspects.ts';
+import { defaultReviewAspects } from './aspects.ts';
+
 /**
  * Template for triage phase prompt
  */
@@ -66,12 +69,14 @@ export const createGroupingPrompt = ({
   files,
   summarizeResults,
   previousAnalysis,
+  aspects = defaultReviewAspects,
 }: {
   title: string;
   description: string;
   files: { path: string; patch: string }[];
   summarizeResults: { path: string; needsReview: boolean, summary?: string, reason?: string }[];
   previousAnalysis?: string;
+  aspects?: ReviewAspect[];
 }) => `You are analyzing changes in the current batch of a pull request.
 
 ${previousAnalysis ? `## Previous Analysis (Reference for aspect consistency)
@@ -87,6 +92,11 @@ Do NOT include previous files or concerns in your response.\n` : ''}
 Title: ${title}
 Description: ${description}
 
+## Available Review Aspects
+Use these standard aspects as a guide for your analysis:
+${aspects.map(a => `- ${a.name} (key: "${a.key}")
+  ${a.description}`).join('\n')}
+
 ## Current Batch Files
 
 ${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')}
@@ -98,15 +108,15 @@ ${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}
 Analyze the current batch files and respond with:
 1. Description focusing ONLY on the current batch files
 2. Aspect mappings for current batch files:
-   - Reuse matching aspect keys from previous analysis for consistency
-   - Use new aspect keys for unrelated changes
-   - Previous analysis is ONLY for aspect key reference
+   - Try to use standard aspects from the provided list where applicable
+   - Feel free to create new aspects if the changes don't fit well with any standard aspects
+   - For each aspect, explain how it relates to the specific changes
 
 Important rules:
 - Focus ONLY on files listed in "Current Batch Files"
-- Do NOT include files from previous analysis
-- Do NOT copy concerns from previous analysis
-- Previous analysis should ONLY guide aspect key choice
+- Try to use standard aspects where they naturally fit the changes
+- Create new aspects if the changes can't be well described by standard aspects
+- Make sure each aspect description clearly explains its relevance to the current changes
 
 Expected JSON format:
 {
@@ -114,14 +124,14 @@ Expected JSON format:
   "aspectMappings": [
     {
       "aspect": {
-        "key": string,       // Reuse existing keys when appropriate
-        "description": string, // Description of current changes
-        "impact": string     // Impact of current changes (high, medium, low)
+        "key": string,       // Use standard aspect keys (e.g., "performance", "security")
+        "description": string, // Specific description of how this aspect applies to current changes
+        "impact": string     // Impact level (high, medium, low)
       },
-      "files": string[],     // Only current batch files
+      "files": string[]      // Files from current batch affected by this aspect
     }
   ],
-  "crossCuttingConcerns": string[] // Concerns about current batch only
+  "crossCuttingConcerns": string[] // Cross-cutting concerns specific to current batch
 }
 `;
 
