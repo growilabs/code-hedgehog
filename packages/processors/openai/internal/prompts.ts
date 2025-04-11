@@ -108,15 +108,14 @@ ${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}
 Analyze the current batch files and respond with:
 1. Description focusing ONLY on the current batch files
 2. Aspect mappings for current batch files:
-   - Try to use standard aspects from the provided list where applicable
+   - Apply ALL relevant standard aspects that naturally fit the changes
+   - Each file can have multiple aspects if they are significantly relevant
    - Feel free to create new aspects if the changes don't fit well with any standard aspects
-   - For each aspect, explain how it relates to the specific changes
 
 Important rules:
 - Focus ONLY on files listed in "Current Batch Files"
-- Try to use standard aspects where they naturally fit the changes
-- Create new aspects if the changes can't be well described by standard aspects
-- Make sure each aspect description clearly explains its relevance to the current changes
+- Apply multiple aspects to a file if they are relevant
+- Make sure each aspect description clearly explains its relationship to the changes
 
 Expected JSON format:
 {
