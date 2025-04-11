@@ -109,19 +109,22 @@ ${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')
 ${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
 
 Create a comprehensive analysis:
-1. Description that:
-   - Presents all changes as a cohesive and logically connected whole
-   - Explains the overall purpose and impact of the changes
-   - Focuses on relationships between different modifications
-2. Aspect mappings for the provided files:
-   - Apply ALL relevant standard aspects that naturally fit the changes
-   - Each file can have multiple aspects if they are significantly relevant
-   - Feel free to create new aspects if the changes don't fit well with any standard aspects
+1. For elements requiring semantic integration:
+   - description: Create a comprehensive overview integrating all changes
+   - aspect.description: Update descriptions to reflect the current understanding
+   - crossCuttingConcerns: Maintain and extend concerns based on all changes
+
+2. For aspect mappings:
+   - Analyze ONLY the current files
+   - Add them to appropriate aspects
+   - DO NOT remove or modify aspect assignments for files you cannot directly analyze
+   - Focus on extending existing aspects rather than removing them
 
 Important rules:
-- Only analyze the listed files for aspect mappings
-- Create a unified description of the entire change set
-- Ensure each aspect description explains its specific impact
+- Only assign current files to aspects
+- Maintain previous file-aspect relationships
+- Update descriptions without invalidating previous assignments
+- Create new aspects only when necessary for current files
 
 Expected JSON format:
 {

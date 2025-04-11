@@ -9,6 +9,7 @@ import type {
   SummarizeResult,
   OverallSummary,
 } from './deps.ts';
+import { ImpactLevel } from '../base/schema.ts';
 import { createTriagePrompt, createGroupingPrompt, createReviewPrompt } from './internal/prompts.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
@@ -202,31 +203,61 @@ export class OpenaiProcessor extends BaseProcessor {
 
   /**
    * Merge multiple OverallSummary results into one
+   * LLM integration:
+   * - description: Comprehensive explanation of all changes
+   * - aspect.description: Detailed explanation of each aspect
+   * - crossCuttingConcerns: Overall concerns and considerations
+   *
+   * Mechanical integration:
+   * - aspect.key: Maintain consistency across batches
+   * - aspect.files: Combine with deduplication
+   * - aspect.impact: Use highest impact level
    */
   private mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
+    const latest = summaries[summaries.length - 1];
+    const previous = summaries.slice(0, -1);
+    const previousMappings = previous.flatMap(s => s.aspectMappings);
+
+    // 現在のマッピングの処理（新規または更新）
+    const newAspectMappings = latest.aspectMappings.map(latestMapping => {
+      // 同じkeyの過去のマッピングを検索
+      const prevMapping = previousMappings.find(p => p.aspect.key === latestMapping.aspect.key);
+
+      if (prevMapping) {
+        // 既存のアスペクトの場合
+        return {
+          aspect: {
+            key: latestMapping.aspect.key,
+            description: latestMapping.aspect.description, // 新しい説明を使用
+            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact])
+          },
+          files: [...new Set([...prevMapping.files, ...latestMapping.files])]
+        };
+      }
+      // 新しいアスペクトの場合はそのまま追加
+      return latestMapping;
+    });
+
+    // 前回のアスペクトで現在言及されていないものを維持
+    const preservedMappings = previousMappings.filter(prev =>
+      !latest.aspectMappings.some(curr => curr.aspect.key === prev.aspect.key)
+    );
+
     return {
-      // 最新のdescriptionを使用（LLMが統合済み）
-      description: summaries[summaries.length - 1].description,
-
-      // アスペクトマッピングをマージ（同じkeyのものは統合）
-      aspectMappings: summaries.flatMap(s => s.aspectMappings)
-        .reduce((acc, mapping) => {
-          const existing = acc.find(m => m.aspect.key === mapping.aspect.key);
-          if (existing) {
-            // 同じkeyのaspectが存在する場合はファイル一覧をマージ
-            existing.files = [...new Set([...existing.files, ...mapping.files])];
-          } else {
-            // 新しいaspectの場合はそのまま追加
-            acc.push({ ...mapping });
-          }
-          return acc;
-        }, [] as OverallSummary['aspectMappings']),
-
-      // 横断的な懸念事項の重複を除去
-      crossCuttingConcerns: [...new Set(
-        summaries.flatMap(s => s.crossCuttingConcerns ?? [])
-      )],
+      description: latest.description,
+      aspectMappings: [...preservedMappings, ...newAspectMappings],
+      crossCuttingConcerns: latest.crossCuttingConcerns
     };
+  }
+
+  /**
+   * Merge impact levels by selecting highest priority
+   * Priority: high > medium > low
+   */
+  private mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
+    if (impacts.includes(ImpactLevel.High)) return ImpactLevel.High;
+    if (impacts.includes(ImpactLevel.Medium)) return ImpactLevel.Medium;
+    return ImpactLevel.Low;
   }
 
   /**
