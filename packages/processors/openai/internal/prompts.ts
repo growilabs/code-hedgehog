@@ -77,15 +77,18 @@ export const createGroupingPrompt = ({
   summarizeResults: { path: string; needsReview: boolean, summary?: string, reason?: string }[];
   previousAnalysis?: string;
   aspects?: ReviewAspect[];
-}) => `You are analyzing changes in the current batch of a pull request.
+}) => `You are analyzing code changes in a pull request.
 
-${previousAnalysis ? `## Previous Analysis (Reference for aspect consistency)
-The following analysis from previous batches should be used as reference to maintain consistent aspect categorization:
+${previousAnalysis ? `## Previous Analysis
+The following analysis provides context for your review:
 
 ${previousAnalysis}
 
-Note: Previous analysis provides context for aspect reuse only.
-Do NOT include previous files or concerns in your response.\n` : ''}
+Note:
+- Use previous analysis to maintain consistent aspect categorization
+- Create a comprehensive description that covers all changes cohesively
+- Present changes as a logically connected whole
+- Only analyze listed files for aspect mappings\n` : ''}
 
 ## Pull Request
 
@@ -97,29 +100,32 @@ Use these standard aspects as a guide for your analysis:
 ${aspects.map(a => `- ${a.name} (key: "${a.key}")
   ${a.description}`).join('\n')}
 
-## Current Batch Files
+## Files To Analyze
 
 ${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')}
 
-## Current Batch Summaries
+## Change Summaries
 
 ${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
 
-Analyze the current batch files and respond with:
-1. Description focusing ONLY on the current batch files
-2. Aspect mappings for current batch files:
+Create a comprehensive analysis:
+1. Description that:
+   - Presents all changes as a cohesive and logically connected whole
+   - Explains the overall purpose and impact of the changes
+   - Focuses on relationships between different modifications
+2. Aspect mappings for the provided files:
    - Apply ALL relevant standard aspects that naturally fit the changes
    - Each file can have multiple aspects if they are significantly relevant
    - Feel free to create new aspects if the changes don't fit well with any standard aspects
 
 Important rules:
-- Focus ONLY on files listed in "Current Batch Files"
-- Apply multiple aspects to a file if they are relevant
-- Make sure each aspect description clearly explains its relationship to the changes
+- Only analyze the listed files for aspect mappings
+- Create a unified description of the entire change set
+- Ensure each aspect description explains its specific impact
 
 Expected JSON format:
 {
-  "description": string, // Description of current batch changes only
+  "description": string, // Comprehensive description integrating previous and current changes
   "aspectMappings": [
     {
       "aspect": {

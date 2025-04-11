@@ -205,8 +205,8 @@ export class OpenaiProcessor extends BaseProcessor {
    */
   private mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
     return {
-      // 説明を結合
-      description: summaries.map(s => s.description).join('\n\n'),
+      // 最新のdescriptionを使用（LLMが統合済み）
+      description: summaries[summaries.length - 1].description,
 
       // アスペクトマッピングをマージ（同じkeyのものは統合）
       aspectMappings: summaries.flatMap(s => s.aspectMappings)
