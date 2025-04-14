@@ -95,10 +95,37 @@ Note:
 Title: ${title}
 Description: ${description}
 
-## Available Review Aspects
-Use these standard aspects as a guide for your analysis:
+## Review Aspects
+
+1. Standard Aspects
+Use these predefined aspects for technical characteristics:
 ${aspects.map(a => `- ${a.name} (key: "${a.key}")
   ${a.description}`).join('\n')}
+
+2. Domain Aspects
+What is a Domain?
+- A domain represents a specific business or functional area that the code addresses
+- Examples:
+  - "Authentication & Authorization": User login, permissions, security tokens
+  - "Payment Processing": Payment methods, transactions, billing
+  - "Data Transformation": Format conversion, validation, normalization
+  - "User Management": User profiles, preferences, roles
+
+How to identify domains:
+- Analyze file's purpose and responsibilities
+- Look for business/functional patterns in:
+  - Code structure and organization
+  - Function and variable names
+  - Class responsibilities
+  - Comments and documentation
+- Consider what real-world problem the code solves
+
+Creating domain aspects:
+- Use format: "domain:<name>" (e.g., domain:auth, domain:payment)
+- Provide description explaining:
+  - What the domain handles
+  - Why this file belongs to the domain
+- Judge impact level in domain context
 
 ## Files To Analyze
 
@@ -115,10 +142,16 @@ Create a comprehensive analysis:
    - crossCuttingConcerns: Maintain and extend concerns based on all changes
 
 2. For aspect mappings:
-   - Analyze ONLY the current files
-   - Add them to appropriate aspects
+   - Analyze ONLY the current files for both standard and domain aspects
+   - For standard aspects:
+     - Add files to relevant technical aspects using provided keys
+     - Explain how the changes relate to each aspect
+   - For domain aspects:
+     - Identify business/functional domains for each file
+     - Create aspects with "domain:<name>" format
+     - Explain domain purpose and why files belong
    - DO NOT remove or modify aspect assignments for files you cannot directly analyze
-   - Focus on extending existing aspects rather than removing them
+   - Maintain both standard and domain aspects from previous analysis
 
 Important rules:
 - Only assign current files to aspects
@@ -130,13 +163,23 @@ Expected JSON format:
 {
   "description": string, // Comprehensive description integrating previous and current changes
   "aspectMappings": [
+    // Standard aspects example:
     {
       "aspect": {
-        "key": string,       // Use standard aspect keys (e.g., "performance", "security")
+        "key": string,       // Standard aspect key (e.g., "performance", "security")
         "description": string, // Specific description of how this aspect applies to current changes
         "impact": string     // Impact level (high, medium, low)
       },
       "files": string[]      // Files from current batch affected by this aspect
+    },
+    // Domain aspects example:
+    {
+      "aspect": {
+        "key": string,       // Domain aspect key (e.g., "domain:auth", "domain:payment")
+        "description": string, // Explain domain purpose and why files belong here
+        "impact": string     // Impact level in domain context (high, medium, low)
+      },
+      "files": string[]      // Files from current batch in this domain
     }
   ],
   "crossCuttingConcerns": string[] // Cross-cutting concerns specific to current batch
