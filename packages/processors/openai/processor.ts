@@ -110,29 +110,34 @@ export class OpenaiProcessor extends BaseProcessor {
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
     const BATCH_SIZE = 1; // 一度に処理するファイル数
+    const PASSES = 2; // 分析パス数
     const entries = Array.from(summarizeResults.entries());
     const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
     const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
 
-    console.debug(`Processing ${entries.length} files in ${totalBatches} batches`);
+    console.debug(`Processing ${entries.length} files in ${totalBatches} batches with ${PASSES} passes`);
 
     let accumulatedResult: OverallSummary | undefined;
     let previousAnalysis: string | undefined;
 
-    // バッチ処理
-    for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-      const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-      console.debug(`Processing batch ${batchNumber}/${totalBatches}`);
+    // 複数パスでの処理
+    for (let pass = 1; pass <= PASSES; pass++) {
+      console.debug(`Starting pass ${pass}/${PASSES}`);
 
-      const batchEntries = entries.slice(i, i + BATCH_SIZE);
-      const batchFiles = files.filter(f =>
-        batchEntries.some(([path]) => path === f.path)
-      );
+      // バッチ処理
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
 
-      console.debug(`Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
-      if (previousAnalysis) {
-        console.debug('Previous cumulative analysis:', previousAnalysis);
-      }
+        const batchEntries = entries.slice(i, i + BATCH_SIZE);
+        const batchFiles = files.filter(f =>
+          batchEntries.some(([path]) => path === f.path)
+        );
+
+        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+        if (previousAnalysis) {
+          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
+        }
 
       try {
         const prompt = createGroupingPrompt({
@@ -187,11 +192,15 @@ export class OpenaiProcessor extends BaseProcessor {
 
         // 次のバッチのために累積分析結果を更新
         previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
-        console.debug(`Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
+        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
       } catch (error) {
-        console.error(`Error in batch ${batchNumber}/${totalBatches}:`, error);
+        console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
       }
     }
+
+    // 各パスの終了をログ
+    console.debug(`[Pass ${pass}/${PASSES}] Complete`);
+  }
 
     if (!accumulatedResult) {
       console.error('No results generated from any batch');
