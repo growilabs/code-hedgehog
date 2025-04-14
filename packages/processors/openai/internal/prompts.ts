@@ -139,7 +139,29 @@ Create a comprehensive analysis:
 1. For elements requiring semantic integration:
    - description: Create a comprehensive overview integrating all changes
    - aspect.description: Update descriptions to reflect the current understanding
-   - crossCuttingConcerns: Maintain and extend concerns based on all changes
+   - crossCuttingConcerns:
+     What to identify:
+     - System-wide implications that:
+       - Affect multiple aspects or domains
+       - Require broader consideration beyond individual files
+       - Impact development practices or processes
+     
+     Examples:
+     - Security policy changes affecting multiple components
+     - Documentation updates needed across the system
+     - Performance implications spanning multiple modules
+     - Testing strategy adjustments
+     - Dependency updates requiring system-wide changes
+     - Changes to development or deployment processes
+
+     Integration with previous concerns:
+     - Review each previous concern and assess its current relevance
+     - Maintain concerns that are still applicable to the system
+     - Update concern descriptions to reflect new understanding
+     - Add new concerns arising from current changes
+     - Combine related concerns into more comprehensive descriptions
+     - Remove concerns that are no longer relevant
+     - Ensure all maintained concerns reflect current state
 
 2. For aspect mappings:
    - Analyze ONLY the current files for both standard and domain aspects
@@ -182,8 +204,14 @@ Expected JSON format:
       "files": string[]      // Files from current batch in this domain
     }
   ],
-  "crossCuttingConcerns": string[] // Cross-cutting concerns specific to current batch
+  "crossCuttingConcerns": string[] // System-wide implications requiring broader consideration
 }
+
+Note about cross-cutting concerns:
+- Focus on implications that span multiple components
+- Consider both technical and process-related impacts
+- Identify concerns that might require coordination across teams
+- Flag issues that could affect future maintenance or development
 `;
 
 /**
