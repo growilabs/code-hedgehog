@@ -9,7 +9,9 @@ import type {
   SummarizeResult,
   OverallSummary,
 } from './deps.ts';
+import { ImpactLevel } from '../base/schema.ts';
 import { createTriagePrompt, createGroupingPrompt, createReviewPrompt } from './internal/prompts.ts';
+import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -100,65 +102,188 @@ export class OpenaiProcessor extends BaseProcessor {
   }
 
   /**
-   * Implementation of overall summary generation
+   * Implementation of overall summary generation with batch processing
    */
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
+    console.debug('Starting overall summary generation with batch processing');
+    const BATCH_SIZE = 2; // Number of files to process at once
+    const PASSES = 2; // Number of analysis passes
+    const entries = Array.from(summarizeResults.entries());
+    const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
     const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
 
-    const prompt = createGroupingPrompt({
-      title: prInfo.title,
-      description: prInfo.body || '',
-      files: files.map((file) => ({
-        path: file.path,
-        patch: file.patch || 'No changes',
-      })),
-      summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
-        path,
-        summary: result.summary,
-        needsReview: result.needsReview,
-        reason: result.reason,
-      })),
-    });
+    console.debug(`Processing ${entries.length} files in ${totalBatches} batches with ${PASSES} passes`);
 
-    try {
-      const response = await this.openai.responses.create({
-        model: 'gpt-4o',
-        input: [
-          {
-            role: 'user',
-            content: prompt,
-            type: 'message',
-          },
-        ],
-        text: {
-          format: {
-            name: overallSummaryFormat.json_schema.name,
-            type: overallSummaryFormat.type,
-            schema: overallSummaryFormat.json_schema.schema ?? {},
-          },
-        },
-        temperature: 0.2,
-      });
+    let accumulatedResult: OverallSummary | undefined;
+    let previousAnalysis: string | undefined;
 
-      const content = response.output_text;
-      if (!content) {
-        console.error('No grouping response generated');
-        return undefined;
+    // Begin multi-pass processing
+    for (let pass = 1; pass <= PASSES; pass++) {
+      console.debug(`Starting pass ${pass}/${PASSES}`);
+
+      // Generate batches
+      const batches = this.createBatchEntries(entries, BATCH_SIZE, pass);
+      const totalBatches = batches.length;
+
+      // Process each batch
+      for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
+        const batchEntries = batches[batchNumber - 1];
+        const batchFiles = files.filter(f =>
+          batchEntries.some(([path]) => path === f.path)
+        );
+
+        console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
+        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+        if (previousAnalysis) {
+          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
+        }
+
+        try {
+          const prompt = createGroupingPrompt({
+            title: prInfo.title,
+            description: prInfo.body || '',
+            files: batchFiles.map(f => ({
+              path: f.path,
+              patch: f.patch || 'No changes',
+            })),
+            summarizeResults: batchEntries.map(([path, result]) => ({
+              path,
+              summary: result.summary,
+              needsReview: result.needsReview,
+              reason: result.reason,
+            })),
+            previousAnalysis,
+          });
+
+          const response = await this.openai.responses.create({
+            model: 'gpt-4o',
+            input: [
+              {
+                role: 'user',
+                content: prompt,
+                type: 'message',
+              },
+            ],
+            text: {
+              format: {
+                name: overallSummaryFormat.json_schema.name,
+                type: overallSummaryFormat.type,
+                schema: overallSummaryFormat.json_schema.schema ?? {},
+              },
+            },
+            temperature: 0.2,
+          });
+
+          const content = response.output_text;
+          if (!content) {
+            console.error(`[Pass ${pass}/${PASSES}] No response generated for batch ${batchNumber}`);
+            continue;
+          }
+
+          const batchResult = OverallSummarySchema.parse(JSON.parse(content));
+
+          // Update accumulated results
+          if (accumulatedResult) {
+            accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
+          } else {
+            accumulatedResult = batchResult;
+          }
+
+          // Update cumulative analysis for next batch
+          previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
+          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
+        } catch (error) {
+          console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
+        }
       }
 
-      const result = OverallSummarySchema.parse(JSON.parse(content));
+      // Log completion of each pass
+      console.debug(`[Pass ${pass}/${PASSES}] Complete`);
+    }
 
-      console.debug('OpenAI overall summary results:', JSON.stringify(result, null, 2));
-
-      return result;
-    } catch (error) {
-      console.error('Error generating overall summary:', error);
+    if (!accumulatedResult) {
+      console.error('No results generated from any batch');
       return undefined;
     }
+
+    return accumulatedResult;
+  }
+
+  /**
+   * Create batches for given pass
+   */
+  private createBatchEntries(
+    entries: [string, SummarizeResult][],
+    batchSize: number,
+    pass: number
+  ): [string, SummarizeResult][][] {
+    if (pass === 1) {
+      return createHorizontalBatches(entries, batchSize);
+    }
+    return createVerticalBatches(entries, batchSize);
+  }
+
+  /**
+   * Merge multiple OverallSummary results into one
+   * LLM integration:
+   * - description: Comprehensive explanation of all changes
+   * - aspect.description: Detailed explanation of each aspect
+   * - crossCuttingConcerns: Overall concerns and considerations
+   *
+   * Mechanical integration:
+   * - aspect.key: Maintain consistency across batches
+   * - aspect.files: Combine with deduplication
+   * - aspect.impact: Use highest impact level
+   */
+  private mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
+    const latest = summaries[summaries.length - 1];
+    const previous = summaries.slice(0, -1);
+    const previousMappings = previous.flatMap(s => s.aspectMappings);
+
+    // Process current mappings (new or update)
+    const newAspectMappings = latest.aspectMappings.map(latestMapping => {
+      // Find previous mapping with the same key
+      const prevMapping = previousMappings.find(p => p.aspect.key === latestMapping.aspect.key);
+
+      if (prevMapping) {
+        // For existing aspect
+        return {
+          aspect: {
+            key: latestMapping.aspect.key,
+            description: latestMapping.aspect.description, // Use new description
+            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact])
+          },
+          files: [...new Set([...prevMapping.files, ...latestMapping.files])]
+        };
+      }
+      // Add new aspect as is
+      return latestMapping;
+    });
+
+    // Preserve aspects from previous mappings that are not referenced in current analysis
+    const preservedMappings = previousMappings.filter(prev =>
+      !latest.aspectMappings.some(curr => curr.aspect.key === prev.aspect.key)
+    );
+
+    return {
+      description: latest.description,
+      aspectMappings: [...preservedMappings, ...newAspectMappings],
+      crossCuttingConcerns: latest.crossCuttingConcerns
+    };
+  }
+
+  /**
+   * Merge impact levels by selecting highest priority
+   * Priority: high > medium > low
+   */
+  private mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
+    if (impacts.includes(ImpactLevel.High)) return ImpactLevel.High;
+    if (impacts.includes(ImpactLevel.Medium)) return ImpactLevel.Medium;
+    return ImpactLevel.Low;
   }
 
   /**
@@ -257,6 +382,29 @@ export class OpenaiProcessor extends BaseProcessor {
     }
 
     return { comments };
+  }
+
+  /**
+   * Format previous analysis result for next batch
+   */
+  private formatPreviousAnalysis(result: OverallSummary): string {
+    return `Previous Batch Analysis:
+{
+  "description": "${result.description}",
+  "aspectMappings": [
+${result.aspectMappings.map(mapping => `    {
+      "aspect": {
+        "key": "${mapping.aspect.key}",
+        "description": "${mapping.aspect.description}",
+        "impact": "${mapping.aspect.impact}"
+      },
+      "files": ${JSON.stringify(mapping.files)}
+    }`).join(',\n')}
+  ],
+  "crossCuttingConcerns": [
+${result.crossCuttingConcerns?.map(concern => `    "${concern}"`).join(',\n') || '    // No concerns'}
+  ]
+}`;
   }
 
   /**
