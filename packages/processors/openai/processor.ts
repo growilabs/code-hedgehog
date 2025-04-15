@@ -109,7 +109,7 @@ export class OpenaiProcessor extends BaseProcessor {
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
-    const BATCH_SIZE = 1; // 一度に処理するファイル数
+    const BATCH_SIZE = 2; // 一度に処理するファイル数
     const PASSES = 2; // 分析パス数
     const entries = Array.from(summarizeResults.entries());
     const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
@@ -124,83 +124,85 @@ export class OpenaiProcessor extends BaseProcessor {
     for (let pass = 1; pass <= PASSES; pass++) {
       console.debug(`Starting pass ${pass}/${PASSES}`);
 
-      // バッチ処理
-      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-        console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
+      // バッチを生成
+      const batches = this.createBatchEntries(entries, BATCH_SIZE, pass);
+      const totalBatches = batches.length;
 
-        const batchEntries = entries.slice(i, i + BATCH_SIZE);
+      // 各バッチを処理
+      for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
+        const batchEntries = batches[batchNumber - 1];
         const batchFiles = files.filter(f =>
           batchEntries.some(([path]) => path === f.path)
         );
 
+        console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
         console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
         if (previousAnalysis) {
           console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
         }
 
-      try {
-        const prompt = createGroupingPrompt({
-          title: prInfo.title,
-          description: prInfo.body || '',
-          files: batchFiles.map(f => ({
-            path: f.path,
-            patch: f.patch || 'No changes',
-          })),
-          summarizeResults: batchEntries.map(([path, result]) => ({
-            path,
-            summary: result.summary,
-            needsReview: result.needsReview,
-            reason: result.reason,
-          })),
-          previousAnalysis,
-        });
+        try {
+          const prompt = createGroupingPrompt({
+            title: prInfo.title,
+            description: prInfo.body || '',
+            files: batchFiles.map(f => ({
+              path: f.path,
+              patch: f.patch || 'No changes',
+            })),
+            summarizeResults: batchEntries.map(([path, result]) => ({
+              path,
+              summary: result.summary,
+              needsReview: result.needsReview,
+              reason: result.reason,
+            })),
+            previousAnalysis,
+          });
 
-        const response = await this.openai.responses.create({
-          model: 'gpt-4o',
-          input: [
-            {
-              role: 'user',
-              content: prompt,
-              type: 'message',
+          const response = await this.openai.responses.create({
+            model: 'gpt-4o',
+            input: [
+              {
+                role: 'user',
+                content: prompt,
+                type: 'message',
+              },
+            ],
+            text: {
+              format: {
+                name: overallSummaryFormat.json_schema.name,
+                type: overallSummaryFormat.type,
+                schema: overallSummaryFormat.json_schema.schema ?? {},
+              },
             },
-          ],
-          text: {
-            format: {
-              name: overallSummaryFormat.json_schema.name,
-              type: overallSummaryFormat.type,
-              schema: overallSummaryFormat.json_schema.schema ?? {},
-            },
-          },
-          temperature: 0.2,
-        });
+            temperature: 0.2,
+          });
 
-        const content = response.output_text;
-        if (!content) {
-          console.error(`No response generated for batch ${batchNumber}`);
-          continue;
+          const content = response.output_text;
+          if (!content) {
+            console.error(`[Pass ${pass}/${PASSES}] No response generated for batch ${batchNumber}`);
+            continue;
+          }
+
+          const batchResult = OverallSummarySchema.parse(JSON.parse(content));
+
+          // 累積結果の更新
+          if (accumulatedResult) {
+            accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
+          } else {
+            accumulatedResult = batchResult;
+          }
+
+          // 次のバッチのために累積分析結果を更新
+          previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
+          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
+        } catch (error) {
+          console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
         }
-
-        const batchResult = OverallSummarySchema.parse(JSON.parse(content));
-
-        // 累積結果の更新
-        if (accumulatedResult) {
-          accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
-        } else {
-          accumulatedResult = batchResult;
-        }
-
-        // 次のバッチのために累積分析結果を更新
-        previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
-        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
-      } catch (error) {
-        console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
       }
-    }
 
-    // 各パスの終了をログ
-    console.debug(`[Pass ${pass}/${PASSES}] Complete`);
-  }
+      // 各パスの終了をログ
+      console.debug(`[Pass ${pass}/${PASSES}] Complete`);
+    }
 
     if (!accumulatedResult) {
       console.error('No results generated from any batch');
@@ -208,6 +210,63 @@ export class OpenaiProcessor extends BaseProcessor {
     }
 
     return accumulatedResult;
+  }
+
+  /**
+   * Create batches for given pass
+   */
+  private createBatchEntries(
+    entries: [string, SummarizeResult][],
+    batchSize: number,
+    pass: number
+  ): [string, SummarizeResult][][] {
+    if (pass === 1) {
+      return this.createHorizontalBatches(entries, batchSize);
+    }
+    return this.createVerticalBatches(entries, batchSize);
+  }
+
+  /**
+   * Create horizontal batches (first pass)
+   */
+  private createHorizontalBatches(
+    entries: [string, SummarizeResult][],
+    batchSize: number
+  ): [string, SummarizeResult][][] {
+    const batches = [];
+    for (let i = 0; i < entries.length; i += batchSize) {
+      batches.push(entries.slice(i, i + batchSize));
+    }
+    return batches;
+  }
+
+  /**
+   * Create vertical batches (second pass)
+   */
+  private createVerticalBatches(
+    entries: [string, SummarizeResult][],
+    batchSize: number
+  ): [string, SummarizeResult][][] {
+    // チャンクサイズを計算（切り上げ）
+    const chunkSize = Math.ceil(entries.length / batchSize);
+    
+    // エントリーをチャンクに分割
+    const chunks: [string, SummarizeResult][][] = [];
+    for (let i = 0; i < entries.length; i += chunkSize) {
+      chunks.push(entries.slice(i, i + chunkSize));
+    }
+    
+    // 垂直方向にグループ化
+    const batches: [string, SummarizeResult][][] = [];
+    for (let pos = 0; pos < chunkSize; pos++) {
+      const batch = chunks
+        .map(chunk => chunk[pos])
+        .filter((entry): entry is [string, SummarizeResult] => entry !== undefined);
+      if (batch.length > 0) {
+        batches.push(batch);
+      }
+    }
+    return batches;
   }
 
   /**
