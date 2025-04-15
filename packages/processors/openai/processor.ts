@@ -11,6 +11,7 @@ import type {
 } from './deps.ts';
 import { ImpactLevel } from '../base/schema.ts';
 import { createTriagePrompt, createGroupingPrompt, createReviewPrompt } from './internal/prompts.ts';
+import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -221,52 +222,9 @@ export class OpenaiProcessor extends BaseProcessor {
     pass: number
   ): [string, SummarizeResult][][] {
     if (pass === 1) {
-      return this.createHorizontalBatches(entries, batchSize);
+      return createHorizontalBatches(entries, batchSize);
     }
-    return this.createVerticalBatches(entries, batchSize);
-  }
-
-  /**
-   * Create horizontal batches (first pass)
-   */
-  private createHorizontalBatches(
-    entries: [string, SummarizeResult][],
-    batchSize: number
-  ): [string, SummarizeResult][][] {
-    const batches = [];
-    for (let i = 0; i < entries.length; i += batchSize) {
-      batches.push(entries.slice(i, i + batchSize));
-    }
-    return batches;
-  }
-
-  /**
-   * Create vertical batches (second pass)
-   */
-  private createVerticalBatches(
-    entries: [string, SummarizeResult][],
-    batchSize: number
-  ): [string, SummarizeResult][][] {
-    // Calculate chunk size (rounded up)
-    const chunkSize = Math.ceil(entries.length / batchSize);
-    
-    // Split entries into chunks
-    const chunks: [string, SummarizeResult][][] = [];
-    for (let i = 0; i < entries.length; i += chunkSize) {
-      chunks.push(entries.slice(i, i + chunkSize));
-    }
-    
-    // Group files vertically
-    const batches: [string, SummarizeResult][][] = [];
-    for (let pos = 0; pos < chunkSize; pos++) {
-      const batch = chunks
-        .map(chunk => chunk[pos])
-        .filter((entry): entry is [string, SummarizeResult] => entry !== undefined);
-      if (batch.length > 0) {
-        batches.push(batch);
-      }
-    }
-    return batches;
+    return createVerticalBatches(entries, batchSize);
   }
 
   /**
