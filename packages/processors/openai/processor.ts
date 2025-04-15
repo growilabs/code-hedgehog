@@ -109,8 +109,8 @@ export class OpenaiProcessor extends BaseProcessor {
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
-    const BATCH_SIZE = 2; // 一度に処理するファイル数
-    const PASSES = 2; // 分析パス数
+    const BATCH_SIZE = 2; // Number of files to process at once
+    const PASSES = 2; // Number of analysis passes
     const entries = Array.from(summarizeResults.entries());
     const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
     const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
@@ -124,11 +124,11 @@ export class OpenaiProcessor extends BaseProcessor {
     for (let pass = 1; pass <= PASSES; pass++) {
       console.debug(`Starting pass ${pass}/${PASSES}`);
 
-      // バッチを生成
+      // Generate batches
       const batches = this.createBatchEntries(entries, BATCH_SIZE, pass);
       const totalBatches = batches.length;
 
-      // 各バッチを処理
+      // Process each batch
       for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
         const batchEntries = batches[batchNumber - 1];
         const batchFiles = files.filter(f =>
@@ -200,7 +200,7 @@ export class OpenaiProcessor extends BaseProcessor {
         }
       }
 
-      // 各パスの終了をログ
+      // Log completion of each pass
       console.debug(`[Pass ${pass}/${PASSES}] Complete`);
     }
 
@@ -247,16 +247,16 @@ export class OpenaiProcessor extends BaseProcessor {
     entries: [string, SummarizeResult][],
     batchSize: number
   ): [string, SummarizeResult][][] {
-    // チャンクサイズを計算（切り上げ）
+    // Calculate chunk size (rounded up)
     const chunkSize = Math.ceil(entries.length / batchSize);
     
-    // エントリーをチャンクに分割
+    // Split entries into chunks
     const chunks: [string, SummarizeResult][][] = [];
     for (let i = 0; i < entries.length; i += chunkSize) {
       chunks.push(entries.slice(i, i + chunkSize));
     }
     
-    // 垂直方向にグループ化
+    // Group files vertically
     const batches: [string, SummarizeResult][][] = [];
     for (let pos = 0; pos < chunkSize; pos++) {
       const batch = chunks
@@ -286,23 +286,23 @@ export class OpenaiProcessor extends BaseProcessor {
     const previous = summaries.slice(0, -1);
     const previousMappings = previous.flatMap(s => s.aspectMappings);
 
-    // 現在のマッピングの処理（新規または更新）
+    // Process current mappings (new or update)
     const newAspectMappings = latest.aspectMappings.map(latestMapping => {
-      // 同じkeyの過去のマッピングを検索
+      // Find previous mapping with the same key
       const prevMapping = previousMappings.find(p => p.aspect.key === latestMapping.aspect.key);
 
       if (prevMapping) {
-        // 既存のアスペクトの場合
+        // For existing aspect
         return {
           aspect: {
             key: latestMapping.aspect.key,
-            description: latestMapping.aspect.description, // 新しい説明を使用
+            description: latestMapping.aspect.description, // Use new description
             impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact])
           },
           files: [...new Set([...prevMapping.files, ...latestMapping.files])]
         };
       }
-      // 新しいアスペクトの場合はそのまま追加
+      // Add new aspect as is
       return latestMapping;
     });
 
