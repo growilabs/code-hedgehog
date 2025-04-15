@@ -1,10 +1,3 @@
-import dotenvx from "npm:@dotenvx/dotenvx";
-
-// Load environment variables from both files
-await dotenvx.config({
-  path: ['.act.env', '.act.secrets']
-});
-
 async function main() {
   const baseUrl = Deno.env.get('DIFY_API_BASE_URL');
   if (!baseUrl) {
