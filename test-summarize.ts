@@ -1,33 +1,17 @@
-import { readLines } from "https://deno.land/std@0.217.0/io/read_lines.ts";
+import dotenvx from "npm:@dotenvx/dotenvx";
 
-async function loadEnvFromFile(path: string): Promise<Map<string, string>> {
-  const env = new Map<string, string>();
-  const file = await Deno.open(path);
-  
-  for await (const line of readLines(file)) {
-    if (line && !line.startsWith('#')) {
-      const [key, value] = line.split('=').map((s: string) => s.trim());
-      if (key && value) {
-        env.set(key, value);
-      }
-    }
-  }
-  
-  file.close();
-  return env;
-}
+// Load environment variables from both files
+await dotenvx.config({
+  path: ['.act.env', '.act.secrets']
+});
 
 async function main() {
-  // Load both environment files
-  const secrets = await loadEnvFromFile('.act.secrets');
-  const env = await loadEnvFromFile('.act.env');
-  
-  const baseUrl = env.get('DIFY_API_BASE_URL');
+  const baseUrl = Deno.env.get('DIFY_API_BASE_URL');
   if (!baseUrl) {
     throw new Error('DIFY_API_BASE_URL is not set in .act.env');
   }
-  const apiKey = secrets.get('DIFY_API_KEY_SUMMARIZE');
-  
+
+  const apiKey = Deno.env.get('DIFY_API_KEY_SUMMARIZE');
   if (!apiKey) {
     throw new Error('DIFY_API_KEY_SUMMARIZE is not set in .act.secrets');
   }
