@@ -120,7 +120,7 @@ export class OpenaiProcessor extends BaseProcessor {
     let accumulatedResult: OverallSummary | undefined;
     let previousAnalysis: string | undefined;
 
-    // 複数パスでの処理
+    // Begin multi-pass processing
     for (let pass = 1; pass <= PASSES; pass++) {
       console.debug(`Starting pass ${pass}/${PASSES}`);
 
@@ -185,14 +185,14 @@ export class OpenaiProcessor extends BaseProcessor {
 
           const batchResult = OverallSummarySchema.parse(JSON.parse(content));
 
-          // 累積結果の更新
+          // Update accumulated results
           if (accumulatedResult) {
             accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
           } else {
             accumulatedResult = batchResult;
           }
 
-          // 次のバッチのために累積分析結果を更新
+          // Update cumulative analysis for next batch
           previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
           console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
         } catch (error) {
@@ -306,7 +306,7 @@ export class OpenaiProcessor extends BaseProcessor {
       return latestMapping;
     });
 
-    // 前回のアスペクトで現在言及されていないものを維持
+    // Preserve aspects from previous mappings that are not referenced in current analysis
     const preservedMappings = previousMappings.filter(prev =>
       !latest.aspectMappings.some(curr => curr.aspect.key === prev.aspect.key)
     );
