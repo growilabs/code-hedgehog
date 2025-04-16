@@ -192,7 +192,7 @@ export class OpenaiProcessor extends BaseProcessor {
           }
 
           // Update cumulative analysis for next batch
-          previousAnalysis = this.formatPreviousAnalysisForPrompt(accumulatedResult);
+          previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
           console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
@@ -310,17 +310,6 @@ export class OpenaiProcessor extends BaseProcessor {
     return { comments };
   }
 
-
-  /**
-   * Format previous analysis result for prompt
-   * Adds a prefix and preserves the format expected by the OpenAI model
-   * @param result Previous analysis result
-   * @returns Formatted analysis string for prompts
-   */
-  private formatPreviousAnalysisForPrompt(result: OverallSummary): string {
-    const json = this.formatPreviousAnalysis(result);
-    return `Previous Batch Analysis:\n${json}`;
-  }
 
   /**
    * Format review comment
