@@ -194,24 +194,24 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param result Previous analysis result
    * @returns Formatted analysis string
    */
+  /**
+   * Format previous analysis result as JSON
+   * @param result Previous analysis result
+   * @returns JSON string of the analysis
+   */
   protected formatPreviousAnalysis(result: OverallSummary): string {
-    return `Previous Batch Analysis:
-{
-  "description": "${result.description}",
-  "aspectMappings": [
-${result.aspectMappings.map(mapping => `    {
-      "aspect": {
-        "key": "${mapping.aspect.key}",
-        "description": "${mapping.aspect.description}",
-        "impact": "${mapping.aspect.impact}"
-      },
-      "files": ${JSON.stringify(mapping.files)}
-    }`).join(',\n')}
-  ],
-  "crossCuttingConcerns": [
-${result.crossCuttingConcerns?.map(concern => `    "${concern}"`).join(',\n') || '    // No concerns'}
-  ]
-}`;
+    return JSON.stringify({
+      description: result.description,
+      aspectMappings: result.aspectMappings.map(mapping => ({
+        aspect: {
+          key: mapping.aspect.key,
+          description: mapping.aspect.description,
+          impact: mapping.aspect.impact
+        },
+        files: mapping.files
+      })),
+      crossCuttingConcerns: result.crossCuttingConcerns || []
+    }, null, 2);
   }
 
   /**
