@@ -106,30 +106,91 @@ export class DifyProcessor extends BaseProcessor {
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
-    summarizeResults: Map<string, SummarizeResult>
+    summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
-    try {
-      const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, {
-        inputs: {
-          title: prInfo.title,
-          description: prInfo.body || "",
-          files,
-          summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
-            path,
-            summary: result.summary,
-            needsReview: result.needsReview,
-            reason: result.reason,
-          })),
-        },
-        response_mode: 'blocking' as const,
-        user: this.config.user,
-      });
-      return OverallSummarySchema.parse(JSON.parse(response));
+    console.debug('Starting overall summary generation with batch processing');
+    const BATCH_SIZE = 2; // Number of files to process at once
+    const PASSES = 2; // Number of analysis passes
+    const entries = Array.from(summarizeResults.entries());
+    const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
 
-    } catch (error) {
-      console.error("Error generating overall summary:", error);
+    console.debug(`Processing ${entries.length} files in ${totalBatches} batches with ${PASSES} passes`);
+
+    let accumulatedResult: OverallSummary | undefined;
+    let previousAnalysis: string | undefined;
+
+    // Begin multi-pass processing
+    for (let pass = 1; pass <= PASSES; pass++) {
+      console.debug(`Starting pass ${pass}/${PASSES}`);
+
+      // Generate batches
+      const batches = this.createBatchEntries(entries, BATCH_SIZE, pass);
+      const totalBatches = batches.length;
+
+      // Process each batch
+      for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
+        const batchEntries = batches[batchNumber - 1];
+        const batchFiles = files.filter(f =>
+          batchEntries.some(([path]) => path === f.path)
+        );
+
+        console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
+        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+        if (previousAnalysis) {
+          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
+        }
+
+        try {
+          const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, {
+            inputs: {
+              title: prInfo.title,
+              description: prInfo.body || "",
+              files: batchFiles,
+              summarizeResults: batchEntries.map(([path, result]) => ({
+                path,
+                summary: result.summary,
+                needsReview: result.needsReview,
+                reason: result.reason,
+              })),
+              previousAnalysis,
+            },
+            response_mode: 'blocking' as const,
+            user: this.config.user,
+          });
+
+          const content = response;
+          if (!content) {
+            console.error(`[Pass ${pass}/${PASSES}] No response generated for batch ${batchNumber}`);
+            continue;
+          }
+
+          const batchResult = OverallSummarySchema.parse(JSON.parse(content));
+
+          // Update accumulated results
+          if (accumulatedResult) {
+            accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
+          } else {
+            accumulatedResult = batchResult;
+          }
+
+          // Update cumulative analysis for next batch
+          previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
+          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
+        } catch (error) {
+          console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
+        }
+      }
+
+      // Log completion of each pass
+      console.debug(`[Pass ${pass}/${PASSES}] Complete`);
+    }
+
+    if (!accumulatedResult) {
+      console.error('No results generated from any batch');
       return undefined;
     }
+
+    return accumulatedResult;
   }
 
   /**
