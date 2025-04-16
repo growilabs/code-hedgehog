@@ -66,7 +66,7 @@ export class DifyProcessor extends BaseProcessor {
       const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
       
       try {
-        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeySummarize, {
+        const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeySummarize, {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || "",
@@ -141,7 +141,7 @@ export class DifyProcessor extends BaseProcessor {
         }
 
         try {
-          const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, {
+          const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyGrouping, {
             inputs: {
               title: prInfo.title,
               description: prInfo.body || "",
@@ -220,7 +220,7 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       try {
-        const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, {
+        const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || "",
