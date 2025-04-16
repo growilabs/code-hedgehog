@@ -190,17 +190,22 @@ export class DifyProcessor extends BaseProcessor {
           );
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
+
+          // Execute workflow with uploaded file IDs
           const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyGrouping, {
             inputs: {
               title: prInfo.title,
               description: prInfo.body || "",
-              files: batchFiles,
-              summarizeResults: batchEntries.map(([path, result]) => ({
-                path,
-                summary: result.summary,
-                needsReview: result.needsReview,
-                reason: result.reason,
-              })),
+              files: {
+                transfer_method: "local_file",
+                upload_file_id: filesFileId,
+                type: "document"
+              },
+              summarizeResults: {
+                transfer_method: "local_file",
+                upload_file_id: summaryFileId,
+                type: "document"
+              },
               previousAnalysis,
             },
             response_mode: 'blocking' as const,
