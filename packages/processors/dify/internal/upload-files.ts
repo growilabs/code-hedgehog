@@ -1,16 +1,4 @@
-import { z } from 'zod';
-
-// Response schema for file upload
-const UploadResponseSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  mime_type: z.string(),
-  size: z.number(),
-  url: z.string().optional(),
-});
-
-export type UploadResponse = z.infer<typeof UploadResponseSchema>;
-
+import { UploadResponseSchema } from './schema.ts';
 /**
  * Upload a file to Dify API and get file ID
  * @param baseUrl - Base URL for Dify API
@@ -25,8 +13,8 @@ export async function uploadFile(
   baseUrl: string,
   apiKey: string,
   user: string,
-  fileContent: string,
-  mimeType = 'application/json',
+  fileContent: string | Blob,
+  mimeType = 'application/json', // defaults to JSON for compatibility
   fileName = 'data.json',
 ): Promise<string> {
   const maxRetries = 3;
@@ -34,14 +22,17 @@ export async function uploadFile(
 
   // Create FormData with JSON file
   const formData = new FormData();
-  formData.append('file', new Blob([fileContent], { type: mimeType }), fileName);
+  const blob = typeof fileContent === 'string'
+    ? new Blob([fileContent], { type: mimeType })
+    : fileContent;
+  formData.append('file', blob, fileName);
   formData.append('user', user);
 
   let lastAttempt = 0;
   while (lastAttempt < maxRetries) {
     lastAttempt++;
     try {
-      const response = await fetch(`${baseUrl}/upload`, {
+      const response = await fetch(`${baseUrl}/files/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
