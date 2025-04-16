@@ -1,4 +1,6 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
+import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+import { ImpactLevel } from './schema.ts';
 
 import { matchesGlobPattern } from './deps.ts';
 import type { OverallSummary } from './schema.ts';
@@ -113,6 +115,103 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     const searchTerms = [aspect.key.toLowerCase(), ...aspect.description.toLowerCase().split(' ')];
     const normalizedSummary = summary.toLowerCase();
     return searchTerms.some((term) => normalizedSummary.includes(term));
+  }
+
+  /**
+   * Create batches for given pass
+   * @param entries Entries to batch
+   * @param batchSize Size of each batch
+   * @param pass Current pass number
+   * @returns Batched entries
+   */
+  protected createBatchEntries(
+    entries: [string, SummarizeResult][],
+    batchSize: number,
+    pass: number
+  ): [string, SummarizeResult][][] {
+    if (pass === 1) {
+      return createHorizontalBatches(entries, batchSize);
+    }
+    return createVerticalBatches(entries, batchSize);
+  }
+
+  /**
+   * Merge multiple OverallSummary results into one
+   * @param summaries Array of summaries to merge
+   * @returns Merged summary
+   */
+  protected mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
+    const latest = summaries[summaries.length - 1];
+    const previous = summaries.slice(0, -1);
+    const previousMappings = previous.flatMap(s => s.aspectMappings);
+
+    // Process current mappings (new or update)
+    const newAspectMappings = latest.aspectMappings.map(latestMapping => {
+      // Find previous mapping with the same key
+      const prevMapping = previousMappings.find(p => p.aspect.key === latestMapping.aspect.key);
+
+      if (prevMapping) {
+        // For existing aspect
+        return {
+          aspect: {
+            key: latestMapping.aspect.key,
+            description: latestMapping.aspect.description, // Use new description
+            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact])
+          },
+          files: [...new Set([...prevMapping.files, ...latestMapping.files])]
+        };
+      }
+      // Add new aspect as is
+      return latestMapping;
+    });
+
+    // Preserve aspects from previous mappings that are not referenced in current analysis
+    const preservedMappings = previousMappings.filter(prev =>
+      !latest.aspectMappings.some(curr => curr.aspect.key === prev.aspect.key)
+    );
+
+    return {
+      description: latest.description,
+      aspectMappings: [...preservedMappings, ...newAspectMappings],
+      crossCuttingConcerns: latest.crossCuttingConcerns
+    };
+  }
+
+  /**
+   * Merge impact levels by selecting highest priority
+   * Priority: high > medium > low
+   * @param impacts Array of impact levels to merge
+   * @returns Highest priority impact level
+   */
+  protected mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
+    if (impacts.includes(ImpactLevel.High)) return ImpactLevel.High;
+    if (impacts.includes(ImpactLevel.Medium)) return ImpactLevel.Medium;
+    return ImpactLevel.Low;
+  }
+
+  /**
+   * Format previous analysis result for next batch
+   * @param result Previous analysis result
+   * @returns Formatted analysis string
+   */
+  protected formatPreviousAnalysis(result: OverallSummary): string {
+    return `Previous Batch Analysis:
+{
+  "description": "${result.description}",
+  "aspectMappings": [
+${result.aspectMappings.map(mapping => `    {
+      "aspect": {
+        "key": "${mapping.aspect.key}",
+        "description": "${mapping.aspect.description}",
+        "impact": "${mapping.aspect.impact}"
+      },
+      "files": ${JSON.stringify(mapping.files)}
+    }`).join(',\n')}
+  ],
+  "crossCuttingConcerns": [
+${result.crossCuttingConcerns?.map(concern => `    "${concern}"`).join(',\n') || '    // No concerns'}
+  ]
+}`;
   }
 
   /**
