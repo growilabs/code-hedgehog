@@ -5,7 +5,7 @@ import {
   OverallSummarySchema,
   ReviewResponseSchema
 } from './deps.ts';
-import { runWorkflow } from './internal/mod.ts';
+import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
@@ -48,6 +48,36 @@ export class DifyProcessor extends BaseProcessor {
       ...config,
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
     }
+  }
+
+  /**
+   * Convert IFileChange array to JSON string
+   * @param files Array of file changes
+   * @returns JSON string representation of files
+   */
+  private formatFilesToJson(files: IFileChange[]): string {
+    return JSON.stringify(
+      files.map(file => ({
+        path: file.path,
+        patch: file.patch || "No changes"
+      }))
+    );
+  }
+
+  /**
+   * Convert summarize results to JSON string
+   * @param entries Array of [path, result] tuples
+   * @returns JSON string representation of summarize results
+   */
+  private formatSummarizeResultsToJson(entries: [string, SummarizeResult][]): string {
+    return JSON.stringify(
+      entries.map(([path, result]) => ({
+        path,
+        summary: result.summary,
+        needsReview: result.needsReview,
+        reason: result.reason
+      }))
+    );
   }
 
   /**
@@ -141,6 +171,25 @@ export class DifyProcessor extends BaseProcessor {
         }
 
         try {
+          // Upload files data
+          const filesJson = this.formatFilesToJson(batchFiles);
+          const filesFileId = await uploadFile(
+            this.config.baseUrl,
+            this.config.apiKeyGrouping,
+            this.config.user,
+            filesJson
+          );
+
+          // Upload summarize results
+          const summaryJson = this.formatSummarizeResultsToJson(batchEntries);
+          const summaryFileId = await uploadFile(
+            this.config.baseUrl,
+            this.config.apiKeyGrouping,
+            this.config.user,
+            summaryJson
+          );
+
+          console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
           const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyGrouping, {
             inputs: {
               title: prInfo.title,
