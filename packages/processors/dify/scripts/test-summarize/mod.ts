@@ -9,7 +9,7 @@ async function main() {
     throw new Error('DIFY_API_KEY_SUMMARIZE is not set in .act.secrets');
   }
 
-  const response = await fetch(baseUrl, {
+  const response = await fetch(`${baseUrl}/workflows/run`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
