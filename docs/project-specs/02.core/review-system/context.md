@@ -368,35 +368,7 @@ interface OverallSummary {
    - 状態遷移の追跡
    - 関連性の維持
 
-2. **垂直的コンテキスト分析**
-   ```typescript
-   interface VerticalContext {
-     definitions: {
-       functions: FunctionDefinition[];
-       classes: ClassDefinition[];
-     };
-     dependencies: {
-       internal: string[];  // ファイル内の依存
-       external: string[];  // 外部への依存
-     };
-     impactAnalysis: {
-       direct: string[];   // 直接的な影響
-       indirect: string[]; // 間接的な影響
-     };
-   }
-   ```
-
-   期待される効果：
-   - コードの構造的理解の深化
-   - 影響範囲の正確な把握
-   - 結合度の評価
-
-   実装の主なポイント：
-   - AST解析との連携
-   - 依存関係の追跡
-   - 影響分析のアルゴリズム
-
-3. **リソース最適化**
+2. **リソース最適化**
    ```typescript
    interface CacheStrategy {
      storage: {
@@ -424,7 +396,7 @@ interface OverallSummary {
    - メモリ管理の最適化
    - モニタリングの実装
 
-4. **外部システム連携**
+3. **外部システム連携**
    ```typescript
    interface ExternalIntegration {
      ci: {
@@ -448,7 +420,7 @@ interface OverallSummary {
    - イベント管理
    - エラー処理
 
-5. **履歴分析の強化**
+4. **履歴分析の強化**
    ```typescript
    interface HistoricalAnalysis {
      patterns: {
@@ -479,22 +451,17 @@ interface OverallSummary {
    - 議論の追跡性改善
    - コミュニケーションの効率化
 
-2. 垂直的コンテキスト分析（中期）
-   - より深い技術的理解の促進
-   - 影響範囲の正確な把握
-   - リファクタリングの支援
-
-3. リソース最適化（中期）
+2. リソース最適化（中期）
    - システム全体の応答性向上
    - コスト効率の改善
    - スケーラビリティの確保
 
-4. 外部システム連携（長期）
+3. 外部システム連携（長期）
    - 開発プロセス全体との統合
    - 自動化の促進
    - 情報共有の効率化
 
-5. 履歴分析（長期）
+4. 履歴分析（長期）
    - 長期的な品質向上
    - 知識の蓄積と活用
    - プロアクティブな問題解決
