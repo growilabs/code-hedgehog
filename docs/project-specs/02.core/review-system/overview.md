@@ -134,4 +134,3 @@ sequenceDiagram
 
 - [3段階レビュープロセス](./process.md)
 - [コンテキスト管理](./context.md)
-- [インクリメンタルレビュー](./incremental.md)

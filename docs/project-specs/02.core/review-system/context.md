@@ -160,7 +160,35 @@ interface OverallSummary {
 
 最も詳細なレベルで、個々の変更の意味を理解します。
 
-1. **トークン管理**
+1. **レビューコメント管理**
+   ```typescript
+   /**
+    * レビューコメントの基本インターフェース
+    */
+   interface IReviewComment {
+     /**
+      * 対象ファイルのパス
+      */
+     path: string;
+
+     /**
+      * 差分内の位置（インラインコメント用）
+      */
+     position?: number;
+
+     /**
+      * コメントの内容
+      */
+     body: string;
+
+     /**
+      * コメントの種類（インラインまたはPR全体）
+      */
+     type: 'inline' | 'pr';
+   }
+   ```
+
+2. **トークン管理**
    ```typescript
    interface TokenConfig {
      margin: number;    // 余裕分
@@ -173,10 +201,23 @@ interface OverallSummary {
    - 大規模な変更の適切な分割
    - コストの最適化
 
-2. **バッチ処理**
-   - 関連する変更のグループ化
-   - 段階的な分析の実現
-   - 結果の統合と最適化
+3. **重複防止** [一部実装済]
+   ```mermaid
+   sequenceDiagram
+       participant RP as ReviewProcessor
+       participant DC as DuplicationChecker
+       participant CM as ContextManager
+       
+       RP->>DC: レビュー要求
+       DC->>CM: コンテキスト取得
+       CM-->>DC: 既存レビュー情報
+       DC->>DC: 重複分析
+       alt 重複あり
+           DC-->>RP: スキップ通知
+       else 重複なし
+           DC-->>RP: レビュー許可
+       end
+   ```
 
 ## 3. コンテキスト処理フロー
 
@@ -261,6 +302,13 @@ interface OverallSummary {
      // 影響度の調整
    }
    ```
+
+3. **エラー処理** [検討中]
+   処理中のエラーに対して、以下の戦略を検討しています：
+   - 部分的な再計算によるリカバリー
+   - フォールバック方式の採用
+   - エラー状態の明確な管理
+   - トランザクション的な一貫性の確保
 
 ## 4. 拡張ポイント
 
