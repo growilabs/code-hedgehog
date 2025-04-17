@@ -1,0 +1,114 @@
+import { OverallSummarySchema } from '../../deps.ts';
+import { uploadFile } from '../../internal/mod.ts';
+
+async function main() {
+  const baseUrl = Deno.env.get('DIFY_API_BASE_URL');
+  if (!baseUrl) {
+    throw new Error('DIFY_API_BASE_URL is not set in .act.env');
+  }
+
+  const apiKey = Deno.env.get('DIFY_API_KEY_GROUPING');
+  if (!apiKey) {
+    throw new Error('DIFY_API_KEY_GROUPING is not set in .act.secrets');
+  }
+
+  const testFiles = [
+    {
+      path: 'test/file1.ts',
+      patch: 'Sample patch content 1'
+    },
+    {
+      path: 'test/file2.ts',
+      patch: 'Sample patch content 2'
+    }
+  ];
+
+  const testSummarizeResults = [
+    {
+      path: 'test/file1.ts',
+      summary: 'Test summary for file 1',
+      needsReview: true,
+      reason: 'Changes require review'
+    },
+    {
+      path: 'test/file2.ts',
+      summary: 'Test summary for file 2',
+      needsReview: false,
+      reason: 'Simple changes'
+    }
+  ];
+
+  // Upload file data
+  console.log('Uploading files data...');
+  const filesJson = JSON.stringify(testFiles);
+  const filesFileId = await uploadFile(
+    baseUrl,
+    apiKey,
+    'moogle',
+    filesJson
+  );
+  console.log('Files uploaded, ID:', filesFileId);
+
+  // Upload summary data
+  console.log('Uploading summary data...');
+  const summaryJson = JSON.stringify(testSummarizeResults);
+  const summaryFileId = await uploadFile(
+    baseUrl,
+    apiKey,
+    'moogle',
+    summaryJson
+  );
+  console.log('Summary uploaded, ID:', summaryFileId);
+
+  // Execute workflow
+  console.log('Executing workflow...');
+  const response = await fetch(`${baseUrl}/workflows/run`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      inputs: {
+        title: 'Test Overall Summary',
+        description: 'Testing overall summary generation',
+        files: {
+          transfer_method: "local_file",
+          upload_file_id: filesFileId,
+          type: "document"
+        },
+        summarizeResults: {
+          transfer_method: "local_file",
+          upload_file_id: summaryFileId,
+          type: "document"
+        },
+        previousAnalysis: undefined,
+      },
+      response_mode: 'blocking' as const,
+      user: 'moogle',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+  }
+
+  // Get raw response data
+  const data = await response.json();
+  console.log('\nRaw Response Body:', JSON.stringify(data, null, 2));
+
+  try {
+    // Extract and validate outputs from response
+    console.log('\nAttempting to parse and validate response...');
+    const outputs = data.data.outputs;
+    console.log('\nOutputs:', JSON.stringify(outputs, null, 2));
+
+    const validatedData = OverallSummarySchema.parse(outputs);
+    console.log('\nValidated Overall Summary:', JSON.stringify(validatedData, null, 2));
+  } catch (error) {
+    console.error('\nValidation Error:', error);
+    console.log('\nOutputs data:', data.data?.outputs);
+  }
+}
+
+main();
