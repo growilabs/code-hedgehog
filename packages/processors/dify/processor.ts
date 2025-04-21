@@ -1,10 +1,5 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, SummarizeResult, OverallSummary } from './deps.ts';
-import {
-  BaseProcessor,
-  SummaryResponseSchema,
-  OverallSummarySchema,
-  ReviewResponseSchema
-} from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
+import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
@@ -84,11 +79,7 @@ export class DifyProcessor extends BaseProcessor {
    * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
-  override async summarize(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-    config?: ReviewConfig
-  ): Promise<Map<string, SummarizeResult>> {
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
     
     for (const file of files) {
@@ -102,13 +93,13 @@ export class DifyProcessor extends BaseProcessor {
             description: prInfo.body || "",
             filePath: file.path,
             patch: file.patch || "No changes",
-            needsReviewPre: baseResult.needsReview,
+            needsReviewPre: String(baseResult.needsReview),
           },
           response_mode: 'blocking' as const,
           user: this.config.user,
         });
 
-        const summaryResponse = SummaryResponseSchema.parse(JSON.parse(response));
+        const summaryResponse = SummaryResponseSchema.parse(response);
 
         results.set(file.path, {
           ...summaryResponse,
@@ -212,13 +203,12 @@ export class DifyProcessor extends BaseProcessor {
             user: this.config.user,
           });
 
-          const content = response;
-          if (!content) {
+          if (!response) {
             console.error(`[Pass ${pass}/${PASSES}] No response generated for batch ${batchNumber}`);
             continue;
           }
 
-          const batchResult = OverallSummarySchema.parse(JSON.parse(content));
+          const batchResult = OverallSummarySchema.parse(response);
 
           // Update accumulated results
           if (accumulatedResult) {
@@ -290,7 +280,7 @@ export class DifyProcessor extends BaseProcessor {
           response_mode: 'blocking' as const,
           user: this.config.user,
         });
-        const review = ReviewResponseSchema.parse(JSON.parse(response));
+        const review = ReviewResponseSchema.parse(response);
 
         if (review.comments) {
           for (const comment of review.comments) {

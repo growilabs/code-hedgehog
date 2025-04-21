@@ -1,5 +1,5 @@
-import { OverallSummarySchema } from '../../deps.ts';
 import { uploadFile } from '../../internal/mod.ts';
+import { processGroupingResponse } from '../../internal/run-workflow.ts';
 
 async function main() {
   const baseUrl = Deno.env.get('DIFY_API_BASE_URL');
@@ -98,12 +98,9 @@ async function main() {
   console.log('\nRaw Response Body:', JSON.stringify(data, null, 2));
 
   try {
-    // Extract and validate outputs from response
-    console.log('\nAttempting to parse and validate response...');
-    const outputs = data.data.outputs;
-    console.log('\nOutputs:', JSON.stringify(outputs, null, 2));
-
-    const validatedData = OverallSummarySchema.parse(outputs);
+    // Process and validate response
+    console.log('\nAttempting to process and validate response...');
+    const validatedData = processGroupingResponse(data);
     console.log('\nValidated Overall Summary:', JSON.stringify(validatedData, null, 2));
   } catch (error) {
     console.error('\nValidation Error:', error);
