@@ -8,7 +8,6 @@ export type {
   IPullRequestProcessor,
   IPullRequestProcessedResult,
   ReviewConfig,
-  TokenConfig,
 } from '@code-hedgehog/core';
 
 export { matchesGlobPattern } from '@code-hedgehog/core';
