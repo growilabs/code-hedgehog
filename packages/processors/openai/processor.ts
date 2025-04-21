@@ -186,7 +186,7 @@ export class OpenaiProcessor extends BaseProcessor {
 
           // Update accumulated results
           if (accumulatedResult) {
-            accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
+            accumulatedResult = this.mergeOverallSummaries([accumulatedResult], batchResult);
           } else {
             accumulatedResult = batchResult;
           }

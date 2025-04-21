@@ -140,9 +140,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param summaries Array of summaries to merge
    * @returns Merged summary
    */
-  protected mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
-    const latest = summaries[summaries.length - 1];
-    const previous = summaries.slice(0, -1);
+  protected mergeOverallSummaries(previous: OverallSummary[], latest: OverallSummary): OverallSummary {
     const previousMappings = previous.flatMap(s => s.aspectMappings);
 
     // Process current mappings (new or update)
