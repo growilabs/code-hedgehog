@@ -1,6 +1,7 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { ImpactLevel } from './schema.ts';
+import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+import { mergeOverallSummaries as mergeSummaries } from './utils/summary.ts';
 
 import { matchesGlobPattern } from './deps.ts';
 import type { OverallSummary } from './schema.ts';
@@ -124,11 +125,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param pass Current pass number
    * @returns Batched entries
    */
-  protected createBatchEntries(
-    entries: [string, SummarizeResult][],
-    batchSize: number,
-    pass: number
-  ): [string, SummarizeResult][][] {
+  protected createBatchEntries(entries: [string, SummarizeResult][], batchSize: number, pass: number): [string, SummarizeResult][][] {
     if (pass === 1) {
       return createHorizontalBatches(entries, batchSize);
     }
@@ -137,54 +134,12 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
   /**
    * Merge multiple OverallSummary results into one
-   * @param summaries Array of summaries to merge
+   * @param previous Array of previous summaries
+   * @param latest Latest summary
    * @returns Merged summary
    */
   protected mergeOverallSummaries(previous: OverallSummary[], latest: OverallSummary): OverallSummary {
-    const previousMappings = previous.flatMap(s => s.aspectMappings);
-
-    // Process current mappings (new or update)
-    const newAspectMappings = latest.aspectMappings.map(latestMapping => {
-      // Find previous mapping with the same key
-      const prevMapping = previousMappings.find(p => p.aspect.key === latestMapping.aspect.key);
-
-      if (prevMapping) {
-        // For existing aspect
-        return {
-          aspect: {
-            key: latestMapping.aspect.key,
-            description: latestMapping.aspect.description, // Use new description
-            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact])
-          },
-          files: [...new Set([...prevMapping.files, ...latestMapping.files])]
-        };
-      }
-      // Add new aspect as is
-      return latestMapping;
-    });
-
-    // Preserve aspects from previous mappings that are not referenced in current analysis
-    const preservedMappings = previousMappings.filter(prev =>
-      !latest.aspectMappings.some(curr => curr.aspect.key === prev.aspect.key)
-    );
-
-    return {
-      description: latest.description,
-      aspectMappings: [...preservedMappings, ...newAspectMappings],
-      crossCuttingConcerns: latest.crossCuttingConcerns
-    };
-  }
-
-  /**
-   * Merge impact levels by selecting highest priority
-   * Priority: high > medium > low
-   * @param impacts Array of impact levels to merge
-   * @returns Highest priority impact level
-   */
-  protected mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
-    if (impacts.includes(ImpactLevel.High)) return ImpactLevel.High;
-    if (impacts.includes(ImpactLevel.Medium)) return ImpactLevel.Medium;
-    return ImpactLevel.Low;
+    return mergeSummaries(previous, latest);
   }
 
   /**
@@ -197,19 +152,24 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param result Previous analysis result
    * @returns JSON string of the analysis
    */
-  protected formatPreviousAnalysis(result: OverallSummary): string {
-    return JSON.stringify({
-      description: result.description,
-      aspectMappings: result.aspectMappings.map(mapping => ({
-        aspect: {
-          key: mapping.aspect.key,
-          description: mapping.aspect.description,
-          impact: mapping.aspect.impact
-        },
-        files: mapping.files
-      })),
-      crossCuttingConcerns: result.crossCuttingConcerns || []
-    }, null, 2);
+  protected formatPreviousAnalysis(result: OverallSummary | undefined): string {
+    if (!result) return '{}';
+    return JSON.stringify(
+      {
+        description: result.description,
+        aspectMappings: result.aspectMappings.map((mapping) => ({
+          aspect: {
+            key: mapping.aspect.key,
+            description: mapping.aspect.description,
+            impact: mapping.aspect.impact,
+          },
+          files: mapping.files,
+        })),
+        crossCuttingConcerns: result.crossCuttingConcerns || [],
+      },
+      null,
+      2,
+    );
   }
 
   /**
