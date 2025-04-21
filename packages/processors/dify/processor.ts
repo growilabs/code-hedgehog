@@ -162,6 +162,18 @@ export class DifyProcessor extends BaseProcessor {
         }
 
         try {
+          // Upload previous analysis if available
+          let previousAnalysisFileId: string | undefined;
+          if (previousAnalysis) {
+            previousAnalysisFileId = await uploadFile(
+              this.config.baseUrl,
+              this.config.apiKeyGrouping,
+              this.config.user,
+              previousAnalysis
+            );
+            console.debug(`[Pass ${pass}/${PASSES}] Uploaded previous analysis (${previousAnalysisFileId})`);
+          }
+
           // Upload files data
           const filesJson = this.formatFilesToJson(batchFiles);
           const filesFileId = await uploadFile(
@@ -197,7 +209,11 @@ export class DifyProcessor extends BaseProcessor {
                 upload_file_id: summaryFileId,
                 type: "document"
               },
-              previousAnalysis,
+              previousAnalysis: previousAnalysisFileId ? {
+                transfer_method: "local_file",
+                upload_file_id: previousAnalysisFileId,
+                type: "document"
+              } : undefined,
             },
             response_mode: 'blocking' as const,
             user: this.config.user,
