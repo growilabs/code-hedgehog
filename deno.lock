@@ -25,7 +25,9 @@
     "npm:@octokit/plugin-rest-endpoint-methods@^10.4.1": "10.4.1_@octokit+core@5.2.1",
     "npm:@types/node@*": "22.12.0",
     "npm:esbuild@~0.25.1": "0.25.1",
+    "npm:gpt-tokenizer@*": "2.9.0",
     "npm:gpt-tokenizer@^2.1.1": "2.9.0",
+    "npm:js-yaml@*": "4.1.0",
     "npm:minimatch@10.0.1": "10.0.1",
     "npm:openai@*": "4.91.1_zod@3.24.2",
     "npm:tiktoken@*": "1.0.20",
@@ -362,6 +364,9 @@
         "humanize-ms"
       ]
     },
+    "argparse@2.0.1": {
+      "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
+    },
     "asynckit@0.4.0": {
       "integrity": "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="
     },
@@ -557,6 +562,12 @@
     "inherits@2.0.4": {
       "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="
     },
+    "js-yaml@4.1.0": {
+      "integrity": "sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==",
+      "dependencies": [
+        "argparse"
+      ]
+    },
     "math-intrinsics@1.1.0": {
       "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="
     },
@@ -596,8 +607,8 @@
     "openai@4.91.1_zod@3.24.2": {
       "integrity": "sha512-DbjrR0hIMQFbxz8+3qBsfPJnh3+I/skPgoSlT7f9eiZuhGBUissPQULNgx6gHNkLoZ3uS0uYS6eXPUdtg4nHzw==",
       "dependencies": [
-        "@types/node@18.19.82",
         "@types/node-fetch",
+        "@types/node@18.19.82",
         "abort-controller",
         "agentkeepalive",
         "form-data-encoder",

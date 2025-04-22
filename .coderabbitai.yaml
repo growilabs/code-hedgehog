@@ -1,0 +1,24 @@
+# パスベースのレビュー指示
+file_path_instructions:
+  - path: "src/**/*.{ts,tsx}"
+    instructions: |
+      TypeScriptコードのレビュー指示：
+      - 型の適切な使用
+      - nullチェックの完全性
+      - 非同期処理の適切な実装
+
+  - path: "test/**/*.ts"
+    instructions: |
+      テストコードのレビュー指示：
+      - テストケースの網羅性
+      - エッジケースの考慮
+      - テストの独立性確保
+
+# パスフィルター（レビュー対象外のパス）
+path_filters: |
+  !dist/**
+  !*.min.js
+  !*.map
+
+# シンプルな変更のスキップ設定
+skip_simple_changes: true

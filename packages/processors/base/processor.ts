@@ -1,9 +1,10 @@
+import { promises as fs } from 'node:fs';
+import { constants as fsConstants } from 'node:fs';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-
-import { matchesGlobPattern } from './deps.ts';
+import { parseYaml } from './deps.ts';
+import { DEFAULT_CONFIG } from './deps.ts';
 import type { OverallSummary } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
-
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 
 /**
@@ -11,17 +12,102 @@ import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
  * Provides common functionality for reviewing pull requests
  */
 export abstract class BaseProcessor implements IPullRequestProcessor {
+  private config = DEFAULT_CONFIG;
+
+  /**
+   * Load configuration from .coderabbitai.yaml
+   */
+  protected async loadConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
+    try {
+      // Check if file exists
+      try {
+        await fs.access(configPath, fsConstants.R_OK);
+      } catch (error) {
+        console.warn('Config file not found, using defaults');
+        return;
+      }
+
+      // Read and parse file
+      const content = await fs.readFile(configPath, 'utf-8');
+      const parsed = parseYaml(content) as unknown;
+
+      // Validate config
+      if (!parsed || typeof parsed !== 'object') {
+        console.warn('Invalid config format');
+        return;
+      }
+
+      // Merge with defaults
+      this.config = {
+        ...DEFAULT_CONFIG,
+        ...parsed,
+      };
+    } catch (error) {
+      console.error('Error reading config:', error);
+      // Keep default config
+    }
+  }
+
   /**
    * Get instructions for a specific file based on the path patterns
    */
+  /**
+   * パスパターンに基づいてファイルのレビュー指示を取得
+   * パターンマッチの優先順位:
+   * 1. より具体的なパターン
+   * 2. 設定ファイル内での順序
+   * 3. マッチする全ての指示を結合
+   */
   protected getInstructionsForFile(filePath: string, config?: ReviewConfig): string {
-    if (!config?.path_instructions) return '';
+    // 設定取得
+    const instructions = config?.file_path_instructions || this.config.file_path_instructions || [];
+    if (instructions.length === 0) {
+      return '';
+    }
 
-    const matchingInstructions = config.path_instructions
-      .filter((instruction) => matchesGlobPattern(filePath, instruction.path))
-      .map((instruction) => instruction.instructions);
+    try {
+      // マッチするパターンを抽出し、具体性でソート
+      const matchingInstructions = instructions
+        .map((instruction, index) => ({
+          ...instruction,
+          specificity: this.calculatePatternSpecificity(instruction.path),
+          originalIndex: index,
+        }))
+        .filter((instruction) => this.matchesGlobPattern(filePath, instruction.path))
+        .sort((a, b) => {
+          // 1. 具体性の高いパターンを優先
+          if (a.specificity !== b.specificity) {
+            return b.specificity - a.specificity;
+          }
+          // 2. 設定ファイル内の順序を維持
+          return a.originalIndex - b.originalIndex;
+        });
 
-    return matchingInstructions.join('\n\n');
+      // 指示を結合
+      return matchingInstructions.map((instruction) => instruction.instructions).join('\n\n');
+    } catch (error) {
+      console.warn(`Error while getting instructions for ${filePath}:`, error);
+      return '';
+    }
+  }
+
+  /**
+   * Check if file should be filtered based on path_filters
+   */
+  protected isFileFiltered(filePath: string): boolean {
+    if (!this.config.path_filters) return false;
+
+    const filters = this.config.path_filters
+      .split('\n')
+      .map((f: string) => f.trim())
+      .filter(Boolean);
+
+    return filters.some((filter: string) => {
+      if (filter.startsWith('!')) {
+        return this.matchesGlobPattern(filePath, filter.slice(1));
+      }
+      return false;
+    });
   }
 
   /**
@@ -29,6 +115,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Determines need for detailed review based on token count and file characteristics
    */
   protected async shouldPerformDetailedReview(file: IFileChange, tokenConfig: TokenConfig): Promise<SummarizeResult> {
+    // Check if file is filtered
+    if (this.isFileFiltered(file.path)) {
+      return {
+        needsReview: false,
+        reason: 'File path is filtered out',
+        aspects: [],
+      };
+    }
+
     // Check token count
     if (!file.patch) {
       return {
@@ -50,7 +145,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     // Determine if changes are simple
     const isSimpleChange = this.isSimpleChange(file.patch);
-    if (isSimpleChange) {
+    if (isSimpleChange && this.config.skip_simple_changes) {
       return {
         needsReview: false,
         reason: 'Changes appear to be simple (formatting, comments, etc.)',
@@ -67,6 +162,61 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
   /**
    * Determine if changes are simple (formatting, comments only, etc.)
+   */
+  /**
+   * パターンの具体性をスコア化
+   * - より長いパス部分が優先
+   * - ワイルドカードが少ないほど優先
+   * - 拡張子指定があるほうが優先
+   */
+  private calculatePatternSpecificity(pattern: string): number {
+    let score = 0;
+
+    // 基本スコアはパスの長さ
+    score += pattern.length;
+
+    // ワイルドカードはスコアを下げる
+    score -= (pattern.match(/\*/g) || []).length * 2;
+
+    // **はさらにスコアを下げる
+    score -= (pattern.match(/\*\*/g) || []).length * 3;
+
+    // 拡張子指定があればスコアを上げる
+    if (pattern.includes('.')) {
+      score += 5;
+    }
+
+    // 波括弧による拡張子グループ指定があればさらにスコア上げる
+    if (pattern.includes('{')) {
+      score += 3;
+    }
+
+    return score;
+  }
+
+  /**
+   * 指定されたファイルパスがGlobパターンにマッチするか確認
+   */
+  private matchesGlobPattern(filePath: string, pattern: string): boolean {
+    // .や*などの特殊文字をエスケープ
+    const regexPattern = pattern
+      .replace(/\./g, '\\.')
+      .replace(/\{([^}]+)\}/g, '($1)') // {js,ts} => (js|ts)
+      .replace(/\*\*/g, '.*') // ** => .*
+      .replace(/\*/g, '[^/]*') // * => [^/]*
+      .replace(/\?/g, '.') // ? => .
+      .replace(/,/g, '|'); // カンマをORに変換
+
+    try {
+      return new RegExp(`^${regexPattern}$`).test(filePath);
+    } catch (error) {
+      console.warn(`Invalid pattern "${pattern}":`, error);
+      return false;
+    }
+  }
+
+  /**
+   * パッチの内容がシンプルな変更かどうかを判定
    */
   protected isSimpleChange(patch: string): boolean {
     const lines = patch.split('\n');
@@ -89,38 +239,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Updates summarized results with aspects from the overall summary
-   */
-  protected updatesummarizeResultsWithAspects(summarizeResults: Map<string, SummarizeResult>, overallSummary: OverallSummary): void {
-    // Update aspects based on the overall summary
-    for (const summary of overallSummary.aspectMappings) {
-      const aspect = summary.aspect;
-      // Find all files that relate to this aspect by checking their content
-      for (const [filePath, result] of summarizeResults.entries()) {
-        if (summary.files.includes(filePath)) {
-          // Add the aspect to the triage result if it's relevant
-          result.aspects = Array.from(new Set([...result.aspects, aspect]));
-        }
-      }
-    }
-  }
-
-  /**
-   * Determines if an aspect is relevant to a file based on its summary
-   * This is a basic implementation that can be overridden by processors
-   */
-  protected isAspectRelevantToFile(aspect: { key: string; description: string }, summary: string): boolean {
-    const searchTerms = [aspect.key.toLowerCase(), ...aspect.description.toLowerCase().split(' ')];
-    const normalizedSummary = summary.toLowerCase();
-    return searchTerms.some((term) => normalizedSummary.includes(term));
-  }
-
-  /**
    * Generate summaries grouped by review aspects
-   * @param prInfo Pull request information
-   * @param files List of file changes to review
-   * @param summarizeResults Previous summarized results
-   * @returns Overall summary of changes, or undefined if summary cannot be generated
    */
   protected abstract generateOverallSummary(
     prInfo: IPullRequestInfo,
@@ -129,24 +248,12 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<OverallSummary | undefined>;
 
   /**
-   * Summarize phase - Lightly analyze file changes to determine if detailed review is needed
-   *
-   * @param prInfo Pull request information
-   * @param files List of file changes to review
-   * @param config Optional review configuration
-   * @returns Map of file paths to summarized results
+   * Summarize phase
    */
   abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>>;
 
   /**
-   * Review phase - Execute detailed review based on summarized results
-   *
-   * @param prInfo Pull request information
-   * @param files List of file changes to review
-   * @param summarizeResults Previous summarized results
-   * @param config Optional review configuration
-   * @param overallSummary Overall summary of changes to provide context, if available
-   * @returns Review comments and optionally updated PR info
+   * Review phase
    */
   abstract review(
     prInfo: IPullRequestInfo,
@@ -157,21 +264,19 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<IPullRequestProcessedResult>;
 
   /**
-   * Main processing flow - now with 3 phases
+   * Main processing flow
    */
   async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
+    // 0. Load configuration
+    await this.loadConfig();
+
     // 1. Execute summarize
     const summarizeResults = await this.summarize(prInfo, files, config);
 
     // 2. Generate overall summary
     const overallSummary = await this.generateOverallSummary(prInfo, files, summarizeResults);
 
-    // 3. Update summarized results with aspects if summary is available
-    if (overallSummary != null) {
-      this.updatesummarizeResultsWithAspects(summarizeResults, overallSummary);
-    }
-
-    // 4. Execute detailed review with context
+    // 3. Execute detailed review with context
     return this.review(prInfo, files, summarizeResults, config, overallSummary);
   }
 }

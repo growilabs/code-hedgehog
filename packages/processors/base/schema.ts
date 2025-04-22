@@ -4,9 +4,9 @@ import { z } from './deps.ts';
  * Impact level of changes
  */
 export enum ImpactLevel {
-  High = "high",
-  Medium = "medium",
-  Low = "low"
+  High = 'high',
+  Medium = 'medium',
+  Low = 'low',
 }
 
 /**
@@ -60,3 +60,26 @@ export const ReviewResponseSchema = z.object({
   summary: z.string().optional(),
 });
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
+
+/**
+ * Configuration schema for path based instructions
+ */
+export const PathInstructionSchema = z.object({
+  path: z.string(),
+  instructions: z.string(),
+});
+
+export const ConfigSchema = z.object({
+  file_path_instructions: z.array(PathInstructionSchema).optional(),
+  path_filters: z.string().optional(),
+  skip_simple_changes: z.boolean().optional().default(false),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+// Default configuration
+export const DEFAULT_CONFIG: Config = {
+  file_path_instructions: [],
+  path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
+  skip_simple_changes: false,
+};
