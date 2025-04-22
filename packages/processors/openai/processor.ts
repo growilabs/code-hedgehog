@@ -362,7 +362,7 @@ export class OpenaiProcessor extends BaseProcessor {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'pr',
+            type: 'file',
           });
         }
       } catch (error) {
@@ -374,6 +374,15 @@ export class OpenaiProcessor extends BaseProcessor {
           type: 'inline',
         });
       }
+    }
+
+    // Add overall summary to regular comments
+    if (overallSummary != null) {
+      comments.push({
+        path: 'PR',
+        body: `## Overall Summary\n\n${overallSummary.description}`,
+        type: 'pr',
+      });
     }
 
     return { comments };
