@@ -1,5 +1,6 @@
 import { uploadFile } from '../../internal/mod.ts';
 import { processGroupingResponse } from '../../internal/run-workflow.ts';
+import type { DifyRequestBody } from '../../internal/schema.ts';
 
 async function main() {
   const baseUrl = Deno.env.get('DIFY_API_BASE_URL');
@@ -62,31 +63,33 @@ async function main() {
 
   // Execute workflow
   console.log('Executing workflow...');
+  const requestBody: DifyRequestBody = {
+    inputs: {
+      title: 'Test Overall Summary',
+      description: 'Testing overall summary generation',
+      files: {
+        transfer_method: "local_file",
+        upload_file_id: filesFileId,
+        type: "document"
+      },
+      summarizeResults: {
+        transfer_method: "local_file",
+        upload_file_id: summaryFileId,
+        type: "document"
+      },
+      previousAnalysis: undefined,
+    },
+    response_mode: 'blocking',
+    user: 'moogle',
+  };
+
   const response = await fetch(`${baseUrl}/workflows/run`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      inputs: {
-        title: 'Test Overall Summary',
-        description: 'Testing overall summary generation',
-        files: {
-          transfer_method: "local_file",
-          upload_file_id: filesFileId,
-          type: "document"
-        },
-        summarizeResults: {
-          transfer_method: "local_file",
-          upload_file_id: summaryFileId,
-          type: "document"
-        },
-        previousAnalysis: undefined,
-      },
-      response_mode: 'blocking' as const,
-      user: 'moogle',
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
