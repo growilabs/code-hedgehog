@@ -200,6 +200,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   private matchesGlobPattern(filePath: string, pattern: string): boolean {
     // .や*などの特殊文字をエスケープ
     const regexPattern = pattern
+      .replace(/\\/g, '\\\\') // Escape backslashes
       .replace(/\./g, '\\.')
       .replace(/\{([^}]+)\}/g, '($1)') // {js,ts} => (js|ts)
       .replace(/\*\*/g, '.*') // ** => .*
