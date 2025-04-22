@@ -15,6 +15,13 @@ export type DifyRequestBody<T = Record<string, unknown>> = {
 };
 
 // Dify API Response Schema
+// Dify raw response schema for outputs validation
+export const DifyOutputsSchema = z.object({
+  data: z.object({
+    outputs: z.unknown(),
+  }),
+});
+
 export const DifyResponseSchema = z.object({
   choices: z.array(
     z.object({

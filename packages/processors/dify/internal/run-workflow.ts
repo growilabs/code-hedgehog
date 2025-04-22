@@ -1,11 +1,14 @@
 import process from 'node:process';
-import type { DifyRequestBody } from './schema.ts';
 import type { z } from '../deps.ts';
 import {
-  SummaryResponseSchema,
   OverallSummarySchema,
   ReviewResponseSchema,
+  SummaryResponseSchema,
 } from '../deps.ts';
+import type { DifyRequestBody } from './schema.ts';
+import {
+  DifyOutputsSchema,
+} from './schema.ts';
 
 type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
 type OverallSummary = z.infer<typeof OverallSummarySchema>;
@@ -38,16 +41,8 @@ function getWorkflowType(apiKey: string): WorkflowType {
  * Extract outputs from Dify response
  */
 function extractOutputs(rawResult: unknown): unknown {
-  if (typeof rawResult !== 'object' || rawResult === null) {
-    throw new Error('Invalid response format: expected object');
-  }
-
-  const res = rawResult as { data?: { outputs?: unknown } };
-  if (!res.data?.outputs) {
-    throw new Error('Invalid response format: missing data.outputs');
-  }
-
-  return res.data.outputs;
+  const validated = DifyOutputsSchema.parse(rawResult);
+  return validated.data.outputs;
 }
 
 /**
