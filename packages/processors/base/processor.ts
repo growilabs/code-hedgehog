@@ -143,36 +143,6 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Format previous analysis result for next batch
-   * @param result Previous analysis result
-   * @returns Formatted analysis string
-   */
-  /**
-   * Format previous analysis result as JSON
-   * @param result Previous analysis result
-   * @returns JSON string of the analysis
-   */
-  protected formatPreviousAnalysis(result: OverallSummary | undefined): string {
-    if (!result) return '{}';
-    return JSON.stringify(
-      {
-        description: result.description,
-        aspectMappings: result.aspectMappings.map((mapping) => ({
-          aspect: {
-            key: mapping.aspect.key,
-            description: mapping.aspect.description,
-            impact: mapping.aspect.impact,
-          },
-          files: mapping.files,
-        })),
-        crossCuttingConcerns: result.crossCuttingConcerns || [],
-      },
-      null,
-      2,
-    );
-  }
-
-  /**
    * Generate summaries grouped by review aspects
    * @param prInfo Pull request information
    * @param files List of file changes to review

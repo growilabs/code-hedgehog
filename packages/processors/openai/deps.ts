@@ -11,6 +11,7 @@ export {
   ReviewAspectMappingsSchema,
   OverallSummarySchema,
   ReviewResponseSchema,
+  formatPreviousAnalysis,
 } from '@code-hedgehog/base-processor';
 
 // External dependencies

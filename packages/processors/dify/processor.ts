@@ -1,5 +1,5 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
-import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
+import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, formatPreviousAnalysis } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
@@ -234,7 +234,7 @@ export class DifyProcessor extends BaseProcessor {
           }
 
           // Update cumulative analysis for next batch
-          previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
+          previousAnalysis = formatPreviousAnalysis(accumulatedResult);
           console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
