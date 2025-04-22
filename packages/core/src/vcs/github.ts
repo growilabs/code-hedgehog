@@ -178,19 +178,18 @@ export class GitHubVCS extends BaseVCS {
       }
 
       if (fileComments.length > 0) {
-        await Promise.all(
-          fileComments.map((comment) =>
-            this.api.rest.pulls.createReviewComment({
-              owner: this.context.owner,
-              repo: this.context.repo,
-              pull_number: this.context.pullNumber,
-              body: comment.body,
-              commit_id: headCommitSha,
-              path: comment.path,
-              subject_type: 'file',
-            }),
-          ),
-        );
+        // Cannot run in parallel, because only one pending review is allowed
+        for (const comment of fileComments) {
+          await this.api.rest.pulls.createReviewComment({
+            owner: this.context.owner,
+            repo: this.context.repo,
+            pull_number: this.context.pullNumber,
+            body: comment.body,
+            commit_id: headCommitSha,
+            path: comment.path,
+            subject_type: 'file',
+          });
+        }
 
         core.debug(`Created review with ${fileComments.length} file comments`);
       }

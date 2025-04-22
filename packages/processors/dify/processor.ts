@@ -1,5 +1,10 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
-import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, SummarizeResult, OverallSummary } from './deps.ts';
+import {
+  BaseProcessor,
+  SummaryResponseSchema,
+  OverallSummarySchema,
+  ReviewResponseSchema
+} from './deps.ts';
 import { runWorkflow } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
@@ -42,27 +47,31 @@ export class DifyProcessor extends BaseProcessor {
     this.config = {
       ...config,
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
-    };
+    }
   }
 
   /**
    * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  override async summarize(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    config?: ReviewConfig
+  ): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
-
+    
     for (const file of files) {
       // Basic token check and simple change detection
       const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
-
+      
       try {
         const response = await runWorkflow(this.config.baseUrl, this.config.apiKeySummarize, {
           inputs: {
             title: prInfo.title,
-            description: prInfo.body || '',
+            description: prInfo.body || "",
             filePath: file.path,
-            patch: file.patch || 'No changes',
+            patch: file.patch || "No changes",
             needsReviewPre: baseResult.needsReview,
           },
           response_mode: 'blocking' as const,
@@ -97,13 +106,13 @@ export class DifyProcessor extends BaseProcessor {
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
-    summarizeResults: Map<string, SummarizeResult>,
+    summarizeResults: Map<string, SummarizeResult>
   ): Promise<OverallSummary | undefined> {
     try {
       const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyGrouping, {
         inputs: {
           title: prInfo.title,
-          description: prInfo.body || '',
+          description: prInfo.body || "",
           files,
           summarizeResults: Array.from(summarizeResults.entries()).map(([path, result]) => ({
             path,
@@ -116,8 +125,9 @@ export class DifyProcessor extends BaseProcessor {
         user: this.config.user,
       });
       return OverallSummarySchema.parse(JSON.parse(response));
+
     } catch (error) {
-      console.error('Error generating overall summary:', error);
+      console.error("Error generating overall summary:", error);
       return undefined;
     }
   }
@@ -131,13 +141,13 @@ export class DifyProcessor extends BaseProcessor {
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
     config?: ReviewConfig,
-    overallSummary?: OverallSummary,
+    overallSummary?: OverallSummary
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);
-
+      
       if (!summarizeResult) {
         console.warn(`No triage result for ${file.path}`);
         continue;
@@ -152,9 +162,9 @@ export class DifyProcessor extends BaseProcessor {
         const response = await runWorkflow(this.config.baseUrl, this.config.apiKeyReview, {
           inputs: {
             title: prInfo.title,
-            description: prInfo.body || '',
+            description: prInfo.body || "",
             filePath: file.path,
-            patch: file.patch || 'No changes',
+            patch: file.patch || "No changes",
             instructions: this.getInstructionsForFile(file.path, config),
             aspects: summarizeResult.aspects,
             overallSummary: {
@@ -171,7 +181,9 @@ export class DifyProcessor extends BaseProcessor {
           for (const comment of review.comments) {
             comments.push({
               path: file.path,
-              body: comment.suggestion ? `${comment.content}\n\n**Suggestion:**\n${comment.suggestion}` : comment.content,
+              body: comment.suggestion
+                ? `${comment.content}\n\n**Suggestion:**\n${comment.suggestion}`
+                : comment.content,
               type: 'inline',
               position: comment.line || 1,
             });
@@ -197,7 +209,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     return {
-      comments: comments,
+      comments: comments
     };
   }
 }
