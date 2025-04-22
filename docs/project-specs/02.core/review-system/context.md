@@ -184,9 +184,9 @@ interface OverallSummary {
      body: string;
 
      /**
-      * コメントの種類（インラインまたはPR全体）
+      * コメントの種類（インラインまたはファイルまたはPR全体）
       */
-     type: 'inline' | 'pr';
+     type: 'inline' | 'file' | 'pr';
    }
    ```
 

@@ -1,17 +1,17 @@
-import { OpenAI, zodResponseFormat, BaseProcessor, SummaryResponseSchema, OverallSummarySchema, ReviewResponseSchema } from './deps.ts';
+import { ImpactLevel } from '../base/schema.ts';
+import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
+import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
   IPullRequestInfo,
   IPullRequestProcessedResult,
   IReviewComment,
+  OverallSummary,
   ReviewComment,
   ReviewConfig,
   SummarizeResult,
-  OverallSummary,
 } from './deps.ts';
-import { ImpactLevel } from '../base/schema.ts';
-import { createTriagePrompt, createGroupingPrompt, createReviewPrompt } from './internal/prompts.ts';
-import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
+import { createGroupingPrompt, createReviewPrompt, createTriagePrompt } from './internal/prompts.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -132,12 +132,13 @@ export class OpenaiProcessor extends BaseProcessor {
       // Process each batch
       for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
         const batchEntries = batches[batchNumber - 1];
-        const batchFiles = files.filter(f =>
-          batchEntries.some(([path]) => path === f.path)
-        );
+        const batchFiles = files.filter((f) => batchEntries.some(([path]) => path === f.path));
 
         console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
-        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+        console.debug(
+          `[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`,
+          batchFiles.map((f) => f.path),
+        );
         if (previousAnalysis) {
           console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
         }
@@ -146,7 +147,7 @@ export class OpenaiProcessor extends BaseProcessor {
           const prompt = createGroupingPrompt({
             title: prInfo.title,
             description: prInfo.body || '',
-            files: batchFiles.map(f => ({
+            files: batchFiles.map((f) => ({
               path: f.path,
               patch: f.patch || 'No changes',
             })),
@@ -216,11 +217,7 @@ export class OpenaiProcessor extends BaseProcessor {
   /**
    * Create batches for given pass
    */
-  private createBatchEntries(
-    entries: [string, SummarizeResult][],
-    batchSize: number,
-    pass: number
-  ): [string, SummarizeResult][][] {
+  private createBatchEntries(entries: [string, SummarizeResult][], batchSize: number, pass: number): [string, SummarizeResult][][] {
     if (pass === 1) {
       return createHorizontalBatches(entries, batchSize);
     }
@@ -242,12 +239,12 @@ export class OpenaiProcessor extends BaseProcessor {
   private mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
     const latest = summaries[summaries.length - 1];
     const previous = summaries.slice(0, -1);
-    const previousMappings = previous.flatMap(s => s.aspectMappings);
+    const previousMappings = previous.flatMap((s) => s.aspectMappings);
 
     // Process current mappings (new or update)
-    const newAspectMappings = latest.aspectMappings.map(latestMapping => {
+    const newAspectMappings = latest.aspectMappings.map((latestMapping) => {
       // Find previous mapping with the same key
-      const prevMapping = previousMappings.find(p => p.aspect.key === latestMapping.aspect.key);
+      const prevMapping = previousMappings.find((p) => p.aspect.key === latestMapping.aspect.key);
 
       if (prevMapping) {
         // For existing aspect
@@ -255,9 +252,9 @@ export class OpenaiProcessor extends BaseProcessor {
           aspect: {
             key: latestMapping.aspect.key,
             description: latestMapping.aspect.description, // Use new description
-            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact])
+            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact]),
           },
-          files: [...new Set([...prevMapping.files, ...latestMapping.files])]
+          files: [...new Set([...prevMapping.files, ...latestMapping.files])],
         };
       }
       // Add new aspect as is
@@ -265,14 +262,12 @@ export class OpenaiProcessor extends BaseProcessor {
     });
 
     // Preserve aspects from previous mappings that are not referenced in current analysis
-    const preservedMappings = previousMappings.filter(prev =>
-      !latest.aspectMappings.some(curr => curr.aspect.key === prev.aspect.key)
-    );
+    const preservedMappings = previousMappings.filter((prev) => !latest.aspectMappings.some((curr) => curr.aspect.key === prev.aspect.key));
 
     return {
       description: latest.description,
       aspectMappings: [...preservedMappings, ...newAspectMappings],
-      crossCuttingConcerns: latest.crossCuttingConcerns
+      crossCuttingConcerns: latest.crossCuttingConcerns,
     };
   }
 
@@ -367,7 +362,7 @@ export class OpenaiProcessor extends BaseProcessor {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'pr',
+            type: 'file',
           });
         }
       } catch (error) {
@@ -381,6 +376,15 @@ export class OpenaiProcessor extends BaseProcessor {
       }
     }
 
+    // Add overall summary to regular comments
+    if (overallSummary != null) {
+      comments.push({
+        path: 'PR',
+        body: `## Overall Summary\n\n${overallSummary.description}`,
+        type: 'pr',
+      });
+    }
+
     return { comments };
   }
 
@@ -392,17 +396,21 @@ export class OpenaiProcessor extends BaseProcessor {
 {
   "description": "${result.description}",
   "aspectMappings": [
-${result.aspectMappings.map(mapping => `    {
+${result.aspectMappings
+  .map(
+    (mapping) => `    {
       "aspect": {
         "key": "${mapping.aspect.key}",
         "description": "${mapping.aspect.description}",
         "impact": "${mapping.aspect.impact}"
       },
       "files": ${JSON.stringify(mapping.files)}
-    }`).join(',\n')}
+    }`,
+  )
+  .join(',\n')}
   ],
   "crossCuttingConcerns": [
-${result.crossCuttingConcerns?.map(concern => `    "${concern}"`).join(',\n') || '    // No concerns'}
+${result.crossCuttingConcerns?.map((concern) => `    "${concern}"`).join(',\n') || '    // No concerns'}
   ]
 }`;
   }
