@@ -53,7 +53,12 @@ export type BaseReviewConfig = ReviewConfig;
 
 // Utility functions
 export function matchesGlobPattern(filePath: string, pattern: string): boolean {
-  const regexPattern = pattern.replace(/\./g, '\\.').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.');
+  const regexPattern = pattern
+    .replace(/\\/g, '\\\\') // Escape backslashes
+    .replace(/\./g, '\\.')
+    .replace(/\*\*/g, '.*')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\?/g, '.');
   return new RegExp(`^${regexPattern}$`).test(filePath);
 }
 
