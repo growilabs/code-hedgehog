@@ -163,7 +163,7 @@ export class GitHubVCS extends BaseVCS {
       const headCommitSha = prData.data.head.sha;
 
       if (prComments.length > 0) {
-        await Promise.all(
+        const prResults = await Promise.allSettled(
           prComments.map((comment) =>
             this.api.rest.issues.createComment({
               owner: this.context.owner,
@@ -173,6 +173,11 @@ export class GitHubVCS extends BaseVCS {
             }),
           ),
         );
+        prResults.forEach((result, idx) => {
+          if (result.status === 'rejected') {
+            core.warning(`Failed to create PR comment #${idx + 1}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`);
+          }
+        });
 
         core.debug(`Created review with ${prComments.length} pr comments`);
       }
@@ -180,15 +185,19 @@ export class GitHubVCS extends BaseVCS {
       if (fileComments.length > 0) {
         // Cannot run in parallel, because only one pending review is allowed
         for (const comment of fileComments) {
-          await this.api.rest.pulls.createReviewComment({
-            owner: this.context.owner,
-            repo: this.context.repo,
-            pull_number: this.context.pullNumber,
-            body: comment.body,
-            commit_id: headCommitSha,
-            path: comment.path,
-            subject_type: 'file',
-          });
+          try {
+            await this.api.rest.pulls.createReviewComment({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              pull_number: this.context.pullNumber,
+              body: comment.body,
+              commit_id: headCommitSha,
+              path: comment.path,
+              subject_type: 'file',
+            });
+          } catch (error) {
+            core.warning(`Failed to createReviewComment for file "${comment.path}": ${error instanceof Error ? error.message : String(error)}`);
+          }
         }
 
         core.debug(`Created review with ${fileComments.length} file comments`);
