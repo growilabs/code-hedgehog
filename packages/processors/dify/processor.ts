@@ -1,6 +1,7 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
+import { mergeOverallSummaries } from '../base/utils/summary.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
@@ -228,7 +229,7 @@ export class DifyProcessor extends BaseProcessor {
 
           // Update accumulated results
           if (accumulatedResult) {
-            accumulatedResult = this.mergeOverallSummaries(accumulatedResult, batchResult);
+            accumulatedResult = mergeOverallSummaries(accumulatedResult, batchResult);
           } else {
             accumulatedResult = batchResult;
           }

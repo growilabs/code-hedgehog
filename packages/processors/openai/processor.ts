@@ -1,4 +1,5 @@
 import { OpenAI, zodResponseFormat, BaseProcessor, SummaryResponseSchema, OverallSummarySchema, ReviewResponseSchema } from './deps.ts';
+import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type {
   IFileChange,
   IPullRequestInfo,
@@ -186,7 +187,7 @@ export class OpenaiProcessor extends BaseProcessor {
 
           // Update accumulated results
           if (accumulatedResult) {
-            accumulatedResult = this.mergeOverallSummaries(accumulatedResult, batchResult);
+            accumulatedResult = mergeOverallSummaries(accumulatedResult, batchResult);
           } else {
             accumulatedResult = batchResult;
           }

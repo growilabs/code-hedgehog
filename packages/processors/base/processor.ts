@@ -1,7 +1,7 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
 import { ImpactLevel } from './schema.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
-import { mergeOverallSummaries as mergeSummaries } from './utils/summary.ts';
+import { mergeOverallSummaries } from './utils/summary.ts';
 
 import { matchesGlobPattern } from './deps.ts';
 import type { OverallSummary } from './schema.ts';
@@ -130,16 +130,6 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       return createHorizontalBatches(entries, batchSize);
     }
     return createVerticalBatches(entries, batchSize);
-  }
-
-  /**
-   * Merge multiple OverallSummary results into one
-   * @param previous Array of previous summaries
-   * @param latest Latest summary
-   * @returns Merged summary
-   */
-  protected mergeOverallSummaries(previous: OverallSummary, latest: OverallSummary): OverallSummary {
-    return mergeSummaries(previous, latest);
   }
 
   /**
