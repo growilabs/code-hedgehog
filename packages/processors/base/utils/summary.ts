@@ -51,27 +51,3 @@ export function mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
   return ImpactLevel.Low;
 }
 
-/**
- * Format previous analysis result as JSON
- * @param result Previous analysis result
- * @returns JSON string of the analysis
- */
-export function formatPreviousAnalysis(result: OverallSummary | undefined): string {
-  if (!result) return '{}';
-  return JSON.stringify(
-    {
-      description: result.description,
-      aspectMappings: result.aspectMappings.map((mapping) => ({
-        aspect: {
-          key: mapping.aspect.key,
-          description: mapping.aspect.description,
-          impact: mapping.aspect.impact,
-        },
-        files: mapping.files,
-      })),
-      crossCuttingConcerns: result.crossCuttingConcerns || [],
-    },
-    null,
-    2,
-  );
-}

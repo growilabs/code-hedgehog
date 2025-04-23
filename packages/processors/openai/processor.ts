@@ -1,4 +1,4 @@
-import { OpenAI, zodResponseFormat, BaseProcessor, SummaryResponseSchema, OverallSummarySchema, ReviewResponseSchema, formatPreviousAnalysis } from './deps.ts';
+import { OpenAI, zodResponseFormat, BaseProcessor, SummaryResponseSchema, OverallSummarySchema, ReviewResponseSchema } from './deps.ts';
 import type {
   IFileChange,
   IPullRequestInfo,
@@ -192,7 +192,7 @@ export class OpenaiProcessor extends BaseProcessor {
           }
 
           // Update cumulative analysis for next batch
-          previousAnalysis = formatPreviousAnalysis(accumulatedResult);
+          previousAnalysis = JSON.stringify(accumulatedResult, null, 2);
           console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
