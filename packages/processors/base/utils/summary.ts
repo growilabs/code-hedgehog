@@ -6,8 +6,8 @@ import { ImpactLevel, type OverallSummary } from '../schema.ts';
  * @param latest Latest summary to merge with
  * @returns Merged summary
  */
-export function mergeOverallSummaries(previous: OverallSummary[], latest: OverallSummary): OverallSummary {
-  const previousMappings = previous.flatMap((s) => s.aspectMappings);
+export function mergeOverallSummaries(previous: OverallSummary, latest: OverallSummary): OverallSummary {
+  const previousMappings = previous.aspectMappings;
 
   // Process current mappings (new or update)
   const newAspectMappings = latest.aspectMappings.map((latestMapping) => {

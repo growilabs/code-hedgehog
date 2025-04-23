@@ -138,7 +138,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param latest Latest summary
    * @returns Merged summary
    */
-  protected mergeOverallSummaries(previous: OverallSummary[], latest: OverallSummary): OverallSummary {
+  protected mergeOverallSummaries(previous: OverallSummary, latest: OverallSummary): OverallSummary {
     return mergeSummaries(previous, latest);
   }
 
