@@ -1,5 +1,4 @@
-import { ImpactLevel } from '../base/schema.ts';
-import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
+import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
@@ -189,13 +188,13 @@ export class OpenaiProcessor extends BaseProcessor {
 
           // Update accumulated results
           if (accumulatedResult) {
-            accumulatedResult = this.mergeOverallSummaries([accumulatedResult, batchResult]);
+            accumulatedResult = mergeOverallSummaries(accumulatedResult, batchResult);
           } else {
             accumulatedResult = batchResult;
           }
 
           // Update cumulative analysis for next batch
-          previousAnalysis = this.formatPreviousAnalysis(accumulatedResult);
+          previousAnalysis = JSON.stringify(accumulatedResult, null, 2);
           console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
@@ -214,72 +213,6 @@ export class OpenaiProcessor extends BaseProcessor {
     return accumulatedResult;
   }
 
-  /**
-   * Create batches for given pass
-   */
-  private createBatchEntries(entries: [string, SummarizeResult][], batchSize: number, pass: number): [string, SummarizeResult][][] {
-    if (pass === 1) {
-      return createHorizontalBatches(entries, batchSize);
-    }
-    return createVerticalBatches(entries, batchSize);
-  }
-
-  /**
-   * Merge multiple OverallSummary results into one
-   * LLM integration:
-   * - description: Comprehensive explanation of all changes
-   * - aspect.description: Detailed explanation of each aspect
-   * - crossCuttingConcerns: Overall concerns and considerations
-   *
-   * Mechanical integration:
-   * - aspect.key: Maintain consistency across batches
-   * - aspect.files: Combine with deduplication
-   * - aspect.impact: Use highest impact level
-   */
-  private mergeOverallSummaries(summaries: OverallSummary[]): OverallSummary {
-    const latest = summaries[summaries.length - 1];
-    const previous = summaries.slice(0, -1);
-    const previousMappings = previous.flatMap((s) => s.aspectMappings);
-
-    // Process current mappings (new or update)
-    const newAspectMappings = latest.aspectMappings.map((latestMapping) => {
-      // Find previous mapping with the same key
-      const prevMapping = previousMappings.find((p) => p.aspect.key === latestMapping.aspect.key);
-
-      if (prevMapping) {
-        // For existing aspect
-        return {
-          aspect: {
-            key: latestMapping.aspect.key,
-            description: latestMapping.aspect.description, // Use new description
-            impact: this.mergeImpactLevels([prevMapping.aspect.impact, latestMapping.aspect.impact]),
-          },
-          files: [...new Set([...prevMapping.files, ...latestMapping.files])],
-        };
-      }
-      // Add new aspect as is
-      return latestMapping;
-    });
-
-    // Preserve aspects from previous mappings that are not referenced in current analysis
-    const preservedMappings = previousMappings.filter((prev) => !latest.aspectMappings.some((curr) => curr.aspect.key === prev.aspect.key));
-
-    return {
-      description: latest.description,
-      aspectMappings: [...preservedMappings, ...newAspectMappings],
-      crossCuttingConcerns: latest.crossCuttingConcerns,
-    };
-  }
-
-  /**
-   * Merge impact levels by selecting highest priority
-   * Priority: high > medium > low
-   */
-  private mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
-    if (impacts.includes(ImpactLevel.High)) return ImpactLevel.High;
-    if (impacts.includes(ImpactLevel.Medium)) return ImpactLevel.Medium;
-    return ImpactLevel.Low;
-  }
 
   /**
    * Implementation of review phase
@@ -388,32 +321,6 @@ export class OpenaiProcessor extends BaseProcessor {
     return { comments };
   }
 
-  /**
-   * Format previous analysis result for next batch
-   */
-  private formatPreviousAnalysis(result: OverallSummary): string {
-    return `Previous Batch Analysis:
-{
-  "description": "${result.description}",
-  "aspectMappings": [
-${result.aspectMappings
-  .map(
-    (mapping) => `    {
-      "aspect": {
-        "key": "${mapping.aspect.key}",
-        "description": "${mapping.aspect.description}",
-        "impact": "${mapping.aspect.impact}"
-      },
-      "files": ${JSON.stringify(mapping.files)}
-    }`,
-  )
-  .join(',\n')}
-  ],
-  "crossCuttingConcerns": [
-${result.crossCuttingConcerns?.map((concern) => `    "${concern}"`).join(',\n') || '    // No concerns'}
-  ]
-}`;
-  }
 
   /**
    * Format review comment

@@ -9,7 +9,7 @@ export {
   ImpactLevel,
   SummaryResponseSchema,
   OverallSummarySchema,
-  ReviewResponseSchema,
+  ReviewResponseSchema
 } from '@code-hedgehog/base-processor';
 
 // External dependencies

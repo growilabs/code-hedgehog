@@ -82,6 +82,7 @@ export const createGroupingPrompt = ({
 ${previousAnalysis ? `## Previous Analysis
 The following analysis provides context for your review:
 
+Previous Batch Analysis:
 ${previousAnalysis}
 
 Note:

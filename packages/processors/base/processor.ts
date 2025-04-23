@@ -1,4 +1,7 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
+import { ImpactLevel } from './schema.ts';
+import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+import { mergeOverallSummaries } from './utils/summary.ts';
 
 import { matchesGlobPattern } from './deps.ts';
 import type { OverallSummary } from './schema.ts';
@@ -113,6 +116,20 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     const searchTerms = [aspect.key.toLowerCase(), ...aspect.description.toLowerCase().split(' ')];
     const normalizedSummary = summary.toLowerCase();
     return searchTerms.some((term) => normalizedSummary.includes(term));
+  }
+
+  /**
+   * Create batches for given pass
+   * @param entries Entries to batch
+   * @param batchSize Size of each batch
+   * @param pass Current pass number
+   * @returns Batched entries
+   */
+  protected createBatchEntries(entries: [string, SummarizeResult][], batchSize: number, pass: number): [string, SummarizeResult][][] {
+    if (pass === 1) {
+      return createHorizontalBatches(entries, batchSize);
+    }
+    return createVerticalBatches(entries, batchSize);
   }
 
   /**

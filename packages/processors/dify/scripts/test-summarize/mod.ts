@@ -1,3 +1,5 @@
+import { processSummarizeResponse } from '../../internal/run-workflow.ts';
+
 async function main() {
   const baseUrl = Deno.env.get('DIFY_API_BASE_URL');
   if (!baseUrl) {
@@ -32,9 +34,19 @@ async function main() {
     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
   }
 
-  console.log('Raw Response:', { response });
+  // Get raw response data
   const data = await response.json();
-  console.log('\nResponse Body:', JSON.stringify(data, null, 2));
+  console.log('\nRaw Response Body:', JSON.stringify(data, null, 2));
+
+  try {
+    // Process and validate response
+    console.log('\nAttempting to process and validate response...');
+    const validatedData = processSummarizeResponse(data);
+    console.log('\nValidated Summary Response:', JSON.stringify(validatedData, null, 2));
+  } catch (error) {
+    console.error('\nValidation Error:', error);
+    console.log('\nOutputs data:', data.data?.outputs);
+  }
 }
 
 main();
