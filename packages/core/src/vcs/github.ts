@@ -145,25 +145,79 @@ export class GitHubVCS extends BaseVCS {
       return;
     }
 
+    const prComments = comments.filter((c) => c.type === 'pr');
+    const fileComments = comments.filter((c) => c.type === 'file');
+    const inlineComments = comments.filter((c) => c.type === 'inline');
+
     if (dryRun) {
       core.debug(`[DRY RUN] Would create review with ${comments.length} comments`);
       return;
     }
 
     try {
-      await this.api.rest.pulls.createReview({
+      const prData = await this.api.rest.pulls.get({
         owner: this.context.owner,
         repo: this.context.repo,
         pull_number: this.context.pullNumber,
-        event: 'COMMENT',
-        comments: comments.map((comment) => ({
-          path: comment.path,
-          position: comment.position,
-          body: comment.body,
-        })),
       });
+      const headCommitSha = prData.data.head.sha;
 
-      core.debug(`Created review with ${comments.length} comments`);
+      if (prComments.length > 0) {
+        const prResults = await Promise.allSettled(
+          prComments.map((comment) =>
+            this.api.rest.issues.createComment({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              issue_number: this.context.pullNumber,
+              body: comment.body,
+            }),
+          ),
+        );
+        prResults.forEach((result, idx) => {
+          if (result.status === 'rejected') {
+            core.warning(`Failed to create PR comment #${idx + 1}: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`);
+          }
+        });
+
+        core.debug(`Created review with ${prComments.length} pr comments`);
+      }
+
+      if (fileComments.length > 0) {
+        // Cannot run in parallel, because only one pending review is allowed
+        for (const comment of fileComments) {
+          try {
+            await this.api.rest.pulls.createReviewComment({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              pull_number: this.context.pullNumber,
+              body: comment.body,
+              commit_id: headCommitSha,
+              path: comment.path,
+              subject_type: 'file',
+            });
+          } catch (error) {
+            core.warning(`Failed to createReviewComment for file "${comment.path}": ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+
+        core.debug(`Created review with ${fileComments.length} file comments`);
+      }
+
+      if (inlineComments.length > 0) {
+        await this.api.rest.pulls.createReview({
+          owner: this.context.owner,
+          repo: this.context.repo,
+          pull_number: this.context.pullNumber,
+          event: 'COMMENT',
+          comments: inlineComments.map((comment) => ({
+            path: comment.path,
+            position: comment.position,
+            body: comment.body,
+          })),
+        });
+
+        core.debug(`Created review with ${inlineComments.length} inline comments`);
+      }
     } catch (error) {
       throw this.formatError('create review', error);
     }

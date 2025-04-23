@@ -1,7 +1,7 @@
 /**
  * Type of review comment
  */
-export type CommentType = 'inline' | 'pr';
+export type CommentType = 'inline' | 'file' | 'pr';
 
 /**
  * Represents a review comment on a pull request

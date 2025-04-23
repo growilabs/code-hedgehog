@@ -1,16 +1,16 @@
-import { OpenAI, zodResponseFormat, BaseProcessor, SummaryResponseSchema, OverallSummarySchema, ReviewResponseSchema } from './deps.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
+import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
   IPullRequestInfo,
   IPullRequestProcessedResult,
   IReviewComment,
+  OverallSummary,
   ReviewComment,
   ReviewConfig,
   SummarizeResult,
-  OverallSummary,
 } from './deps.ts';
-import { createTriagePrompt, createGroupingPrompt, createReviewPrompt } from './internal/prompts.ts';
+import { createGroupingPrompt, createReviewPrompt, createTriagePrompt } from './internal/prompts.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -131,12 +131,13 @@ export class OpenaiProcessor extends BaseProcessor {
       // Process each batch
       for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
         const batchEntries = batches[batchNumber - 1];
-        const batchFiles = files.filter(f =>
-          batchEntries.some(([path]) => path === f.path)
-        );
+        const batchFiles = files.filter((f) => batchEntries.some(([path]) => path === f.path));
 
         console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
-        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+        console.debug(
+          `[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`,
+          batchFiles.map((f) => f.path),
+        );
         if (previousAnalysis) {
           console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
         }
@@ -145,7 +146,7 @@ export class OpenaiProcessor extends BaseProcessor {
           const prompt = createGroupingPrompt({
             title: prInfo.title,
             description: prInfo.body || '',
-            files: batchFiles.map(f => ({
+            files: batchFiles.map((f) => ({
               path: f.path,
               patch: f.patch || 'No changes',
             })),
@@ -294,7 +295,7 @@ export class OpenaiProcessor extends BaseProcessor {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'pr',
+            type: 'file',
           });
         }
       } catch (error) {
@@ -306,6 +307,15 @@ export class OpenaiProcessor extends BaseProcessor {
           type: 'inline',
         });
       }
+    }
+
+    // Add overall summary to regular comments
+    if (overallSummary != null) {
+      comments.push({
+        path: 'PR',
+        body: `## Overall Summary\n\n${overallSummary.description}`,
+        type: 'pr',
+      });
     }
 
     return { comments };
