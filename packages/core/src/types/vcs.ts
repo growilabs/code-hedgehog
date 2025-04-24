@@ -80,9 +80,10 @@ export interface IVersionControlSystem {
 
   /**
    * Creates an async iterator that yields batches of file changes
+   * @param prInfo Pull request information
    * @param batchSize Number of files to process in each batch
    */
-  getPullRequestChangesStream(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
+  getPullRequestChangesStream(prInfo: IPullRequestInfo, batchSize?: number): AsyncIterableIterator<IFileChange[]>;
 
   /**
    * Creates a review with a batch of comments

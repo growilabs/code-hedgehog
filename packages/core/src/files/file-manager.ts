@@ -1,7 +1,7 @@
 import * as core from '@actions/core';
 import { minimatch } from 'minimatch';
 
-import type { IFileChange, IVersionControlSystem } from '../types/mod.ts';
+import type { IFileChange, IPullRequestInfo, IVersionControlSystem } from '../types/mod.ts';
 
 import type { IFileFilter, IFileManager } from './types.ts';
 
@@ -11,11 +11,11 @@ export class FileManager implements IFileManager {
     private readonly filter: IFileFilter = {},
   ) {}
 
-  async *collectChangedFiles(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
+  async *collectChangedFiles(prInfo: IPullRequestInfo, batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
       let currentBatch: IFileChange[] = [];
 
-      for await (const files of this.vcsClient.getPullRequestChangesStream(batchSize)) {
+      for await (const files of this.vcsClient.getPullRequestChangesStream(prInfo, batchSize)) {
         const filteredFiles = files.filter((file: IFileChange) => this.shouldProcessFile(file));
 
         currentBatch.push(...filteredFiles);

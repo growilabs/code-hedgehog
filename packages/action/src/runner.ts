@@ -30,7 +30,7 @@ export class ActionRunner {
       }
 
       // Process files in batches and get reviews
-      for await (const files of fileManager.collectChangedFiles()) {
+      for await (const files of fileManager.collectChangedFiles(prInfo)) {
         const { comments } = await processor.process(prInfo, files);
         if (comments != null && comments.length > 0) {
           if (dryRun) {
@@ -113,7 +113,7 @@ export class ActionRunner {
           apiKeySummarize: process.env.DIFY_API_KEY_SUMMARIZE ?? '',
           apiKeyGrouping: process.env.DIFY_API_KEY_GROUPING ?? '',
           apiKeyReview: process.env.DIFY_API_KEY_REVIEW ?? '',
-         });
+        });
       }
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);

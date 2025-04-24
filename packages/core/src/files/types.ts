@@ -1,4 +1,4 @@
-import type { IFileChange } from '../types/mod.ts';
+import type { IFileChange, IPullRequestInfo } from '../types/mod.ts';
 
 export interface IFileFilter {
   /**
@@ -27,8 +27,9 @@ export interface IFileFilter {
 export interface IFileManager {
   /**
    * Collects and filters changed files from PR
+   * @param prInfo Pull request information
    * @param batchSize Number of files to process in each batch
    * @returns AsyncIterator of filtered file changes
    */
-  collectChangedFiles(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
+  collectChangedFiles(prInfo: IPullRequestInfo, batchSize?: number): AsyncIterableIterator<IFileChange[]>;
 }

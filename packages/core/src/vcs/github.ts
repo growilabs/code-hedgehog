@@ -76,9 +76,10 @@ export class GitHubVCS extends BaseVCS {
    * - File size limits (skips patches larger than 1MB)
    * - Total file count limits (warns after 3000 files)
    *
+   * @param prInfo Pull request information
    * @param batchSize Number of files to include in each yielded batch
    */
-  async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
+  async *getPullRequestChangesStream(prInfo: IPullRequestInfo, batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
       // Optimize page size based on batch size to reduce API calls
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
