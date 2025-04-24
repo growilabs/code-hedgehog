@@ -108,9 +108,6 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Determine if changes are simple (formatting, comments only, etc.)
-   */
-  /**
    * パッチの内容がシンプルな変更かどうかを判定
    */
   protected isSimpleChange(patch: string): boolean {
