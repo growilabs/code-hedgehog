@@ -1,11 +1,11 @@
 // Removed fs and parseYaml imports, they are now in load-config.ts
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-import { DEFAULT_CONFIG } from './deps.ts'; // Keep DEFAULT_CONFIG if needed elsewhere, or remove if only used for initial value
+import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import type { OverallSummary } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
-import { loadConfig as loadExternalConfig } from './internal/load-config.ts'; // Import the new function
-import { calculatePatternSpecificity } from './internal/calculate-pattern-specificity.ts';
+import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
+import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
 
 /**
  * Base class for pull request processors
@@ -35,36 +35,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * 3. マッチする全ての指示を結合
    */
   protected getInstructionsForFile(filePath: string, config?: ReviewConfig): string {
-    // 設定取得
-    const instructions = config?.file_path_instructions || this.config.file_path_instructions || [];
-    if (instructions.length === 0) {
-      return '';
-    }
-
-    try {
-      // マッチするパターンを抽出し、具体性でソート
-      const matchingInstructions = instructions
-        .map((instruction, index) => ({
-          ...instruction,
-          specificity: calculatePatternSpecificity(instruction.path),
-          originalIndex: index,
-        }))
-        .filter((instruction) => this.matchesGlobPattern(filePath, instruction.path))
-        .sort((a, b) => {
-          // 1. 具体性の高いパターンを優先
-          if (a.specificity !== b.specificity) {
-            return b.specificity - a.specificity;
-          }
-          // 2. 設定ファイル内の順序を維持
-          return a.originalIndex - b.originalIndex;
-        });
-
-      // 指示を結合
-      return matchingInstructions.map((instruction) => instruction.instructions).join('\n\n');
-    } catch (error) {
-      console.warn(`Error while getting instructions for ${filePath}:`, error);
-      return '';
-    }
+    return getInstructionsForFile(filePath, config || this.config);
   }
 
   /**
@@ -80,7 +51,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     return filters.some((filter: string) => {
       if (filter.startsWith('!')) {
-        return this.matchesGlobPattern(filePath, filter.slice(1));
+        return matchesGlobPattern(filePath, filter.slice(1));
       }
       return false;
     });
@@ -139,27 +110,6 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   /**
    * Determine if changes are simple (formatting, comments only, etc.)
    */
-  /**
-   * 指定されたファイルパスがGlobパターンにマッチするか確認
-   */
-  private matchesGlobPattern(filePath: string, pattern: string): boolean {
-    // .や*などの特殊文字をエスケープ
-    const regexPattern = pattern
-      .replace(/\./g, '\\.')
-      .replace(/\{([^}]+)\}/g, '($1)') // {js,ts} => (js|ts)
-      .replace(/\*\*/g, '.*') // ** => .*
-      .replace(/\*/g, '[^/]*') // * => [^/]*
-      .replace(/\?/g, '.') // ? => .
-      .replace(/,/g, '|'); // カンマをORに変換
-
-    try {
-      return new RegExp(`^${regexPattern}$`).test(filePath);
-    } catch (error) {
-      console.warn(`Invalid pattern "${pattern}":`, error);
-      return false;
-    }
-  }
-
   /**
    * パッチの内容がシンプルな変更かどうかを判定
    */
