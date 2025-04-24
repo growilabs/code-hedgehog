@@ -1,5 +1,5 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-import { ImpactLevel } from './schema.ts';
+import { ImpactLevel, type ReviewComment } from './schema.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { mergeOverallSummaries } from './utils/summary.ts';
 
@@ -190,5 +190,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     // 4. Execute detailed review with context
     return this.review(prInfo, files, summarizeResults, config, overallSummary);
+  }
+  /**
+   * Format review comment with suggestion
+   */
+  protected formatComment(comment: ReviewComment): string {
+    let body = comment.message;
+    if (comment.suggestion) {
+      body += `\n\n**Suggestion:**\n${comment.suggestion}`;
+    }
+    return body;
   }
 }

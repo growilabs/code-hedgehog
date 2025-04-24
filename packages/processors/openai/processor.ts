@@ -325,11 +325,4 @@ export class OpenaiProcessor extends BaseProcessor {
   /**
    * Format review comment
    */
-  private formatComment(comment: ReviewComment): string {
-    let body = comment.content;
-    if (comment.suggestion) {
-      body += `\n\n**Suggestion:**\n${comment.suggestion}`;
-    }
-    return body;
-  }
 }

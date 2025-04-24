@@ -332,9 +332,7 @@ export class DifyProcessor extends BaseProcessor {
           for (const comment of review.comments) {
             comments.push({
               path: file.path,
-              body: comment.suggestion
-                ? `${comment.content}\n\n**Suggestion:**\n${comment.suggestion}`
-                : comment.content,
+              body: this.formatComment(comment),
               type: 'inline',
               position: comment.line_number || 1,
             });
