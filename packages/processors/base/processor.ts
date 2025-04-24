@@ -5,6 +5,7 @@ import type { OverallSummary } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 import { loadConfig as loadExternalConfig } from './internal/load-config.ts'; // Import the new function
+import { calculatePatternSpecificity } from './internal/calculate-pattern-specificity.ts';
 
 /**
  * Base class for pull request processors
@@ -45,7 +46,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       const matchingInstructions = instructions
         .map((instruction, index) => ({
           ...instruction,
-          specificity: this.calculatePatternSpecificity(instruction.path),
+          specificity: calculatePatternSpecificity(instruction.path),
           originalIndex: index,
         }))
         .filter((instruction) => this.matchesGlobPattern(filePath, instruction.path))
@@ -138,37 +139,6 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   /**
    * Determine if changes are simple (formatting, comments only, etc.)
    */
-  /**
-   * パターンの具体性をスコア化
-   * - より長いパス部分が優先
-   * - ワイルドカードが少ないほど優先
-   * - 拡張子指定があるほうが優先
-   */
-  private calculatePatternSpecificity(pattern: string): number {
-    let score = 0;
-
-    // 基本スコアはパスの長さ
-    score += pattern.length;
-
-    // ワイルドカードはスコアを下げる
-    score -= (pattern.match(/\*/g) || []).length * 2;
-
-    // **はさらにスコアを下げる
-    score -= (pattern.match(/\*\*/g) || []).length * 3;
-
-    // 拡張子指定があればスコアを上げる
-    if (pattern.includes('.')) {
-      score += 5;
-    }
-
-    // 波括弧による拡張子グループ指定があればさらにスコア上げる
-    if (pattern.includes('{')) {
-      score += 3;
-    }
-
-    return score;
-  }
-
   /**
    * 指定されたファイルパスがGlobパターンにマッチするか確認
    */
