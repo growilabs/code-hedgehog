@@ -1,12 +1,8 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-import { ImpactLevel, type ReviewComment } from './schema.ts';
-import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
-import { mergeOverallSummaries } from './utils/summary.ts';
-
 import { matchesGlobPattern } from './deps.ts';
-import type { OverallSummary } from './schema.ts';
+import type { OverallSummary, ReviewComment } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
-
+import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 
 /**
