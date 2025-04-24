@@ -1,51 +1,26 @@
-import { promises as fs } from 'node:fs';
-import { constants as fsConstants } from 'node:fs';
+// Removed fs and parseYaml imports, they are now in load-config.ts
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-import { parseYaml } from './deps.ts';
-import { DEFAULT_CONFIG } from './deps.ts';
+import { DEFAULT_CONFIG } from './deps.ts'; // Keep DEFAULT_CONFIG if needed elsewhere, or remove if only used for initial value
 import type { OverallSummary } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
+import { loadConfig as loadExternalConfig } from './internal/load-config.ts'; // Import the new function
 
 /**
  * Base class for pull request processors
  * Provides common functionality for reviewing pull requests
  */
 export abstract class BaseProcessor implements IPullRequestProcessor {
-  private config = DEFAULT_CONFIG;
+  // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
+  private config: ReviewConfig = DEFAULT_CONFIG;
 
   /**
-   * Load configuration from .coderabbitai.yaml
+   * Load configuration using the external module.
+   * This method now acts as a wrapper to update the instance's config.
    */
   protected async loadConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
-    try {
-      // Check if file exists
-      try {
-        await fs.access(configPath, fsConstants.R_OK);
-      } catch (error) {
-        console.warn('Config file not found, using defaults');
-        return;
-      }
-
-      // Read and parse file
-      const content = await fs.readFile(configPath, 'utf-8');
-      const parsed = parseYaml(content) as unknown;
-
-      // Validate config
-      if (!parsed || typeof parsed !== 'object') {
-        console.warn('Invalid config format');
-        return;
-      }
-
-      // Merge with defaults
-      this.config = {
-        ...DEFAULT_CONFIG,
-        ...parsed,
-      };
-    } catch (error) {
-      console.error('Error reading config:', error);
-      // Keep default config
-    }
+    // Call the external function and update the instance's config
+    this.config = await loadExternalConfig(configPath);
   }
 
   /**
