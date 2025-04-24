@@ -16,6 +16,10 @@ type DifyProcessorConfig = {
  */
 export class DifyProcessor extends BaseProcessor {
   private readonly config: DifyProcessorConfig;
+  private readonly tokenConfig = {
+    margin: 100,
+    maxTokens: 4000,
+  };
 
   /**
    * Constructor for DifyProcessor
@@ -85,7 +89,7 @@ export class DifyProcessor extends BaseProcessor {
     
     for (const file of files) {
       // Basic token check and simple change detection
-      const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
+      const baseResult = await this.shouldPerformDetailedReview(file, this.tokenConfig);
       
       try {
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeySummarize, {
