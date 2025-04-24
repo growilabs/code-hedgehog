@@ -284,7 +284,7 @@ export class OpenaiProcessor extends BaseProcessor {
         for (const comment of review.comments) {
           comments.push({
             path: file.path,
-            position: comment.line ?? 1,
+            position: comment.line_number ?? 1,
             body: this.formatComment(comment),
             type: 'inline',
           });

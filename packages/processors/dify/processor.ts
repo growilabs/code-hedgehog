@@ -336,7 +336,7 @@ export class DifyProcessor extends BaseProcessor {
                 ? `${comment.content}\n\n**Suggestion:**\n${comment.suggestion}`
                 : comment.content,
               type: 'inline',
-              position: comment.line || 1,
+              position: comment.line_number || 1,
             });
           }
         }
