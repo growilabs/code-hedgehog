@@ -221,7 +221,7 @@ export class DifyProcessor extends BaseProcessor {
           });
 
           if (!response) {
-            console.error(`[Pass ${pass}/${PASSES}] No response generated for batch ${batchNumber}`);
+            console.error(`[Pass ${pass}/${PASSES}] No review outputs generated for batch ${batchNumber}`);
             continue;
           }
 
