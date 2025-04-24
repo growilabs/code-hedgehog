@@ -290,6 +290,21 @@ export class DifyProcessor extends BaseProcessor {
           aspectsJson
         );
 
+        // Upload overall summary data if available
+        let overallSummaryFileId: string | undefined;
+        if (overallSummary) {
+          const overallSummaryJson = JSON.stringify({
+            description: overallSummary.description,
+            crossCuttingConcerns: overallSummary.crossCuttingConcerns,
+          });
+          overallSummaryFileId = await uploadFile(
+            this.config.baseUrl,
+            this.config.apiKeyReview,
+            this.config.user,
+            overallSummaryJson
+          );
+        }
+
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
           inputs: {
             title: prInfo.title,
@@ -302,10 +317,11 @@ export class DifyProcessor extends BaseProcessor {
               upload_file_id: aspectsFileId,
               type: "document"
             },
-            overallSummary: {
-              description: overallSummary?.description,
-              crossCuttingConcerns: overallSummary?.crossCuttingConcerns,
-            },
+            overallSummary: overallSummaryFileId ? {
+              transfer_method: "local_file",
+              upload_file_id: overallSummaryFileId,
+              type: "document"
+            } : undefined,
           },
           response_mode: 'blocking' as const,
           user: this.config.user,
