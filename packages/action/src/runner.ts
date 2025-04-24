@@ -113,7 +113,7 @@ export class ActionRunner {
           apiKeySummarize: process.env.DIFY_API_KEY_SUMMARIZE ?? '',
           apiKeyGrouping: process.env.DIFY_API_KEY_GROUPING ?? '',
           apiKeyReview: process.env.DIFY_API_KEY_REVIEW ?? '',
-         });
+        });
       }
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);
