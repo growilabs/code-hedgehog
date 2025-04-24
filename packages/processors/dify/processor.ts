@@ -339,10 +339,20 @@ export class DifyProcessor extends BaseProcessor {
           }
         }
 
+        // Add file summary comment
         if (review.summary) {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
+            type: 'file',
+          });
+        }
+
+        // Add PR summary comment if overall summary is available
+        if (overallSummary != null) {
+          comments.push({
+            path: 'PR',
+            body: `## Overall Summary\n\n${overallSummary.description}`,
             type: 'pr',
           });
         }
