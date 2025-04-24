@@ -20,8 +20,8 @@ export function matchesGlobPattern(filePath: string, pattern: string): boolean {
           regexString += '.*'; // Matches zero or more characters including '/'
           i++;
         } else { // Handle *
-          // シングルワイルドカードでも / を含めて全てのディレクトリにマッチするように変更
-          regexString += '.*?'; // Matches zero or more characters (non-greedy)
+          // シングルワイルドカードは / を含まない文字列にマッチ
+          regexString += '[^/]*'; // Matches zero or more characters except '/'
         }
         break;
       case '?':
