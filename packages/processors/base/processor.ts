@@ -1,11 +1,15 @@
 // Removed fs and parseYaml imports, they are now in load-config.ts
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
+import { ImpactLevel } from './schema.ts';
+import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+import { mergeOverallSummaries } from './utils/summary.ts';
+
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
+import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
+import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
 import type { OverallSummary } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
-import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
-import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
 
 /**
  * Base class for pull request processors
@@ -128,6 +132,47 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     }
 
     return !hasSubstantiveChanges;
+  }
+
+  /**
+   * Updates summarized results with aspects from the overall summary
+   */
+  protected updatesummarizeResultsWithAspects(summarizeResults: Map<string, SummarizeResult>, overallSummary: OverallSummary): void {
+    // Update aspects based on the overall summary
+    for (const summary of overallSummary.aspectMappings) {
+      const aspect = summary.aspect;
+      // Find all files that relate to this aspect by checking their content
+      for (const [filePath, result] of summarizeResults.entries()) {
+        if (summary.files.includes(filePath)) {
+          // Add the aspect to the triage result if it's relevant
+          result.aspects = Array.from(new Set([...result.aspects, aspect]));
+        }
+      }
+    }
+  }
+
+  /**
+   * Determines if an aspect is relevant to a file based on its summary
+   * This is a basic implementation that can be overridden by processors
+   */
+  protected isAspectRelevantToFile(aspect: { key: string; description: string }, summary: string): boolean {
+    const searchTerms = [aspect.key.toLowerCase(), ...aspect.description.toLowerCase().split(' ')];
+    const normalizedSummary = summary.toLowerCase();
+    return searchTerms.some((term) => normalizedSummary.includes(term));
+  }
+
+  /**
+   * Create batches for given pass
+   * @param entries Entries to batch
+   * @param batchSize Size of each batch
+   * @param pass Current pass number
+   * @returns Batched entries
+   */
+  protected createBatchEntries(entries: [string, SummarizeResult][], batchSize: number, pass: number): [string, SummarizeResult][][] {
+    if (pass === 1) {
+      return createHorizontalBatches(entries, batchSize);
+    }
+    return createVerticalBatches(entries, batchSize);
   }
 
   /**

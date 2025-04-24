@@ -38,14 +38,8 @@ ${patch}
 
 Respond in JSON format with:
 - summary: Brief description of changes (100 words or less)
-${needsReviewPre
-  ? '- needsReview: true if changes require detailed review'
-  : '- needsReview: false (fixed value for this prompt)'
-}
-${needsReviewPre
-  ? '- reason: Explanation for the review decision only when \'needsReview\' is false (5 words or less)'
-  : ''
-}
+${needsReviewPre ? '- needsReview: true if changes require detailed review' : '- needsReview: false (fixed value for this prompt)'}
+${needsReviewPre ? "- reason: Explanation for the review decision only when 'needsReview' is false (5 words or less)" : ''}
 
 Expected JSON format:
 {
@@ -74,21 +68,26 @@ export const createGroupingPrompt = ({
   title: string;
   description: string;
   files: { path: string; patch: string }[];
-  summarizeResults: { path: string; needsReview: boolean, summary?: string, reason?: string }[];
+  summarizeResults: { path: string; needsReview: boolean; summary?: string; reason?: string }[];
   previousAnalysis?: string;
   aspects?: ReviewAspect[];
 }) => `You are analyzing code changes in a pull request.
 
-${previousAnalysis ? `## Previous Analysis
+${
+  previousAnalysis
+    ? `## Previous Analysis
 The following analysis provides context for your review:
 
+Previous Batch Analysis:
 ${previousAnalysis}
 
 Note:
 - Use previous analysis to maintain consistent aspect categorization
 - Create a comprehensive description that covers all changes cohesively
 - Present changes as a logically connected whole
-- Only analyze listed files for aspect mappings\n` : ''}
+- Only analyze listed files for aspect mappings\n`
+    : ''
+}
 
 ## Pull Request
 
@@ -99,8 +98,12 @@ Description: ${description}
 
 1. Standard Aspects
 Use these predefined aspects for technical characteristics:
-${aspects.map(a => `- ${a.name} (key: "${a.key}")
-  ${a.description}`).join('\n')}
+${aspects
+  .map(
+    (a) => `- ${a.name} (key: "${a.key}")
+  ${a.description}`,
+  )
+  .join('\n')}
 
 2. Domain Aspects
 What is a Domain?
@@ -129,11 +132,11 @@ Creating domain aspects:
 
 ## Files To Analyze
 
-${files.map(f => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')}
+${files.map((f) => `### ${f.path}\n\n\`\`\`diff\n${f.patch}\n\`\`\`\n`).join('\n')}
 
 ## Change Summaries
 
-${summarizeResults.map(r => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
+${summarizeResults.map((r) => `- ${r.path}: ${r.summary || 'No summary available'}`).join('\n')}
 
 Create a comprehensive analysis:
 1. For elements requiring semantic integration:
@@ -219,7 +222,7 @@ Note about cross-cutting concerns:
  */
 export const createReviewPrompt = ({
   title,
-  description, 
+  description,
   filePath,
   patch,
   instructions,
@@ -240,7 +243,7 @@ PR Title: ${title}
 Description: ${description}
 File: ${filePath}
 
-${aspects?.length ? `## Review Aspects\n\n${aspects.map(a => `- ${a.name}: ${a.description}`).join('\n')}` : ''}
+${aspects?.length ? `## Review Aspects\n\n${aspects.map((a) => `- ${a.name}: ${a.description}`).join('\n')}` : ''}
 
 ${instructions ? `## Additional Instructions\n\n${instructions}` : ''}
 
