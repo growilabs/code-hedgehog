@@ -281,6 +281,15 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       try {
+        // Upload aspects data
+        const aspectsJson = JSON.stringify(summarizeResult.aspects);
+        const aspectsFileId = await uploadFile(
+          this.config.baseUrl,
+          this.config.apiKeyReview,
+          this.config.user,
+          aspectsJson
+        );
+
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
           inputs: {
             title: prInfo.title,
@@ -288,7 +297,11 @@ export class DifyProcessor extends BaseProcessor {
             filePath: file.path,
             patch: file.patch || "No changes",
             instructions: this.getInstructionsForFile(file.path, config),
-            aspects: summarizeResult.aspects,
+            aspects: {
+              transfer_method: "local_file",
+              upload_file_id: aspectsFileId,
+              type: "document"
+            },
             overallSummary: {
               description: overallSummary?.description,
               crossCuttingConcerns: overallSummary?.crossCuttingConcerns,
