@@ -347,15 +347,6 @@ export class DifyProcessor extends BaseProcessor {
             type: 'file',
           });
         }
-
-        // Add PR summary comment if overall summary is available
-        if (overallSummary != null) {
-          comments.push({
-            path: 'PR',
-            body: `## Overall Summary\n\n${overallSummary.description}`,
-            type: 'pr',
-          });
-        }
       } catch (error) {
         console.error(`Review error for ${file.path}:`, error);
         comments.push({
@@ -365,6 +356,15 @@ export class DifyProcessor extends BaseProcessor {
           type: 'inline',
         });
       }
+    }
+
+    // Add overall summary to regular comments
+    if (overallSummary != null) {
+      comments.push({
+        path: 'PR',
+        body: `## Overall Summary\n\n${overallSummary.description}`,
+        type: 'pr',
+      });
     }
 
     return {
