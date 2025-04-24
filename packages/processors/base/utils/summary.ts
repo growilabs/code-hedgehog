@@ -50,4 +50,3 @@ export function mergeImpactLevels(impacts: ImpactLevel[]): ImpactLevel {
   if (impacts.includes(ImpactLevel.Medium)) return ImpactLevel.Medium;
   return ImpactLevel.Low;
 }
-

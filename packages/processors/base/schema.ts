@@ -4,9 +4,9 @@ import { z } from './deps.ts';
  * Impact level of changes
  */
 export enum ImpactLevel {
-  High = "high",
-  Medium = "medium",
-  Low = "low"
+  High = 'high',
+  Medium = 'medium',
+  Low = 'low',
 }
 
 /**

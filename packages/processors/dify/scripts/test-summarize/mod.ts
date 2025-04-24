@@ -23,7 +23,7 @@ async function main() {
         description: 'Test PR Description',
         filePath: 'path/to/file.txt',
         patch: 'No changes',
-        needsReviewPre: "true",
+        needsReviewPre: 'true',
       },
       response_mode: 'blocking' as const,
       user: 'moogle',

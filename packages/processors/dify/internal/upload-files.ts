@@ -22,9 +22,7 @@ export async function uploadFile(
 
   // Create FormData with JSON file
   const formData = new FormData();
-  const blob = typeof fileContent === 'string'
-    ? new Blob([fileContent], { type: mimeType })
-    : fileContent;
+  const blob = typeof fileContent === 'string' ? new Blob([fileContent], { type: mimeType }) : fileContent;
   formData.append('file', blob, fileName);
   formData.append('user', user);
 
@@ -35,7 +33,7 @@ export async function uploadFile(
       const response = await fetch(`${baseUrl}/files/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: formData,
       });
@@ -58,7 +56,7 @@ export async function uploadFile(
       }
 
       console.warn(`Attempt ${lastAttempt} failed, retrying in ${retryDelay}ms...`, error);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
     }
   }
 
