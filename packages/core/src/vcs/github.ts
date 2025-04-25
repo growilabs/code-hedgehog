@@ -93,8 +93,9 @@ export class GitHubVCS extends BaseVCS {
         repo: this.context.repo,
         issue_number: this.context.pullNumber,
         sort: 'created',
-        direction: 'desc',
-        per_page: 1, // only latest comment
+        // direction: 'desc',
+        // per_page: 1, // only latest comment
+        per_page: GitHubVCS.MAX_PER_PAGE,
       });
 
       if (issueComments.length === 0) {
@@ -102,7 +103,10 @@ export class GitHubVCS extends BaseVCS {
         return;
       }
 
-      const latestCommentTime = new Date(issueComments[0].created_at).getTime();
+      // TODO: direction を 'asc' にしても 'desc' にしても昇順になるので調査して修正する
+      // 現在は仕方なく全件取得して配列の最後の要素を入れている
+      // const latestCommentTime = new Date(issueComments[0].created_at).getTime();
+      const latestCommentTime = new Date(issueComments[issueComments.length - 1].created_at).getTime();
 
       // By default, returns commits in asc order (oldest first).
       const { data: commits } = await this.api.rest.pulls.listCommits({
