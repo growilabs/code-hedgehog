@@ -31,10 +31,13 @@ CIパイプラインは以下のステップで構成されます。これらの
 4.  **テストカバレッジチェック**:
     -   `deno test -A --coverage=./cov packages` を実行してテストを実行し、カバレッジデータを `./cov` ディレクトリに生成します。
     -   `deno coverage ./cov` を実行してカバレッジレポートを出力します。
-    -   レポートの `total` 行から全体のカバレッジ率を抽出し、事前に定義された閾値（例: 80%）と比較します。
+    -   レポートの `total` 行から全体のカバレッジ率を抽出し、環境変数 `COVERAGE_THRESHOLD` で定義された閾値（デフォルト: 80%）と比較します。
     -   カバレッジ率が閾値を下回る場合、CIジョブは失敗します。これにより、テストの網羅性を一定以上に保ちます。
     -   **実装例 (GitHub Actions)**:
         ```yaml
+        env:
+          COVERAGE_THRESHOLD: 80 # Default coverage threshold
+        # ... other steps
         - name: Check Coverage Threshold
           run: |
             COVERAGE_OUTPUT=$(deno coverage ./cov)
@@ -46,7 +49,8 @@ CIパイプラインは以下のステップで構成されます。これらの
               exit 1
             fi
 
-            THRESHOLD=80 # Set your desired coverage threshold
+            # Use environment variable for threshold
+            THRESHOLD=${COVERAGE_THRESHOLD}
             echo "Current Coverage: $COVERAGE%"
             echo "Required Threshold: $THRESHOLD%"
 
@@ -70,4 +74,4 @@ CIパイプラインは以下のステップで構成されます。これらの
 ## 注意事項
 
 -   各ステップは、前のステップが成功した場合にのみ実行されます。
--   カバレッジ閾値はプロジェクトの成熟度に応じて調整される可能性があります。
+-   カバレッジ閾値は、GitHub Actions ワークフローの `env.COVERAGE_THRESHOLD` で設定され、プロジェクトの成熟度に応じて調整される可能性があります。

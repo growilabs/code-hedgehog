@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read # for actions/checkout
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    env:
+      COVERAGE_THRESHOLD: 80 # Default coverage threshold
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        # Optionally specify a Deno version, otherwise latest stable is used
+        # with:
+        #   deno-version: v1.x
+
+      - name: Run Linter
+        run: deno task lint
+
+      - name: Run Tests
+        run: deno task test
+
+      - name: Generate Coverage Data
+        run: deno test -A --coverage=./cov packages
+
+      - name: Check Coverage Threshold
+        run: |
+          COVERAGE_OUTPUT=$(deno coverage ./cov)
+          echo "$COVERAGE_OUTPUT"
+          # Extract total coverage percentage using grep, awk, and sed
+          COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep '^total' | awk '{print $2}' | sed 's/%//')
+
+          # Check if COVERAGE is a valid number
+          if ! [[ "$COVERAGE" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Error: Could not extract coverage percentage."
+            exit 1
+          fi
+
+          # Use environment variable for threshold
+          THRESHOLD=${COVERAGE_THRESHOLD}
+          echo "Current Coverage: $COVERAGE%"
+          echo "Required Threshold: $THRESHOLD%"
+
+          # Compare coverage with threshold using bc
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "Error: Code coverage is below the threshold ($THRESHOLD%)."
+            exit 1
+          else
+            echo "Code coverage meets the threshold."
+          fi
+
+      - name: Build GitHub Action
+        run: deno task -C packages/action build
