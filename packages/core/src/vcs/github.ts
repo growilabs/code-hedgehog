@@ -148,7 +148,6 @@ export class GitHubVCS extends BaseVCS {
    * - File size limits (skips patches larger than 1MB)
    * - Total file count limits (warns after 3000 files)
    *
-   * @param prInfo Pull request information
    * @param batchSize Number of files to include in each yielded batch
    */
   async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
@@ -157,7 +156,7 @@ export class GitHubVCS extends BaseVCS {
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
       const shaRange = await this.getShaRangeSinceLastIssueComment();
-
+      console.log(shaRange);
       const iterator = this.api.paginate.iterator(
         shaRange != null
           ? this.api.rest.repos.compareCommits.endpoint.merge({
