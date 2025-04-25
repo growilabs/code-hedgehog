@@ -8,6 +8,11 @@
  * @returns The specificity score.
  */
 export function calculatePatternSpecificity(pattern: string): number {
+  // Handle non-string inputs gracefully
+  if (typeof pattern !== 'string') {
+    return 0; // Return a default low specificity for invalid patterns
+  }
+
   let score = 0;
 
   // Base score is the length of the pattern

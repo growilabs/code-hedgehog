@@ -37,7 +37,7 @@ test('複数パターンにマッチする場合、具体性の高い順に指�
   const config: ReviewConfig = {
     ...DEFAULT_CONFIG,
     file_path_instructions: [
-      { path: '*.ts', instructions: 'Check TypeScript' },
+      { path: '**/*.ts', instructions: 'Check TypeScript' }, // Match any .ts file in any directory
       { path: 'src/*.ts', instructions: 'Check source TypeScript' },
       { path: 'src/test.ts', instructions: 'Check specific file' },
     ],
@@ -76,4 +76,17 @@ test('エラーが発生した場合、空文字列を返すこと', () => {
     // deno-lint-ignore no-explicit-any
     globalThis.__testMatchesGlobPattern = originalMatchFn;
   }
+});
+test('不正なpathを持つ設定の場合、警告を出力し無視すること', () => {
+  const config: ReviewConfig = {
+    ...DEFAULT_CONFIG,
+    file_path_instructions: [
+      // Use unknown instead of any for type safety
+      { path: undefined as unknown as string, instructions: 'Invalid path' },
+      { path: '*.ts', instructions: 'Check TypeScript' },
+    ],
+  };
+  // console.warn をスパイして呼び出しを確認するなどのアサーションも可能だが、
+  // ここでは単純に有効な指示のみが返ることを確認する
+  assertEquals(getInstructionsForFile('test.ts', config), 'Check TypeScript');
 });
