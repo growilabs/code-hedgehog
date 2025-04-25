@@ -1,6 +1,7 @@
 import { promises as fs, constants as fsConstants } from 'node:fs';
-// Import from deps.ts instead of types.ts
-import { parseYaml, DEFAULT_CONFIG, type ReviewConfig } from '../deps.ts';
+// Import ReviewConfig from types.ts
+import { DEFAULT_CONFIG, parseYaml } from '../deps.ts';
+import type { ReviewConfig } from '../types.ts';
 
 /**
  * Load configuration from a YAML file, merging with defaults.

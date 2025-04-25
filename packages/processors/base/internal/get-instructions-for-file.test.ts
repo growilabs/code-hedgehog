@@ -1,7 +1,7 @@
 import { assertEquals } from '@std/assert';
 import { test } from '@std/testing/bdd';
-import type { ReviewConfig } from '../deps.ts';
 import { DEFAULT_CONFIG } from '../deps.ts';
+import type { ReviewConfig } from '../types.ts';
 import { getInstructionsForFile } from './get-instructions-for-file.ts';
 import { matchesGlobPattern } from './matches-glob-pattern.ts';
 

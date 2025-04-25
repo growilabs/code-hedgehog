@@ -3,7 +3,8 @@
     "@code-hedgehog/core": "../../core/mod.ts",
     "@std/expect": "jsr:@std/expect@^1.0.15",
     "gpt-tokenizer": "npm:gpt-tokenizer@^2.1.1",
-    "js-yaml": "npm:js-yaml@^4.1.0"
+    "js-yaml": "npm:js-yaml@^4.1.0",
+    "zod": "npm:zod@^3.24.3"
   },
   "tasks": {
     "test": "deno test",

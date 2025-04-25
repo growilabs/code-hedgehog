@@ -1,6 +1,7 @@
 // Removed fs and parseYaml imports, they are now in load-config.ts
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
 import { ImpactLevel } from './schema.ts';
+import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { mergeOverallSummaries } from './utils/summary.ts';
 

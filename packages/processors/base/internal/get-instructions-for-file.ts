@@ -1,4 +1,5 @@
-import type { PathInstruction, ReviewConfig } from '../deps.ts'; // FilePathInstruction を PathInstruction に修正
+import type { PathInstruction } from '../deps.ts';
+import type { ReviewConfig } from '../types.ts';
 import { calculatePatternSpecificity } from './calculate-pattern-specificity.ts';
 import { matchesGlobPattern } from './matches-glob-pattern.ts';
 

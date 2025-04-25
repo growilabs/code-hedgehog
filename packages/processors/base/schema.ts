@@ -1,4 +1,6 @@
 import { z } from './deps.ts';
+// Import ReviewConfig from types.ts
+import type { ReviewConfig } from './types.ts';
 
 /**
  * Impact level of changes
@@ -77,9 +79,10 @@ export const ConfigSchema = z.object({
 
 export type Config = z.infer<typeof ConfigSchema>;
 
-// Default configuration
-export const DEFAULT_CONFIG: Config = {
-  file_path_instructions: [],
+// Default configuration (Moved from deps.ts, now using ReviewConfig type)
+export const DEFAULT_CONFIG: ReviewConfig = {
+  path_instructions: [], // Required by core
+  file_path_instructions: [], // Local extension
   path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
   skip_simple_changes: false,
 };
