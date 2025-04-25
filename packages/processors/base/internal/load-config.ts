@@ -1,5 +1,4 @@
 import { promises as fs, constants as fsConstants } from 'node:fs';
-// Import ReviewConfig from types.ts
 import { DEFAULT_CONFIG, parseYaml } from '../deps.ts';
 import type { ReviewConfig } from '../types.ts';
 
@@ -9,35 +8,29 @@ import type { ReviewConfig } from '../types.ts';
  * @returns The loaded configuration merged with defaults.
  */
 export async function loadConfig(configPath = '.coderabbitai.yaml'): Promise<ReviewConfig> {
-  // Use ReviewConfig type
-  let config: ReviewConfig = DEFAULT_CONFIG; // Assuming DEFAULT_CONFIG is compatible
+  let config: ReviewConfig = DEFAULT_CONFIG;
   try {
-    // Check if file exists and is readable
     try {
       await fs.access(configPath, fsConstants.R_OK);
     } catch (error) {
       console.warn(`Config file "${configPath}" not found or not readable, using defaults.`);
-      return config; // Return default config if file not accessible
+      return config;
     }
 
-    // Read and parse file
     const content = await fs.readFile(configPath, 'utf-8');
     const parsed = parseYaml(content) as unknown;
 
-    // Validate config format
     if (!parsed || typeof parsed !== 'object') {
       console.warn(`Invalid config format in "${configPath}", using defaults.`);
-      return config; // Return default config if format is invalid
+      return config;
     }
 
-    // Merge with defaults, ensuring parsed is treated as Partial<ReviewConfig>
     config = {
       ...DEFAULT_CONFIG,
-      ...(parsed as Partial<ReviewConfig>), // Cast parsed to allow partial override
+      ...(parsed as Partial<ReviewConfig>),
     };
   } catch (error) {
     console.error(`Error reading or parsing config file "${configPath}":`, error);
-    // Keep default config in case of other errors
   }
   return config;
 }

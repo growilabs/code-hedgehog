@@ -29,8 +29,6 @@ export function getInstructionsForFile(filePath: string, config?: ReviewConfig):
     // 型注釈を追加
     const matchingInstructions = config.file_path_instructions
       .map((instruction: PathInstruction, index: number) => {
-        // FilePathInstruction を PathInstruction に修正
-        // instruction.path が string であることを前提とする (schema で必須のはず)
         const specificity = calculatePatternSpecificity(instruction.path);
         return {
           ...instruction,
@@ -39,7 +37,6 @@ export function getInstructionsForFile(filePath: string, config?: ReviewConfig):
         };
       })
       .filter((instruction: PathInstruction & { specificity: number; originalIndex: number }) => {
-        // FilePathInstruction を PathInstruction に修正
         try {
           // instruction.path が undefined でないことを確認 (型安全のため)
           if (typeof instruction.path !== 'string') {
@@ -56,19 +53,14 @@ export function getInstructionsForFile(filePath: string, config?: ReviewConfig):
         }
       })
       // 型注釈を追加
-      .sort(
-        (
-          a: PathInstruction & { specificity: number; originalIndex: number }, // FilePathInstruction を PathInstruction に修正
-          b: PathInstruction & { specificity: number; originalIndex: number }, // FilePathInstruction を PathInstruction に修正
-        ) => {
-          // 1. 具体性の高いパターンを優先
-          if (a.specificity !== b.specificity) {
-            return b.specificity - a.specificity;
-          }
-          // 2. 設定ファイル内の順序を維持
-          return a.originalIndex - b.originalIndex;
-        },
-      );
+      .sort((a: PathInstruction & { specificity: number; originalIndex: number }, b: PathInstruction & { specificity: number; originalIndex: number }) => {
+        // 1. 具体性の高いパターンを優先
+        if (a.specificity !== b.specificity) {
+          return b.specificity - a.specificity;
+        }
+        // 2. 設定ファイル内の順序を維持
+        return a.originalIndex - b.originalIndex;
+      });
 
     // マッチするパターンがない場合は空文字列を返す
     if (matchingInstructions.length === 0) {
@@ -76,13 +68,10 @@ export function getInstructionsForFile(filePath: string, config?: ReviewConfig):
     }
 
     // 指示を結合
-    return (
-      matchingInstructions
-        // instruction.instructions が string であることを前提とする (schema で必須のはず)
-        .map((instruction) => instruction.instructions) // 型注釈は filter で代替
-        .filter((instructions): instructions is string => typeof instructions === 'string') // instructions が string であることを保証
-        .join('\n\n')
-    );
+    return matchingInstructions
+      .map((instruction) => instruction.instructions)
+      .filter((instructions): instructions is string => typeof instructions === 'string') // instructions が string であることを保証
+      .join('\n\n');
   } catch (error: unknown) {
     // catch の error に unknown 型を明示
     // Biome: 不要なテンプレートリテラルを修正

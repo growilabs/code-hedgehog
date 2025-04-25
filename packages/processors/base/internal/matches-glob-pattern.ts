@@ -22,7 +22,6 @@ export function matchesGlobPattern(filePath: string, pattern: string): boolean {
           i++;
         } else {
           // Handle *
-          // シングルワイルドカードは / を含まない文字列にマッチ
           regexString += '[^/]*'; // Matches zero or more characters except '/'
         }
         break;
