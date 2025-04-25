@@ -17,6 +17,7 @@
     "npm:@actions/core@1.11.1": "1.11.1",
     "npm:@actions/core@^1.11.1": "1.11.1",
     "npm:@actions/github@6": "6.0.0_@octokit+core@5.2.1",
+    "npm:@biomejs/biome@*": "1.9.4",
     "npm:@biomejs/biome@1.9.4": "1.9.4",
     "npm:@biomejs/biome@^1.9.4": "1.9.4",
     "npm:@modelcontextprotocol/server-brave-search@*": "0.6.2",

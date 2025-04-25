@@ -1,7 +1,7 @@
+import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
-import { mergeOverallSummaries } from '../base/utils/summary.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
@@ -47,7 +47,7 @@ export class DifyProcessor extends BaseProcessor {
     this.config = {
       ...config,
       baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
-    }
+    };
   }
 
   /**
@@ -57,10 +57,10 @@ export class DifyProcessor extends BaseProcessor {
    */
   private formatFilesToJson(files: IFileChange[]): string {
     return JSON.stringify(
-      files.map(file => ({
+      files.map((file) => ({
         path: file.path,
-        patch: file.patch || "No changes"
-      }))
+        patch: file.patch || 'No changes',
+      })),
     );
   }
 
@@ -75,8 +75,8 @@ export class DifyProcessor extends BaseProcessor {
         path,
         summary: result.summary,
         needsReview: result.needsReview,
-        reason: result.reason
-      }))
+        reason: result.reason,
+      })),
     );
   }
 
@@ -86,7 +86,7 @@ export class DifyProcessor extends BaseProcessor {
    */
   override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
-    
+
     for (const file of files) {
       // Basic token check and simple change detection
       const baseResult = await this.shouldPerformDetailedReview(file, this.tokenConfig);
@@ -95,9 +95,9 @@ export class DifyProcessor extends BaseProcessor {
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeySummarize, {
           inputs: {
             title: prInfo.title,
-            description: prInfo.body || "",
+            description: prInfo.body || '',
             filePath: file.path,
-            patch: file.patch || "No changes",
+            patch: file.patch || 'No changes',
             needsReviewPre: String(baseResult.needsReview),
           },
           response_mode: 'blocking' as const,
@@ -156,12 +156,13 @@ export class DifyProcessor extends BaseProcessor {
       // Process each batch
       for (let batchNumber = 1; batchNumber <= totalBatches; batchNumber++) {
         const batchEntries = batches[batchNumber - 1];
-        const batchFiles = files.filter(f =>
-          batchEntries.some(([path]) => path === f.path)
-        );
+        const batchFiles = files.filter((f) => batchEntries.some(([path]) => path === f.path));
 
         console.debug(`[Pass ${pass}/${PASSES}] Processing batch ${batchNumber}/${totalBatches}`);
-        console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`, batchFiles.map(f => f.path));
+        console.debug(
+          `[Pass ${pass}/${PASSES}] Batch ${batchNumber} files:`,
+          batchFiles.map((f) => f.path),
+        );
         if (previousAnalysis) {
           console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
         }
@@ -170,32 +171,17 @@ export class DifyProcessor extends BaseProcessor {
           // Upload previous analysis if available
           let previousAnalysisFileId: string | undefined;
           if (previousAnalysis) {
-            previousAnalysisFileId = await uploadFile(
-              this.config.baseUrl,
-              this.config.apiKeyGrouping,
-              this.config.user,
-              previousAnalysis
-            );
+            previousAnalysisFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, previousAnalysis);
             console.debug(`[Pass ${pass}/${PASSES}] Uploaded previous analysis (${previousAnalysisFileId})`);
           }
 
           // Upload files data
           const filesJson = this.formatFilesToJson(batchFiles);
-          const filesFileId = await uploadFile(
-            this.config.baseUrl,
-            this.config.apiKeyGrouping,
-            this.config.user,
-            filesJson
-          );
+          const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, filesJson);
 
           // Upload summarize results
           const summaryJson = this.formatSummarizeResultsToJson(batchEntries);
-          const summaryFileId = await uploadFile(
-            this.config.baseUrl,
-            this.config.apiKeyGrouping,
-            this.config.user,
-            summaryJson
-          );
+          const summaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, summaryJson);
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
 
@@ -203,22 +189,24 @@ export class DifyProcessor extends BaseProcessor {
           const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyGrouping, {
             inputs: {
               title: prInfo.title,
-              description: prInfo.body || "",
+              description: prInfo.body || '',
               files: {
-                transfer_method: "local_file",
+                transfer_method: 'local_file',
                 upload_file_id: filesFileId,
-                type: "document"
+                type: 'document',
               },
               summarizeResults: {
-                transfer_method: "local_file",
+                transfer_method: 'local_file',
                 upload_file_id: summaryFileId,
-                type: "document"
+                type: 'document',
               },
-              previousAnalysis: previousAnalysisFileId ? {
-                transfer_method: "local_file",
-                upload_file_id: previousAnalysisFileId,
-                type: "document"
-              } : undefined,
+              previousAnalysis: previousAnalysisFileId
+                ? {
+                    transfer_method: 'local_file',
+                    upload_file_id: previousAnalysisFileId,
+                    type: 'document',
+                  }
+                : undefined,
             },
             response_mode: 'blocking' as const,
             user: this.config.user,
@@ -267,13 +255,13 @@ export class DifyProcessor extends BaseProcessor {
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
     config?: ReviewConfig,
-    overallSummary?: OverallSummary
+    overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);
-      
+
       if (!summarizeResult) {
         console.warn(`No triage result for ${file.path}`);
         continue;
@@ -312,9 +300,9 @@ export class DifyProcessor extends BaseProcessor {
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
           inputs: {
             title: prInfo.title,
-            description: prInfo.body || "",
+            description: prInfo.body || '',
             filePath: file.path,
-            patch: file.patch || "No changes",
+            patch: file.patch || 'No changes',
             instructions: this.getInstructionsForFile(file.path, config),
             aspects: {
               transfer_method: "local_file",
@@ -372,7 +360,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     return {
-      comments: comments
+      comments: comments,
     };
   }
 }

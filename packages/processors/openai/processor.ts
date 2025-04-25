@@ -213,7 +213,6 @@ export class OpenaiProcessor extends BaseProcessor {
     return accumulatedResult;
   }
 
-
   /**
    * Implementation of review phase
    * Performs detailed review using GPT-4
@@ -320,7 +319,6 @@ export class OpenaiProcessor extends BaseProcessor {
 
     return { comments };
   }
-
 
   /**
    * Format review comment

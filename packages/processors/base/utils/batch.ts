@@ -20,19 +20,17 @@ export function createHorizontalBatches<T>(entries: T[], batchSize: number): T[]
  */
 export function createVerticalBatches<T>(entries: T[], batchSize: number): T[][] {
   const chunkSize = Math.ceil(entries.length / batchSize);
-  
+
   // Split entries into chunks
   const chunks: T[][] = [];
   for (let i = 0; i < entries.length; i += chunkSize) {
     chunks.push(entries.slice(i, i + chunkSize));
   }
-  
+
   // Group elements vertically
   const batches: T[][] = [];
   for (let pos = 0; pos < chunkSize; pos++) {
-    const batch = chunks
-      .map(chunk => chunk[pos])
-      .filter((entry): entry is T => entry !== undefined);
+    const batch = chunks.map((chunk) => chunk[pos]).filter((entry): entry is T => entry !== undefined);
     if (batch.length > 0) {
       batches.push(batch);
     }
