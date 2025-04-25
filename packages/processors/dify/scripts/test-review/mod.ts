@@ -31,14 +31,12 @@ async function main() {
 
   // Upload aspects data
   console.log('Uploading aspects data...');
-  const aspectsJson = JSON.stringify(testAspects);
-  const aspectsFileId = await uploadFile(baseUrl, apiKey, 'moogle', aspectsJson);
+  const aspectsFileId = await uploadFile(baseUrl, apiKey, 'moogle', testAspects);
   console.log('Aspects uploaded, ID:', aspectsFileId);
 
   // Upload overall summary data
   console.log('Uploading overall summary data...');
-  const overallSummaryJson = JSON.stringify(testOverallSummary);
-  const overallSummaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', overallSummaryJson);
+  const overallSummaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', testOverallSummary);
   console.log('Overall summary uploaded, ID:', overallSummaryFileId);
 
   // Execute workflow

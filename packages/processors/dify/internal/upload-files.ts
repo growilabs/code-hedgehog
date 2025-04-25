@@ -1,20 +1,26 @@
 import { UploadResponseSchema } from './schema.ts';
+
 /**
- * Upload a file to Dify API and get file ID
+ * JSON serializable value type
+ */
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+/**
+ * Upload a JSON file to Dify API and get file ID.
+ * This function is specifically designed for uploading JSON data,
+ * which is the only current use case in the application.
+ *
  * @param baseUrl - Base URL for Dify API
  * @param apiKey - API key for the upload
  * @param user - User identifier
- * @param fileContent - Content to upload
- * @param mimeType - MIME type of the file
- * @param fileName - Name of the file to upload
+ * @param fileContent - JSON serializable content to upload
+ * @param fileName - Name of the file to upload (defaults to data.json)
  * @returns Uploaded file ID
  */
 export async function uploadFile(
   baseUrl: string,
   apiKey: string,
   user: string,
-  fileContent: string | Blob,
-  mimeType = 'application/json', // defaults to JSON for compatibility
+  fileContent: JsonValue | Record<string, unknown>,
   fileName = 'data.json',
 ): Promise<string> {
   const maxRetries = 3;
@@ -22,7 +28,8 @@ export async function uploadFile(
 
   // Create FormData with JSON file
   const formData = new FormData();
-  const blob = typeof fileContent === 'string' ? new Blob([fileContent], { type: mimeType }) : fileContent;
+  const jsonString = JSON.stringify(fileContent);
+  const blob = new Blob([jsonString], { type: 'application/json' });
   formData.append('file', blob, fileName);
   formData.append('user', user);
 

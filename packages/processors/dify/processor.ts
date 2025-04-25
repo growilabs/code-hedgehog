@@ -1,7 +1,7 @@
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
-import { runWorkflow, uploadFile } from './internal/mod.ts';
+import { runWorkflow, uploadFile, type JsonValue } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
@@ -55,29 +55,26 @@ export class DifyProcessor extends BaseProcessor {
    * @param files Array of file changes
    * @returns JSON string representation of files
    */
-  private formatFilesToJson(files: IFileChange[]): string {
-    return JSON.stringify(
-      files.map((file) => ({
-        path: file.path,
-        patch: file.patch || 'No changes',
-      })),
-    );
+  private formatFiles(files: IFileChange[]): Record<string, JsonValue>[] {
+    return files.map((file) => ({
+      path: file.path || '',
+      patch: file.patch || 'No changes',
+      type: 'change' as const
+    }));
   }
 
   /**
-   * Convert summarize results to JSON string
+   * Convert summarize results to array
    * @param entries Array of [path, result] tuples
-   * @returns JSON string representation of summarize results
+   * @returns Array of summary objects
    */
-  private formatSummarizeResultsToJson(entries: [string, SummarizeResult][]): string {
-    return JSON.stringify(
-      entries.map(([path, result]) => ({
-        path,
-        summary: result.summary,
-        needsReview: result.needsReview,
-        reason: result.reason,
-      })),
-    );
+  private formatSummarizeResults(entries: [string, SummarizeResult][]): Record<string, JsonValue>[] {
+    return entries.map(([path, result]) => ({
+      path,
+      summary: result.summary || '',
+      needsReview: result.needsReview,
+      reason: result.reason || '',
+    }));
   }
 
   /**
@@ -171,17 +168,17 @@ export class DifyProcessor extends BaseProcessor {
           // Upload previous analysis if available
           let previousAnalysisFileId: string | undefined;
           if (previousAnalysis) {
-            previousAnalysisFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, previousAnalysis);
+            previousAnalysisFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, JSON.parse(previousAnalysis));
             console.debug(`[Pass ${pass}/${PASSES}] Uploaded previous analysis (${previousAnalysisFileId})`);
           }
 
           // Upload files data
-          const filesJson = this.formatFilesToJson(batchFiles);
-          const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, filesJson);
+          const formattedFiles = this.formatFiles(batchFiles);
+          const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, formattedFiles);
 
           // Upload summarize results
-          const summaryJson = this.formatSummarizeResultsToJson(batchEntries);
-          const summaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, summaryJson);
+          const formattedResults = this.formatSummarizeResults(batchEntries);
+          const summaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, formattedResults);
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
 
@@ -257,6 +254,12 @@ export class DifyProcessor extends BaseProcessor {
     config?: ReviewConfig,
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
+    // If we don't have overall summary, we can't do a proper review
+    if (!overallSummary) {
+      console.warn('No overall summary available, skipping review');
+      return { comments: [] };
+    }
+
     const comments: IReviewComment[] = [];
 
     for (const file of files) {
@@ -274,26 +277,25 @@ export class DifyProcessor extends BaseProcessor {
 
       try {
         // Upload aspects data
-        const aspectsJson = JSON.stringify(summarizeResult.aspects);
         const aspectsFileId = await uploadFile(
           this.config.baseUrl,
           this.config.apiKeyReview,
           this.config.user,
-          aspectsJson
+          summarizeResult.aspects
         );
 
         // Upload overall summary data if available
         let overallSummaryFileId: string | undefined;
         if (overallSummary) {
-          const overallSummaryJson = JSON.stringify({
+          const overallSummaryData = {
             description: overallSummary.description,
             crossCuttingConcerns: overallSummary.crossCuttingConcerns,
-          });
+          };
           overallSummaryFileId = await uploadFile(
             this.config.baseUrl,
             this.config.apiKeyReview,
             this.config.user,
-            overallSummaryJson
+            overallSummaryData
           );
         }
 
