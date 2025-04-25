@@ -1,4 +1,4 @@
-import type { PathInstruction } from '../deps.ts';
+import type { PathInstruction } from '../types.ts';
 import type { ReviewConfig } from '../types.ts';
 import { calculatePatternSpecificity } from './calculate-pattern-specificity.ts';
 import { matchesGlobPattern } from './matches-glob-pattern.ts';
