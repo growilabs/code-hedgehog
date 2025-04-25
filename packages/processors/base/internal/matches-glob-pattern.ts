@@ -71,8 +71,8 @@ export function matchesGlobPattern(filePath: string, pattern: string): boolean {
         }
         break;
       default:
-        // Escape other regex special characters
-        regexString += char.replace(/[.+^$()|[\]]/g, '\\$&');
+        // Escape other regex special characters, including backslashes
+        regexString += char.replace(/[\\.+^$()|[\]]/g, '\\$&');
     }
   }
 
