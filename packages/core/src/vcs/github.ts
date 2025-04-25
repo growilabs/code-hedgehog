@@ -21,6 +21,13 @@ interface IGitHubContext {
   pullNumber: number;
 }
 
+interface IApiFileChangeData {
+  filename: string;
+  patch?: string;
+  changes: number;
+  status: string;
+}
+
 /**
  * GitHub-specific VCS implementation
  * Handles API interactions, data transformation, and error handling
@@ -145,13 +152,23 @@ export class GitHubVCS extends BaseVCS {
       // Optimize page size based on batch size to reduce API calls
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
-      const iterator = this.api.paginate.iterator<{ filename: string; patch?: string; changes: number; status: string }>(
-        this.api.rest.pulls.listFiles.endpoint.merge({
-          owner: this.context.owner,
-          repo: this.context.repo,
-          pull_number: this.context.pullNumber,
-          per_page: pageSize,
-        }),
+      const shaRange = await this.getShaRangeSinceLastIssueComment();
+
+      const iterator = this.api.paginate.iterator(
+        shaRange != null
+          ? this.api.rest.repos.compareCommits.endpoint.merge({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              base: shaRange.beforeSha,
+              head: shaRange.headSha,
+              per_page: pageSize,
+            })
+          : this.api.rest.pulls.listFiles.endpoint.merge({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              pull_number: this.context.pullNumber,
+              per_page: pageSize,
+            }),
       );
 
       let currentBatch: IFileChange[] = [];
@@ -163,7 +180,17 @@ export class GitHubVCS extends BaseVCS {
           core.warning(`GitHub API rate limit is running low: ${rateLimit} requests remaining`);
         }
 
-        for (const file of response.data) {
+        let files: IApiFileChangeData[] = [];
+        if (shaRange != null) {
+          // TODO: Fix the type to the correct one
+          const data = response.data as { files?: IApiFileChangeData[] | undefined };
+          files = data?.files ?? [];
+        } else {
+          // TODO: Fix the type to the correct one
+          files = (response.data as IApiFileChangeData[] | undefined) ?? [];
+        }
+
+        for (const file of files) {
           this.fileCount++;
           if (this.fileCount > 3000) {
             if (!isFileLimitWarned) {
