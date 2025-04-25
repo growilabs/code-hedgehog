@@ -15,7 +15,7 @@ export abstract class BaseVCS implements IVersionControlSystem {
   }
 
   abstract getPullRequestInfo(): Promise<IPullRequestInfo>;
-  abstract getPullRequestChangesStream(prInfo: IPullRequestInfo, batchSize?: number): AsyncIterableIterator<IFileChange[]>;
+  abstract getPullRequestChangesStream(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
   abstract createReviewBatch(comments: IReviewComment[], dryRun?: boolean): Promise<void>;
 
   /**
