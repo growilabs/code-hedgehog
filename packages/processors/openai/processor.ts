@@ -283,7 +283,7 @@ export class OpenaiProcessor extends BaseProcessor {
         for (const comment of review.comments) {
           comments.push({
             path: file.path,
-            position: comment.line ?? 1,
+            position: comment.line_number ?? 1,
             body: this.formatComment(comment),
             type: 'inline',
           });
@@ -323,11 +323,4 @@ export class OpenaiProcessor extends BaseProcessor {
   /**
    * Format review comment
    */
-  private formatComment(comment: ReviewComment): string {
-    let body = comment.content;
-    if (comment.suggestion) {
-      body += `\n\n**Suggestion:**\n${comment.suggestion}`;
-    }
-    return body;
-  }
 }
