@@ -7,7 +7,7 @@
  */
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
-import type { IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
+import type { ICommitComparisonShas, IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
 import { BaseVCS } from './base.ts';
 import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
 
@@ -26,6 +26,8 @@ interface IGitHubContext {
  * Handles API interactions, data transformation, and error handling
  */
 export class GitHubVCS extends BaseVCS {
+  static readonly MAX_PER_PAGE = 100;
+
   private readonly api: IGitHubAPI;
   private readonly context: IGitHubContext;
   private fileCount = 0;
@@ -66,6 +68,65 @@ export class GitHubVCS extends BaseVCS {
       };
     } catch (error) {
       throw this.formatError('fetch PR info', error);
+    }
+  }
+
+  /**
+   * Fetches the commit SHA range representing changes since the last *issue* comment was posted on the pull request.
+   *
+   * **Limitations:**
+   * - **Comment Type:** Only considers issue comments. Review comments or commit-specific comments are ignored.
+   * - **Commit Limit:** Relies on `pulls.listCommits` which fetches a maximum of 100 commits by default. If the PR has more commits, or the latest comment refers to a commit older than the last 100, the calculated `beforeSha` might be inaccurate or the method might incorrectly return `undefined`.
+   * - **No Comments/Commits:** Returns `undefined` if no issue comments or no commits are found in the PR.
+   */
+  async getShaRangeSinceLastIssueComment(): Promise<ICommitComparisonShas | undefined> {
+    try {
+      const { data: issueComments } = await this.api.rest.issues.listComments({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        issue_number: this.context.pullNumber,
+        sort: 'created',
+        direction: 'desc',
+        per_page: 1, // only latest comment
+      });
+
+      if (issueComments.length === 0) {
+        core.debug(`No issue comments found in PR #${this.context.pullNumber}`);
+        return;
+      }
+
+      const latestCommentTime = new Date(issueComments[0].created_at).getTime();
+
+      // By default, returns commits in asc order (oldest first).
+      const { data: commits } = await this.api.rest.pulls.listCommits({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        pull_number: this.context.pullNumber,
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+
+      if (commits.length === 0) {
+        core.warning(`No commits found in PR #${this.context.pullNumber}`);
+        return;
+      }
+
+      const headSha = commits[commits.length - 1].sha;
+
+      const commitsBeforeLastComment = commits.filter((commit) => {
+        const commitTime = commit.commit.committer?.date ? new Date(commit.commit.committer.date).getTime() : 0;
+        return commitTime < latestCommentTime;
+      });
+
+      if (commitsBeforeLastComment.length === 0) {
+        core.debug('No commits found before the latest comment.');
+        return;
+      }
+
+      const beforeSha = commitsBeforeLastComment[commitsBeforeLastComment.length - 1].sha;
+
+      return { beforeSha, headSha };
+    } catch (error) {
+      throw this.formatError('get SHA range', error);
     }
   }
 
