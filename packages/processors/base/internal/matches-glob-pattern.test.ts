@@ -1,7 +1,7 @@
 // packages/processors/base/internal/matches-glob-pattern.test.ts
 import { expect } from '@std/expect';
-import { test, describe, beforeAll, afterAll } from '@std/testing/bdd';
-import { stub, type Stub } from '@std/testing/mock';
+import { afterAll, beforeAll, describe, test } from '@std/testing/bdd';
+import { type Stub, stub } from '@std/testing/mock';
 import { matchesGlobPattern } from './matches-glob-pattern.ts';
 
 describe('matchesGlobPattern', () => {
@@ -36,11 +36,11 @@ describe('matchesGlobPattern', () => {
     ['a/(b).txt', 'a/\\(b\\).txt', 'エスケープされた丸括弧'], // Note: Pattern needs escaping
   ];
 
-  matchCases.forEach(([filePath, pattern, description]) => {
+  for (const [filePath, pattern, description] of matchCases) {
     test(`一致: ${description} (${filePath} vs ${pattern})`, () => {
       expect(matchesGlobPattern(filePath, pattern)).toBe(true);
     });
-  });
+  }
 
   // Test cases for non-matching
   const noMatchCases: [string, string, string][] = [
@@ -55,11 +55,11 @@ describe('matchesGlobPattern', () => {
     ['a/b.txt', 'a/b.js', '拡張子不一致'],
   ];
 
-  noMatchCases.forEach(([filePath, pattern, description]) => {
+  for (const [filePath, pattern, description] of noMatchCases) {
     test(`不一致: ${description} (${filePath} vs ${pattern})`, () => {
       expect(matchesGlobPattern(filePath, pattern)).toBe(false);
     });
-  });
+  }
 
   test('無効なパターンは警告を出し false を返す', () => {
     const filePath = 'test.txt';

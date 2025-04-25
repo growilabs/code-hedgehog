@@ -16,10 +16,12 @@ export function matchesGlobPattern(filePath: string, pattern: string): boolean {
 
     switch (char) {
       case '*':
-        if (pattern[i] === '*') { // Handle **
+        if (pattern[i] === '*') {
+          // Handle **
           regexString += '.*'; // Matches zero or more characters including '/'
           i++;
-        } else { // Handle *
+        } else {
+          // Handle *
           // シングルワイルドカードは / を含まない文字列にマッチ
           regexString += '[^/]*'; // Matches zero or more characters except '/'
         }
@@ -34,7 +36,7 @@ export function matchesGlobPattern(filePath: string, pattern: string): boolean {
         while (i < len) {
           const nextChar = pattern[i++];
           if (nextChar === '\\') {
-            group += '\\' + pattern[i++];
+            group += `\\${pattern[i++]}`;
           } else if (nextChar === '{') {
             braceLevel++;
             group += '{';
@@ -46,23 +48,25 @@ export function matchesGlobPattern(filePath: string, pattern: string): boolean {
             group += nextChar;
           }
         }
-        if (braceLevel !== 0) { // Malformed group
+        if (braceLevel !== 0) {
+          // Malformed group
           regexString += '\\{'; // Treat '{' as literal
           i = start; // Backtrack
         } else {
           // Convert comma-separated alternatives to regex OR |, respecting escaped commas
           const placeholder = '__COMMA__'; // Use a simple placeholder unlikely to be in the pattern
           const escapedGroup = group.replace(/\\,/g, placeholder); // Temporarily replace escaped commas
-          const alternativesRegex = escapedGroup.split(',') // Split by unescaped commas
-                                     .map(alt => alt.replace(new RegExp(placeholder, 'g'), ',')) // Restore escaped commas to literal commas
-                                     .join('|'); // Join with regex OR
+          const alternativesRegex = escapedGroup
+            .split(',') // Split by unescaped commas
+            .map((alt) => alt.replace(new RegExp(placeholder, 'g'), ',')) // Restore escaped commas to literal commas
+            .join('|'); // Join with regex OR
           regexString += `(?:${alternativesRegex})`;
         }
         break;
       }
       case '\\': // Handle escaped characters
         if (i < len) {
-          regexString += '\\' + pattern[i++]; // Add escaped character literally
+          regexString += `\\${pattern[i++]}`; // Add escaped character literally
         } else {
           regexString += '\\\\'; // Trailing backslash
         }
