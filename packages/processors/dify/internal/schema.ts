@@ -28,38 +28,22 @@ export const DifyResponseSchema = z.object({
       message: z.object({
         content: z.string(),
       }),
-    })
+    }),
   ),
 });
 
 export type DifyResponse = z.infer<typeof DifyResponseSchema>;
 
 // File type enums
-export const FileTypeEnum = z.enum([
-  'document',
-  'image',
-  'audio',
-  'video',
-  'custom'
-]);
+export const FileTypeEnum = z.enum(['document', 'image', 'audio', 'video', 'custom']);
 
-export const DocumentExtensionEnum = z.enum([
-  'txt', 'md', 'markdown', 'pdf', 'html',
-  'xlsx', 'xls', 'docx', 'csv', 'eml',
-  'msg', 'pptx', 'ppt', 'xml', 'epub'
-]);
+export const DocumentExtensionEnum = z.enum(['txt', 'md', 'markdown', 'pdf', 'html', 'xlsx', 'xls', 'docx', 'csv', 'eml', 'msg', 'pptx', 'ppt', 'xml', 'epub']);
 
-export const ImageExtensionEnum = z.enum([
-  'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'
-]);
+export const ImageExtensionEnum = z.enum(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']);
 
-export const AudioExtensionEnum = z.enum([
-  'mp3', 'm4a', 'wav', 'webm', 'amr'
-]);
+export const AudioExtensionEnum = z.enum(['mp3', 'm4a', 'wav', 'webm', 'amr']);
 
-export const VideoExtensionEnum = z.enum([
-  'mp4', 'mov', 'mpeg', 'mpga'
-]);
+export const VideoExtensionEnum = z.enum(['mp4', 'mov', 'mpeg', 'mpga']);
 
 // Export types for enums
 export type FileType = z.infer<typeof FileTypeEnum>;

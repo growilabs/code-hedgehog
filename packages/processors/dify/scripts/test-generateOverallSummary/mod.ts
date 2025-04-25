@@ -16,12 +16,12 @@ async function main() {
   const testFiles = [
     {
       path: 'test/file1.ts',
-      patch: 'Sample patch content 1'
+      patch: 'Sample patch content 1',
     },
     {
       path: 'test/file2.ts',
-      patch: 'Sample patch content 2'
-    }
+      patch: 'Sample patch content 2',
+    },
   ];
 
   const testSummarizeResults = [
@@ -29,36 +29,26 @@ async function main() {
       path: 'test/file1.ts',
       summary: 'Test summary for file 1',
       needsReview: true,
-      reason: 'Changes require review'
+      reason: 'Changes require review',
     },
     {
       path: 'test/file2.ts',
       summary: 'Test summary for file 2',
       needsReview: false,
-      reason: 'Simple changes'
-    }
+      reason: 'Simple changes',
+    },
   ];
 
   // Upload file data
   console.log('Uploading files data...');
   const filesJson = JSON.stringify(testFiles);
-  const filesFileId = await uploadFile(
-    baseUrl,
-    apiKey,
-    'moogle',
-    filesJson
-  );
+  const filesFileId = await uploadFile(baseUrl, apiKey, 'moogle', filesJson);
   console.log('Files uploaded, ID:', filesFileId);
 
   // Upload summary data
   console.log('Uploading summary data...');
   const summaryJson = JSON.stringify(testSummarizeResults);
-  const summaryFileId = await uploadFile(
-    baseUrl,
-    apiKey,
-    'moogle',
-    summaryJson
-  );
+  const summaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', summaryJson);
   console.log('Summary uploaded, ID:', summaryFileId);
 
   // Execute workflow
@@ -68,14 +58,14 @@ async function main() {
       title: 'Test Overall Summary',
       description: 'Testing overall summary generation',
       files: {
-        transfer_method: "local_file",
+        transfer_method: 'local_file',
         upload_file_id: filesFileId,
-        type: "document"
+        type: 'document',
       },
       summarizeResults: {
-        transfer_method: "local_file",
+        transfer_method: 'local_file',
         upload_file_id: summaryFileId,
-        type: "document"
+        type: 'document',
       },
       previousAnalysis: undefined,
     },
@@ -87,7 +77,7 @@ async function main() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(requestBody),
   });

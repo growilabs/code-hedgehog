@@ -1,14 +1,8 @@
 import process from 'node:process';
 import type { z } from '../deps.ts';
-import {
-  OverallSummarySchema,
-  ReviewResponseSchema,
-  SummaryResponseSchema,
-} from '../deps.ts';
+import { OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from '../deps.ts';
 import type { DifyRequestBody } from './schema.ts';
-import {
-  DifyOutputsSchema,
-} from './schema.ts';
+import { DifyOutputsSchema } from './schema.ts';
 
 type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
 type OverallSummary = z.infer<typeof OverallSummarySchema>;
@@ -50,11 +44,11 @@ function extractOutputs(rawResult: unknown): unknown {
  */
 export function processSummarizeResponse(rawResult: unknown): SummaryResponse {
   const outputs = extractOutputs(rawResult);
-  
+
   if (typeof outputs === 'object' && outputs && 'needsReview' in outputs) {
     const outputsObj = outputs as { needsReview?: unknown };
     if (outputsObj.needsReview !== undefined) {
-      outputsObj.needsReview = String(outputsObj.needsReview) === "true";
+      outputsObj.needsReview = String(outputsObj.needsReview) === 'true';
     }
   }
 
@@ -77,7 +71,6 @@ export function processReviewResponse(rawResult: unknown): ReviewResponse {
   return ReviewResponseSchema.parse(outputs);
 }
 
-
 /**
  * Execute a Dify workflow with retry logic
  * @param baseUrl - Base URL for Dify API
@@ -97,7 +90,7 @@ export async function runWorkflow(baseUrl: string, apiKey: string, body: DifyReq
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(body),
       });
@@ -111,7 +104,7 @@ export async function runWorkflow(baseUrl: string, apiKey: string, body: DifyReq
 
       // Convert response to string for processing
       const responseStr = JSON.stringify(rawResult);
-      
+
       // Process response based on workflow type
       const workflowType = getWorkflowType(apiKey);
       let processedResult: SummaryResponse | OverallSummary | ReviewResponse;
@@ -135,7 +128,7 @@ export async function runWorkflow(baseUrl: string, apiKey: string, body: DifyReq
       }
 
       console.warn(`Attempt ${lastAttempt} failed, retrying in ${retryDelay}ms...`, error);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
     }
   }
 

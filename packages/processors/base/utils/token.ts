@@ -45,7 +45,7 @@ export function estimateTokenCount(text: string): number {
  */
 export function isWithinLimit(text: string, config: TokenConfig): boolean {
   const count = estimateTokenCount(text);
-  return count <= (config.maxTokens - config.margin);
+  return count <= config.maxTokens - config.margin;
 }
 
 /**
@@ -59,7 +59,7 @@ export function splitByTokenLimit(text: string, config: TokenConfig): string[] {
   const tokens = encode(text);
   const maxTokens = config.maxTokens - config.margin;
   const chunks: string[] = [];
-  
+
   let currentChunkTokens: number[] = [];
   for (const token of tokens) {
     if (currentChunkTokens.length >= maxTokens) {
@@ -69,11 +69,11 @@ export function splitByTokenLimit(text: string, config: TokenConfig): string[] {
     }
     currentChunkTokens.push(token);
   }
-  
+
   if (currentChunkTokens.length > 0) {
     const decoded = new TextDecoder().decode(new Uint8Array(currentChunkTokens));
     chunks.push(decoded);
   }
-  
+
   return chunks;
 }
