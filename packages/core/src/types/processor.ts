@@ -1,4 +1,3 @@
-import type { IFileChange } from './file.ts';
 import type { IReviewComment } from './review.ts';
 import type { IPullRequestInfo } from './vcs.ts';
 
@@ -24,7 +23,3 @@ export type IPullRequestProcessedResult = {
   updatedPrInfo?: IPullRequestInfo;
   comments?: IReviewComment[];
 };
-
-export interface IPullRequestProcessor {
-  process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult>;
-}
