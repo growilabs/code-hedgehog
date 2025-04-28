@@ -16,6 +16,10 @@ type DifyProcessorConfig = {
  */
 export class DifyProcessor extends BaseProcessor {
   private readonly config: DifyProcessorConfig;
+  private readonly tokenConfig = {
+    margin: 100,
+    maxTokens: 4000,
+  };
 
   /**
    * Constructor for DifyProcessor
@@ -85,7 +89,7 @@ export class DifyProcessor extends BaseProcessor {
 
     for (const file of files) {
       // Basic token check and simple change detection
-      const baseResult = await this.shouldPerformDetailedReview(file, { margin: 100, maxTokens: 4000 });
+      const baseResult = await this.shouldPerformDetailedReview(file, this.tokenConfig);
 
       try {
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeySummarize, {
@@ -209,7 +213,7 @@ export class DifyProcessor extends BaseProcessor {
           });
 
           if (!response) {
-            console.error(`[Pass ${pass}/${PASSES}] No response generated for batch ${batchNumber}`);
+            console.error(`[Pass ${pass}/${PASSES}] No review outputs generated for batch ${batchNumber}`);
             continue;
           }
 
@@ -269,6 +273,30 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       try {
+        // Upload aspects data
+        const aspectsJson = JSON.stringify(summarizeResult.aspects);
+        const aspectsFileId = await uploadFile(
+          this.config.baseUrl,
+          this.config.apiKeyReview,
+          this.config.user,
+          aspectsJson
+        );
+
+        // Upload overall summary data if available
+        let overallSummaryFileId: string | undefined;
+        if (overallSummary) {
+          const overallSummaryJson = JSON.stringify({
+            description: overallSummary.description,
+            crossCuttingConcerns: overallSummary.crossCuttingConcerns,
+          });
+          overallSummaryFileId = await uploadFile(
+            this.config.baseUrl,
+            this.config.apiKeyReview,
+            this.config.user,
+            overallSummaryJson
+          );
+        }
+
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
           inputs: {
             title: prInfo.title,
@@ -276,11 +304,16 @@ export class DifyProcessor extends BaseProcessor {
             filePath: file.path,
             patch: file.patch || 'No changes',
             instructions: this.getInstructionsForFile(file.path, config),
-            aspects: summarizeResult.aspects,
-            overallSummary: {
-              description: overallSummary?.description,
-              crossCuttingConcerns: overallSummary?.crossCuttingConcerns,
+                        aspects: {
+              transfer_method: "local_file",
+              upload_file_id: aspectsFileId,
+              type: "document"
             },
+            overallSummary: overallSummaryFileId ? {
+              transfer_method: "local_file",
+              upload_file_id: overallSummaryFileId,
+              type: "document"
+            } : undefined,
           },
           response_mode: 'blocking' as const,
           user: this.config.user,
@@ -291,9 +324,9 @@ export class DifyProcessor extends BaseProcessor {
           for (const comment of review.comments) {
             comments.push({
               path: file.path,
-              body: comment.suggestion ? `${comment.content}\n\n**Suggestion:**\n${comment.suggestion}` : comment.content,
+              body: this.formatComment(comment),
               type: 'inline',
-              position: comment.line || 1,
+              position: comment.line_number || 1,
             });
           }
         }
@@ -314,6 +347,15 @@ export class DifyProcessor extends BaseProcessor {
           type: 'inline',
         });
       }
+    }
+
+    // Add overall summary to regular comments
+    if (overallSummary != null) {
+      comments.push({
+        path: 'PR',
+        body: `## Overall Summary\n\n${overallSummary.description}`,
+        type: 'pr',
+      });
     }
 
     return {

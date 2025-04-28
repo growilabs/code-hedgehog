@@ -1,7 +1,7 @@
-import { CommentType } from './deps.ts';
-import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { ImpactLevel } from '../base/schema.ts';
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
+import { mergeOverallSummaries } from '../base/utils/summary.ts';
+import { CommentType } from './deps.ts';
 import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
@@ -321,33 +321,6 @@ export class OpenaiProcessor extends BaseProcessor {
     }
 
     return { comments };
-  }
-
-  /**
-   * Format previous analysis result for next batch
-   */
-  private formatPreviousAnalysis(result: OverallSummary): string {
-    return `Previous Batch Analysis:
-{
-  "description": "${result.description}",
-  "aspectMappings": [
-${result.aspectMappings
-  .map(
-    (mapping) => `    {
-      "aspect": {
-        "key": "${mapping.aspect.key}",
-        "description": "${mapping.aspect.description}",
-        "impact": "${mapping.aspect.impact}"
-      },
-      "files": ${JSON.stringify(mapping.files)}
-    }`,
-  )
-  .join(',\n')}
-  ],
-  "crossCuttingConcerns": [
-${result.crossCuttingConcerns?.map((concern) => `    "${concern}"`).join(',\n') || '    // No concerns'}
-  ]
-}`;
   }
 
   /**

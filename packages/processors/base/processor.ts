@@ -111,7 +111,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * パッチの内容がシンプルな変更かどうかを判定
+   * Determine if changes are simple (formatting, comments only, etc.)
    */
   protected isSimpleChange(patch: string): boolean {
     const lines = patch.split('\n');
@@ -176,6 +176,10 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
   /**
    * Generate summaries grouped by review aspects
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param summarizeResults Previous summarized results
+   * @returns Overall summary of changes, or undefined if summary cannot be generated
    */
   protected abstract generateOverallSummary(
     prInfo: IPullRequestInfo,
@@ -184,12 +188,24 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<OverallSummary | undefined>;
 
   /**
-   * Summarize phase
+   * Summarize phase - Lightly analyze file changes to determine if detailed review is needed
+   *
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param config Optional review configuration
+   * @returns Map of file paths to summarized results
    */
   abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>>;
 
   /**
-   * Review phase
+   * Review phase - Execute detailed review based on summarized results
+   *
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param summarizeResults Previous summarized results
+   * @param config Optional review configuration
+   * @param overallSummary Overall summary of changes to provide context, if available
+   * @returns Review comments and optionally updated PR info
    */
   abstract review(
     prInfo: IPullRequestInfo,
@@ -200,7 +216,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<IPullRequestProcessedResult>;
 
   /**
-   * Main processing flow
+   * Main processing flow - now with 3 phases
    */
   async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
     // 0. Load configuration
