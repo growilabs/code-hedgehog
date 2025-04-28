@@ -9,7 +9,7 @@ permissions:
   contents: read # for actions/checkout
 
 jobs:
-  build_and_test:
+  test:
     runs-on: ubuntu-latest
     env:
       COVERAGE_THRESHOLD: 80 # Default coverage threshold
@@ -23,6 +23,17 @@ jobs:
         # with:
         #   deno-version: v1.x
 
+      - name: Get Deno cache directory
+        id: deno-cache-dir
+        run: echo "DENO_CACHE_DIR=$(deno info --json | jq -r .cache)" >> $GITHUB_ENV
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DENO_CACHE_DIR }}
+          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deno-
       - name: Run Linter
         run: deno task lint
 
@@ -30,7 +41,7 @@ jobs:
         run: deno task test
 
       - name: Generate Coverage Data
-        run: deno test -A --coverage=./cov packages
+        run: deno task test:cov
 
       - name: Check Coverage Threshold
         run: |
@@ -57,6 +68,31 @@ jobs:
           else
             echo "Code coverage meets the threshold."
           fi
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test # Run after test job succeeds
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        # Optionally specify a Deno version, otherwise latest stable is used
+        # with:
+        #   deno-version: v1.x
+
+      - name: Get Deno cache directory
+        id: deno-cache-dir
+        run: echo "DENO_CACHE_DIR=$(deno info --json | jq -r .cache)" >> $GITHUB_ENV
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DENO_CACHE_DIR }}
+          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-deno-
 
       - name: Build GitHub Action
         run: deno task -C packages/action build
