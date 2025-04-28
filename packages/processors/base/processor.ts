@@ -1,14 +1,12 @@
 // Removed fs and parseYaml imports, they are now in load-config.ts
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
-import { ImpactLevel } from './schema.ts';
 import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
-import { mergeOverallSummaries } from './utils/summary.ts';
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
 import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
-import type { OverallSummary } from './schema.ts';
+import type { OverallSummary, ReviewComment } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 
@@ -216,5 +214,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     // 3. Execute detailed review with context
     return this.review(prInfo, files, summarizeResults, config, overallSummary);
+  }
+  /**
+   * Format review comment with suggestion
+   */
+  protected formatComment(comment: ReviewComment): string {
+    let body = comment.message;
+    if (comment.suggestion) {
+      body += `\n\n**Suggestion:**\n${comment.suggestion}`;
+    }
+    return body;
   }
 }

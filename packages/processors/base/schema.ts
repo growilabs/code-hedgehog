@@ -48,8 +48,8 @@ export type OverallSummary = z.infer<typeof OverallSummarySchema>;
  * Structure for review comments
  */
 export const ReviewCommentSchema = z.object({
-  content: z.string(),
-  line: z.number().optional(),
+  message: z.string(),
+  line_number: z.number().optional(),
   suggestion: z.string().optional(),
 });
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;

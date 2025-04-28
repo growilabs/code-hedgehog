@@ -3,7 +3,7 @@ import { encode } from '../deps.ts';
 /**
  * Token estimation configuration
  */
-export interface TokenConfig {
+interface TokenConfig {
   /** Token margin to maintain */
   margin: number;
   /** モデルの最大トークン数 */
@@ -13,7 +13,7 @@ export interface TokenConfig {
 /**
  * Exception related to token estimation
  */
-export class TokenEstimationError extends Error {
+class TokenEstimationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'TokenEstimationError';
@@ -46,34 +46,4 @@ export function estimateTokenCount(text: string): number {
 export function isWithinLimit(text: string, config: TokenConfig): boolean {
   const count = estimateTokenCount(text);
   return count <= config.maxTokens - config.margin;
-}
-
-/**
- * Split text to fit within specified token limit
- *
- * @param text Text to split
- * @param config Token configuration
- * @returns Array of split text chunks
- */
-export function splitByTokenLimit(text: string, config: TokenConfig): string[] {
-  const tokens = encode(text);
-  const maxTokens = config.maxTokens - config.margin;
-  const chunks: string[] = [];
-
-  let currentChunkTokens: number[] = [];
-  for (const token of tokens) {
-    if (currentChunkTokens.length >= maxTokens) {
-      const decoded = new TextDecoder().decode(new Uint8Array(currentChunkTokens));
-      chunks.push(decoded);
-      currentChunkTokens = [];
-    }
-    currentChunkTokens.push(token);
-  }
-
-  if (currentChunkTokens.length > 0) {
-    const decoded = new TextDecoder().decode(new Uint8Array(currentChunkTokens));
-    chunks.push(decoded);
-  }
-
-  return chunks;
 }
