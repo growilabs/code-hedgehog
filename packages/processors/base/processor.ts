@@ -1,8 +1,13 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ReviewConfig, TokenConfig } from './deps.ts';
-import { matchesGlobPattern } from './deps.ts';
+// Removed fs and parseYaml imports, they are now in load-config.ts
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
+import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
+import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+
+import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
+import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
+import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
 import type { OverallSummary, ReviewComment } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
-import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 
 /**
@@ -10,17 +15,49 @@ import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
  * Provides common functionality for reviewing pull requests
  */
 export abstract class BaseProcessor implements IPullRequestProcessor {
+  // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
+  private config: ReviewConfig = DEFAULT_CONFIG;
+
+  /**
+   * Load configuration using the external module.
+   * This method now acts as a wrapper to update the instance's config.
+   */
+  protected async loadConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
+    // Call the external function and update the instance's config
+    this.config = await loadExternalConfig(configPath);
+  }
+
   /**
    * Get instructions for a specific file based on the path patterns
    */
+  /**
+   * パスパターンに基づいてファイルのレビュー指示を取得
+   * パターンマッチの優先順位:
+   * 1. より具体的なパターン
+   * 2. 設定ファイル内での順序
+   * 3. マッチする全ての指示を結合
+   */
   protected getInstructionsForFile(filePath: string, config?: ReviewConfig): string {
-    if (!config?.path_instructions) return '';
+    return getInstructionsForFile(filePath, config || this.config);
+  }
 
-    const matchingInstructions = config.path_instructions
-      .filter((instruction) => matchesGlobPattern(filePath, instruction.path))
-      .map((instruction) => instruction.instructions);
+  /**
+   * Check if file should be filtered based on path_filters
+   */
+  protected isFileFiltered(filePath: string): boolean {
+    if (!this.config.path_filters) return false;
 
-    return matchingInstructions.join('\n\n');
+    const filters = this.config.path_filters
+      .split('\n')
+      .map((f: string) => f.trim())
+      .filter(Boolean);
+
+    return filters.some((filter: string) => {
+      if (filter.startsWith('!')) {
+        return matchesGlobPattern(filePath, filter.slice(1));
+      }
+      return false;
+    });
   }
 
   /**
@@ -28,6 +65,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Determines need for detailed review based on token count and file characteristics
    */
   protected async shouldPerformDetailedReview(file: IFileChange, tokenConfig: TokenConfig): Promise<SummarizeResult> {
+    // Check if file is filtered
+    if (this.isFileFiltered(file.path)) {
+      return {
+        needsReview: false,
+        reason: 'File path is filtered out',
+        aspects: [],
+      };
+    }
+
     // Check token count
     if (!file.patch) {
       return {
@@ -49,7 +95,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     // Determine if changes are simple
     const isSimpleChange = this.isSimpleChange(file.patch);
-    if (isSimpleChange) {
+    if (isSimpleChange && this.config.skip_simple_changes) {
       return {
         needsReview: false,
         reason: 'Changes appear to be simple (formatting, comments, etc.)',
@@ -173,18 +219,16 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Main processing flow - now with 3 phases
    */
   async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
+    // 0. Load configuration
+    await this.loadConfig();
+
     // 1. Execute summarize
     const summarizeResults = await this.summarize(prInfo, files, config);
 
     // 2. Generate overall summary
     const overallSummary = await this.generateOverallSummary(prInfo, files, summarizeResults);
 
-    // 3. Update summarized results with aspects if summary is available
-    if (overallSummary != null) {
-      this.updatesummarizeResultsWithAspects(summarizeResults, overallSummary);
-    }
-
-    // 4. Execute detailed review with context
+    // 3. Execute detailed review with context
     return this.review(prInfo, files, summarizeResults, config, overallSummary);
   }
   /**

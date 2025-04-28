@@ -1,4 +1,7 @@
+import { ImpactLevel } from '../base/schema.ts';
+import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
+import { CommentType } from './deps.ts';
 import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
@@ -294,7 +297,7 @@ export class OpenaiProcessor extends BaseProcessor {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
+            type: 'inline',
           });
         }
       } catch (error) {

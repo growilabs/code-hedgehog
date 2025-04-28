@@ -319,12 +319,11 @@ export class DifyProcessor extends BaseProcessor {
           }
         }
 
-        // Add file summary comment
         if (review.summary) {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
+            type: 'pr',
           });
         }
       } catch (error) {
