@@ -33,9 +33,12 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
     -   コードの正当性を検証します。
 
 4.  **テストカバレッジチェック**:
-    -   `deno task test:cov` を実行してテストを実行し、カバレッジデータを `./cov` ディレクトリに生成します。このタスクは内部で `deno coverage ./cov` も実行し、レポートを出力します。
-    -   閾値チェックのために、再度 `deno coverage ./cov` を実行してカバレッジレポートを取得します。
-    -   レポートの `total` 行から全体のカバレッジ率を抽出し、環境変数 `COVERAGE_THRESHOLD` で定義された閾値（デフォルト: 80%）と比較します。
+    -   `deno task test:cov` を実行してテストを実行し、カバレッジデータを `./cov` ディレクトリに生成します。
+    -   数値比較に必要な `bc` コマンドをインストールします (`sudo apt-get update && sudo apt-get install -y bc`)。
+    -   `deno coverage ./cov` を実行してカバレッジレポートを取得します。
+    -   レポートの `All files` 行から全体の行カバレッジ率 (`Line %`) を抽出します。抽出には `grep`, `tr`, `awk`, `sed` を使用し、キャリッジリターンやANSIエスケープコードを除去します。
+    -   抽出したカバレッジ率が有効な数値か検証します。
+    -   抽出したカバレッジ率を、環境変数 `COVERAGE_THRESHOLD` で定義された閾値（デフォルト: 80%）と `bc` コマンドを使用して比較します。
     -   カバレッジ率が閾値を下回る場合、CIジョブは失敗します。これにより、テストの網羅性を一定以上に保ちます。
     -   **実装例 (GitHub Actions)**:
         ```yaml
@@ -45,22 +48,34 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
         - name: Generate Coverage Data
           run: deno task test:cov # カバレッジデータを生成
 
+        - name: Install bc
+          # bcコマンド (数値計算用) をインストール
+          run: sudo apt-get update && sudo apt-get install -y bc
+
         - name: Check Coverage Threshold
           run: |
-            COVERAGE_OUTPUT=$(deno coverage ./cov) # レポートを取得
-            echo "$COVERAGE_OUTPUT"
-            COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep '^total' | awk '{print $2}' | sed 's/%//')
+            # カバレッジレポートの出力を取得
+            COVERAGE_OUTPUT=$(deno coverage ./cov)
 
+            # カバレッジレポートから "All files" 行の行カバレッジ率 (%) を抽出
+            # 1. grep 'All files': "All files" を含む行を抽出
+            # 2. tr -d '\r': キャリッジリターン (\r) を削除
+            # 3. awk '{print $(NF-1)}': 行の末尾から2番目のフィールド (Line % の値) を取得
+            # 4. sed 's/\x1b\[[0-9;]*m//g': ANSIエスケープコード (色付け用コード) を削除
+            COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep 'All files' | tr -d '\r' | awk '{print $(NF-1)}' | sed 's/\x1b\[[0-9;]*m//g')
+
+            # 抽出したカバレッジ率が有効な数値 (整数または小数) か正規表現でチェック
             if ! [[ "$COVERAGE" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-              echo "Error: Could not extract coverage percentage."
+              echo "Error: Could not extract coverage percentage. Extracted value was '$COVERAGE'."
               exit 1
             fi
 
-            # Use environment variable for threshold
+            # 環境変数からカバレッジの閾値を取得
             THRESHOLD=${COVERAGE_THRESHOLD}
             echo "Current Coverage: $COVERAGE%"
             echo "Required Threshold: $THRESHOLD%"
 
+            # bcコマンドを使って、現在のカバレッジ率が閾値を下回っているか比較
             if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
               echo "Error: Code coverage is below the threshold ($THRESHOLD%)."
               exit 1
@@ -74,8 +89,8 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
 1.  **セットアップ**:
     -   `test` ジョブと同様に、リポジトリのチェックアウト、Deno のセットアップ、キャッシュのリストアを行います。
 
-2.  **GitHub Actionのビルド (`deno task -C packages/action build`)**:
-    -   `packages/action` ディレクトリに移動し、`deno.jsonc` で定義された `build` タスクを実行します。
+2.  **GitHub Actionのビルド (`deno task build:action`)**:
+    -   プロジェクトルートの `deno.jsonc` で定義された `build:action` タスクを実行します。
     -   GitHub Actionとして配布するために必要なビルドプロセス（例: バンドル、依存関係の解決）を実行します。
 
 ## 実行トリガー
