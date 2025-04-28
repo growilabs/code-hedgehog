@@ -25,7 +25,16 @@ jobs:
 
       - name: Get Deno cache directory
         id: deno-cache-dir
-        run: echo "DENO_CACHE_DIR=$(deno info --json | jq -r .cache)" >> $GITHUB_ENV
+        run: |
+          set -e
+          DENO_INFO=$(deno info --json)
+          echo "Deno Info JSON: $DENO_INFO" # Debug output
+          DENO_CACHE_PATH=$(echo "$DENO_INFO" | jq -r .cache)
+          if [ -z "$DENO_CACHE_PATH" ] || [ "$DENO_CACHE_PATH" == "null" ]; then
+            echo "Error: Could not get Deno cache directory from deno info."
+            exit 1
+          fi
+          echo "DENO_CACHE_DIR=$DENO_CACHE_PATH" >> $GITHUB_ENV
 
       - name: Cache Deno dependencies
         uses: actions/cache@v4
@@ -84,7 +93,16 @@ jobs:
 
       - name: Get Deno cache directory
         id: deno-cache-dir
-        run: echo "DENO_CACHE_DIR=$(deno info --json | jq -r .cache)" >> $GITHUB_ENV
+        run: |
+          set -e
+          DENO_INFO=$(deno info --json)
+          echo "Deno Info JSON: $DENO_INFO" # Debug output
+          DENO_CACHE_PATH=$(echo "$DENO_INFO" | jq -r .cache)
+          if [ -z "$DENO_CACHE_PATH" ] || [ "$DENO_CACHE_PATH" == "null" ]; then
+            echo "Error: Could not get Deno cache directory from deno info."
+            exit 1
+          fi
+          echo "DENO_CACHE_DIR=$DENO_CACHE_PATH" >> $GITHUB_ENV
 
       - name: Cache Deno dependencies
         uses: actions/cache@v4
