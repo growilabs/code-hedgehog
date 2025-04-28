@@ -5,7 +5,7 @@ import type { IPullRequestInfo } from './vcs.ts';
 /**
  * Path based instruction configuration
  */
-export interface PathInstruction {
+interface PathInstruction {
   /** Glob pattern for matching files */
   path: string;
   /** Instructions for matched files */
@@ -25,12 +25,6 @@ export type IPullRequestProcessedResult = {
   comments?: IReviewComment[];
 };
 
-/**
- * Interface for processor implementing two-phase review process
- */
 export interface IPullRequestProcessor {
-  /**
-   * Main processing flow
-   */
   process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult>;
 }
