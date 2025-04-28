@@ -275,12 +275,7 @@ export class DifyProcessor extends BaseProcessor {
       try {
         // Upload aspects data
         const aspectsJson = JSON.stringify(summarizeResult.aspects);
-        const aspectsFileId = await uploadFile(
-          this.config.baseUrl,
-          this.config.apiKeyReview,
-          this.config.user,
-          aspectsJson
-        );
+        const aspectsFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyReview, this.config.user, aspectsJson);
 
         // Upload overall summary data if available
         let overallSummaryFileId: string | undefined;
@@ -289,12 +284,7 @@ export class DifyProcessor extends BaseProcessor {
             description: overallSummary.description,
             crossCuttingConcerns: overallSummary.crossCuttingConcerns,
           });
-          overallSummaryFileId = await uploadFile(
-            this.config.baseUrl,
-            this.config.apiKeyReview,
-            this.config.user,
-            overallSummaryJson
-          );
+          overallSummaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyReview, this.config.user, overallSummaryJson);
         }
 
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
@@ -304,16 +294,18 @@ export class DifyProcessor extends BaseProcessor {
             filePath: file.path,
             patch: file.patch || 'No changes',
             instructions: this.getInstructionsForFile(file.path, config),
-                        aspects: {
-              transfer_method: "local_file",
+            aspects: {
+              transfer_method: 'local_file',
               upload_file_id: aspectsFileId,
-              type: "document"
+              type: 'document',
             },
-            overallSummary: overallSummaryFileId ? {
-              transfer_method: "local_file",
-              upload_file_id: overallSummaryFileId,
-              type: "document"
-            } : undefined,
+            overallSummary: overallSummaryFileId
+              ? {
+                  transfer_method: 'local_file',
+                  upload_file_id: overallSummaryFileId,
+                  type: 'document',
+                }
+              : undefined,
           },
           response_mode: 'blocking' as const,
           user: this.config.user,
