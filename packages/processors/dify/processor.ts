@@ -60,20 +60,6 @@ export class DifyProcessor extends BaseProcessor {
   }
 
   /**
-   * Convert summarize results to array
-   * @param entries Array of [path, result] tuples
-   * @returns Array of summary objects
-   */
-  private formatSummarizeResults(entries: [string, SummarizeResult][]): SummaryResponse[] {
-    return entries.map(([path, result]) => ({
-      path,
-      summary: result.summary || '',
-      needsReview: result.needsReview,
-      reason: result.reason || '',
-    }));
-  }
-
-  /**
    * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
@@ -175,9 +161,18 @@ export class DifyProcessor extends BaseProcessor {
           }));
           const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, filesWithDefaults);
 
-          // Upload summarize results
-          const formattedResults = this.formatSummarizeResults(batchEntries);
-          const summaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, formattedResults);
+          // Upload summarize results (convert Map entries to SummaryResponse[])
+          const summaryFileId = await uploadFile(
+            this.config.baseUrl,
+            this.config.apiKeyGrouping,
+            this.config.user,
+            batchEntries.map(([path, result]) => ({
+              path,
+              summary: result.summary || '',
+              needsReview: result.needsReview,
+              reason: result.reason || ''
+            }))
+          );
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
 
