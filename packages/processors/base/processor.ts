@@ -197,4 +197,19 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     }
     return body;
   }
+
+  /**
+   * Add line numbers to diff text for GitHub 'POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews' API
+   */
+  protected addLineNumbersToDiff(diffText: string | null): string {
+    if (diffText == null) {
+      return 'No changes';
+    }
+
+    const lines = diffText.split('\n');
+    const numberedLines = lines.map((line, index) => {
+      return `${index}: ${line}`;
+    });
+    return numberedLines.join('\n');
+  }
 }
