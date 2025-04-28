@@ -12,11 +12,15 @@
 
 ## CIパイプラインのステップ
 
-CIパイプラインは以下のステップで構成されます。これらのステップは、通常、コードがリポジトリにプッシュされた際やプルリクエストが作成された際に実行されます。
+CIパイプラインは `test` と `build` の2つのジョブで構成されます。`build` ジョブは `test` ジョブが成功した場合にのみ実行されます。これらのジョブは、通常、コードがリポジトリにプッシュされた際やプルリクエストが作成された際に実行されます。
+
+### `test` ジョブ
 
 1.  **セットアップ**:
-    -   リポジトリのコードをチェックアウトします。
-    -   指定されたバージョンのDeno環境をセットアップします。
+    -   リポジトリのコードをチェックアウトします (`actions/checkout`)。
+    -   指定されたバージョンのDeno環境をセットアップします (`denoland/setup-deno`)。
+    -   Deno のキャッシュディレクトリを取得し、環境変数 `DENO_CACHE_DIR` に設定します。
+    -   `actions/cache` を使用して Deno の依存関係 (`DENO_CACHE_DIR`) をキャッシュします。キャッシュキーには `deno.lock` ファイルのハッシュが含まれ、依存関係の変更時にキャッシュが無効化されます。
 
 2.  **リンティング (`deno task lint`)**:
     -   プロジェクトルートの `deno.jsonc` で定義された `lint` タスクを実行します。
@@ -29,8 +33,8 @@ CIパイプラインは以下のステップで構成されます。これらの
     -   コードの正当性を検証します。
 
 4.  **テストカバレッジチェック**:
-    -   `deno test -A --coverage=./cov packages` を実行してテストを実行し、カバレッジデータを `./cov` ディレクトリに生成します。
-    -   `deno coverage ./cov` を実行してカバレッジレポートを出力します。
+    -   `deno task test:cov` を実行してテストを実行し、カバレッジデータを `./cov` ディレクトリに生成します。このタスクは内部で `deno coverage ./cov` も実行し、レポートを出力します。
+    -   閾値チェックのために、再度 `deno coverage ./cov` を実行してカバレッジレポートを取得します。
     -   レポートの `total` 行から全体のカバレッジ率を抽出し、環境変数 `COVERAGE_THRESHOLD` で定義された閾値（デフォルト: 80%）と比較します。
     -   カバレッジ率が閾値を下回る場合、CIジョブは失敗します。これにより、テストの網羅性を一定以上に保ちます。
     -   **実装例 (GitHub Actions)**:
@@ -38,9 +42,12 @@ CIパイプラインは以下のステップで構成されます。これらの
         env:
           COVERAGE_THRESHOLD: 80 # Default coverage threshold
         # ... other steps
+        - name: Generate Coverage Data
+          run: deno task test:cov # カバレッジデータを生成
+
         - name: Check Coverage Threshold
           run: |
-            COVERAGE_OUTPUT=$(deno coverage ./cov)
+            COVERAGE_OUTPUT=$(deno coverage ./cov) # レポートを取得
             echo "$COVERAGE_OUTPUT"
             COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep '^total' | awk '{print $2}' | sed 's/%//')
 
@@ -62,7 +69,12 @@ CIパイプラインは以下のステップで構成されます。これらの
             fi
         ```
 
-5.  **GitHub Actionのビルド (`deno task -C packages/action build`)**:
+### `build` ジョブ (`needs: test`)
+
+1.  **セットアップ**:
+    -   `test` ジョブと同様に、リポジトリのチェックアウト、Deno のセットアップ、キャッシュのリストアを行います。
+
+2.  **GitHub Actionのビルド (`deno task -C packages/action build`)**:
     -   `packages/action` ディレクトリに移動し、`deno.jsonc` で定義された `build` タスクを実行します。
     -   GitHub Actionとして配布するために必要なビルドプロセス（例: バンドル、依存関係の解決）を実行します。
 
