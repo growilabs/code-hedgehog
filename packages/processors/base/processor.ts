@@ -1,14 +1,12 @@
 // Removed fs and parseYaml imports, they are now in load-config.ts
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
-import { ImpactLevel } from './schema.ts';
 import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
-import { mergeOverallSummaries } from './utils/summary.ts';
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
 import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
-import type { OverallSummary } from './schema.ts';
+import type { OverallSummary, ReviewComment } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 
@@ -113,7 +111,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * パッチの内容がシンプルな変更かどうかを判定
+   * Determine if changes are simple (formatting, comments only, etc.)
    */
   protected isSimpleChange(patch: string): boolean {
     const lines = patch.split('\n');
@@ -178,6 +176,10 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
   /**
    * Generate summaries grouped by review aspects
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param summarizeResults Previous summarized results
+   * @returns Overall summary of changes, or undefined if summary cannot be generated
    */
   protected abstract generateOverallSummary(
     prInfo: IPullRequestInfo,
@@ -186,12 +188,24 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<OverallSummary | undefined>;
 
   /**
-   * Summarize phase
+   * Summarize phase - Lightly analyze file changes to determine if detailed review is needed
+   *
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param config Optional review configuration
+   * @returns Map of file paths to summarized results
    */
   abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>>;
 
   /**
-   * Review phase
+   * Review phase - Execute detailed review based on summarized results
+   *
+   * @param prInfo Pull request information
+   * @param files List of file changes to review
+   * @param summarizeResults Previous summarized results
+   * @param config Optional review configuration
+   * @param overallSummary Overall summary of changes to provide context, if available
+   * @returns Review comments and optionally updated PR info
    */
   abstract review(
     prInfo: IPullRequestInfo,
@@ -202,7 +216,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   ): Promise<IPullRequestProcessedResult>;
 
   /**
-   * Main processing flow
+   * Main processing flow - now with 3 phases
    */
   async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
     // 0. Load configuration
@@ -216,5 +230,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     // 3. Execute detailed review with context
     return this.review(prInfo, files, summarizeResults, config, overallSummary);
+  }
+  /**
+   * Format review comment with suggestion
+   */
+  protected formatComment(comment: ReviewComment): string {
+    let body = comment.message;
+    if (comment.suggestion) {
+      body += `\n\n**Suggestion:**\n${comment.suggestion}`;
+    }
+    return body;
   }
 }
