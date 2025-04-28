@@ -6,7 +6,7 @@
   "license": "MIT",
   "author": "Yuki Takei <yuki@weseek.co.jp>",
   "exports": "./mod.ts",
-  "nodeModulesDir": "auto",
+  "nodeModulesDir": true,
   "compilerOptions": {
     "strict": true
   },
@@ -28,7 +28,8 @@
     "test": "deno test -A --parallel packages",
     "test:cov": "deno test -A --coverage=./cov packages && deno coverage ./cov",
     "lint": "deno run -A npm:@biomejs/biome check ./",
-    "lint:fix": "deno run -A npm:@biomejs/biome check --write ./"
+    "lint:fix": "deno run -A npm:@biomejs/biome check --write ./",
+    "build:action": "cd packages/action && deno task build"
   },
   "lint": {
     "include": ["packages/"],
