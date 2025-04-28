@@ -1,4 +1,6 @@
 import { z } from './deps.ts';
+// Import ReviewConfig from types.ts
+import type { ReviewConfig } from './types.ts';
 
 /**
  * Impact level of changes
@@ -60,3 +62,27 @@ export const ReviewResponseSchema = z.object({
   summary: z.string().optional(),
 });
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
+
+/**
+ * Configuration schema for path based instructions
+ */
+export const PathInstructionSchema = z.object({
+  path: z.string(),
+  instructions: z.string(),
+});
+
+export const ConfigSchema = z.object({
+  file_path_instructions: z.array(PathInstructionSchema).optional(),
+  path_filters: z.string().optional(),
+  skip_simple_changes: z.boolean().optional().default(false),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
+// Default configuration (Moved from deps.ts, now using ReviewConfig type)
+export const DEFAULT_CONFIG: ReviewConfig = {
+  path_instructions: [], // Required by core
+  file_path_instructions: [], // Local extension
+  path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
+  skip_simple_changes: false,
+};
