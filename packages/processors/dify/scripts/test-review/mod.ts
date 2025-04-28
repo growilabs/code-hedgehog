@@ -1,4 +1,5 @@
 import { uploadFile } from '../../internal/mod.ts';
+import { ImpactLevel } from '../../deps.ts';
 import { processReviewResponse } from '../../internal/run-workflow.ts';
 import type { DifyRequestBody } from '../../internal/schema.ts';
 
@@ -15,12 +16,14 @@ async function main() {
 
   const testAspects = [
     {
-      name: 'security',
+      key: 'security',
       description: 'Implementation of authentication system',
+      impact: ImpactLevel.High,
     },
     {
-      name: 'domain:auth',
+      key: 'domain:auth',
       description: 'User authentication and authorization features',
+      impact: ImpactLevel.Medium,
     },
   ];
 

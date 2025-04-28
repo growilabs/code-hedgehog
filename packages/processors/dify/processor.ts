@@ -1,7 +1,16 @@
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
+import type {
+  IFileChange,
+  IPullRequestInfo,
+  IPullRequestProcessedResult,
+  IReviewComment,
+  OverallSummary,
+  ReviewConfig,
+  SummarizeResult,
+  SummaryResponse,
+} from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
-import { runWorkflow, uploadFile, type JsonValue } from './internal/mod.ts';
+import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 type DifyProcessorConfig = {
   baseUrl: string;
@@ -55,11 +64,11 @@ export class DifyProcessor extends BaseProcessor {
    * @param files Array of file changes
    * @returns JSON string representation of files
    */
-  private formatFiles(files: IFileChange[]): Record<string, JsonValue>[] {
+  private formatFiles(files: IFileChange[]): { path: string; patch: string; type: 'change' }[] {
     return files.map((file) => ({
       path: file.path || '',
       patch: file.patch || 'No changes',
-      type: 'change' as const
+      type: 'change' as const,
     }));
   }
 
@@ -68,7 +77,7 @@ export class DifyProcessor extends BaseProcessor {
    * @param entries Array of [path, result] tuples
    * @returns Array of summary objects
    */
-  private formatSummarizeResults(entries: [string, SummarizeResult][]): Record<string, JsonValue>[] {
+  private formatSummarizeResults(entries: [string, SummarizeResult][]): SummaryResponse[] {
     return entries.map(([path, result]) => ({
       path,
       summary: result.summary || '',
@@ -87,7 +96,7 @@ export class DifyProcessor extends BaseProcessor {
     for (const file of files) {
       // Basic token check and simple change detection
       const baseResult = await this.shouldPerformDetailedReview(file, this.tokenConfig);
-      
+
       try {
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeySummarize, {
           inputs: {
@@ -277,12 +286,7 @@ export class DifyProcessor extends BaseProcessor {
 
       try {
         // Upload aspects data
-        const aspectsFileId = await uploadFile(
-          this.config.baseUrl,
-          this.config.apiKeyReview,
-          this.config.user,
-          summarizeResult.aspects
-        );
+        const aspectsFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyReview, this.config.user, summarizeResult.aspects);
 
         // Upload overall summary data if available
         let overallSummaryFileId: string | undefined;
@@ -291,12 +295,7 @@ export class DifyProcessor extends BaseProcessor {
             description: overallSummary.description,
             crossCuttingConcerns: overallSummary.crossCuttingConcerns,
           };
-          overallSummaryFileId = await uploadFile(
-            this.config.baseUrl,
-            this.config.apiKeyReview,
-            this.config.user,
-            overallSummaryData
-          );
+          overallSummaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyReview, this.config.user, overallSummaryData);
         }
 
         const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
@@ -307,15 +306,17 @@ export class DifyProcessor extends BaseProcessor {
             patch: file.patch || 'No changes',
             instructions: this.getInstructionsForFile(file.path, config),
             aspects: {
-              transfer_method: "local_file",
+              transfer_method: 'local_file',
               upload_file_id: aspectsFileId,
-              type: "document"
+              type: 'document',
             },
-            overallSummary: overallSummaryFileId ? {
-              transfer_method: "local_file",
-              upload_file_id: overallSummaryFileId,
-              type: "document"
-            } : undefined,
+            overallSummary: overallSummaryFileId
+              ? {
+                  transfer_method: 'local_file',
+                  upload_file_id: overallSummaryFileId,
+                  type: 'document',
+                }
+              : undefined,
           },
           response_mode: 'blocking' as const,
           user: this.config.user,

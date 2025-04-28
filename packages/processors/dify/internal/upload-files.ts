@@ -1,18 +1,24 @@
+import type { ImpactLevel, ReviewAspect, OverallSummary, SummaryResponse } from '../../base/schema.ts';
 import { UploadResponseSchema } from './schema.ts';
 
 /**
- * JSON serializable value type
+ * Valid content types for upload
  */
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type UploadContent =
+  | { path: string; patch: string; type?: 'change' }                          // File change data
+  | SummaryResponse                                                           // File summary data
+  | { key: string; description: string; impact: ImpactLevel }                // Review aspect data
+  | { description: string; crossCuttingConcerns: string[] | undefined }      // Partial overall summary
+  | UploadContent[];                                                         // Array of any above types
+
 /**
  * Upload a JSON file to Dify API and get file ID.
- * This function is specifically designed for uploading JSON data,
- * which is the only current use case in the application.
+ * Accepts either file change information or summary data.
  *
  * @param baseUrl - Base URL for Dify API
  * @param apiKey - API key for the upload
  * @param user - User identifier
- * @param fileContent - JSON serializable content to upload
+ * @param content - Content to upload (either file change or summary data)
  * @param fileName - Name of the file to upload (defaults to data.json)
  * @returns Uploaded file ID
  */
@@ -20,7 +26,7 @@ export async function uploadFile(
   baseUrl: string,
   apiKey: string,
   user: string,
-  fileContent: JsonValue | Record<string, unknown>,
+  content: UploadContent | UploadContent[],
   fileName = 'data.json',
 ): Promise<string> {
   const maxRetries = 3;
@@ -28,7 +34,7 @@ export async function uploadFile(
 
   // Create FormData with JSON file
   const formData = new FormData();
-  const jsonString = JSON.stringify(fileContent);
+  const jsonString = JSON.stringify(content);
   const blob = new Blob([jsonString], { type: 'application/json' });
   formData.append('file', blob, fileName);
   formData.append('user', user);
