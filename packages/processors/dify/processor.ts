@@ -60,19 +60,6 @@ export class DifyProcessor extends BaseProcessor {
   }
 
   /**
-   * Convert IFileChange array to JSON string
-   * @param files Array of file changes
-   * @returns JSON string representation of files
-   */
-  private formatFiles(files: IFileChange[]): { path: string; patch: string; type: 'change' }[] {
-    return files.map((file) => ({
-      path: file.path || '',
-      patch: file.patch || 'No changes',
-      type: 'change' as const,
-    }));
-  }
-
-  /**
    * Convert summarize results to array
    * @param entries Array of [path, result] tuples
    * @returns Array of summary objects
@@ -182,8 +169,11 @@ export class DifyProcessor extends BaseProcessor {
           }
 
           // Upload files data
-          const formattedFiles = this.formatFiles(batchFiles);
-          const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, formattedFiles);
+          const filesWithDefaults = batchFiles.map((file) => ({
+            ...file,
+            patch: file.patch || 'No changes'  // Ensure patch is never null
+          }));
+          const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, filesWithDefaults);
 
           // Upload summarize results
           const formattedResults = this.formatSummarizeResults(batchEntries);
