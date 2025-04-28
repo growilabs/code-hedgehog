@@ -14,8 +14,7 @@ export type UploadContent =
   | UploadFileChange                                                         // File change data
   | SummaryResponse                                                          // File summary data
   | { key: string; description: string; impact: ImpactLevel }               // Review aspect data
-  | { description: string; crossCuttingConcerns: string[] | undefined }     // Partial overall summary
-  | UploadContent[];                                                        // Array of any above types
+  | { description: string; crossCuttingConcerns: string[] | undefined };    // Partial overall summary
 
 /**
  * Upload a JSON file to Dify API and get file ID.
