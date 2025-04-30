@@ -65,6 +65,66 @@ describe('GitHubVCS', () => {
     assertEquals(spies.paginateIterator.calls.length, 1);
   });
 
+  it('should get SHA range since last issue comment', async () => {
+    const listCommitsSpy = spy(() =>
+      Promise.resolve({
+        data: [
+          { sha: 'commit0', commit: { committer: { date: '2024-01-01T09:00:00Z' } } }, // Before comment
+          { sha: 'commit1', commit: { committer: { date: '2024-01-01T12:00:00Z' } } }, // Before comment
+          { sha: 'commit2', commit: { committer: { date: '2024-01-02T12:00:00Z' } } }, // After comment
+          { sha: 'commit3', commit: { committer: { date: '2024-01-02T15:00:00Z' } } }, // After comment (head)
+        ],
+      }),
+    );
+    const { mockOctokit, spies } = createMockOctokit({ listCommits: listCommitsSpy });
+    const vcs = new GitHubVCS(config, () => mockOctokit);
+    const shaRange = await vcs.getShaRangeSinceLastIssueComment();
+
+    assertEquals(shaRange, { baseSha: 'commit1', headSha: 'commit3' });
+    assertEquals(spies.listComments.calls.length, 1);
+    assertEquals(listCommitsSpy.calls.length, 1);
+  });
+
+  it('should return undefined if no issue comments exist', async () => {
+    const listCommentsSpy = spy(() => Promise.resolve({ data: [] }));
+    const { mockOctokit, spies } = createMockOctokit({ listComments: listCommentsSpy });
+    const vcs = new GitHubVCS(config, () => mockOctokit);
+    const shaRange = await vcs.getShaRangeSinceLastIssueComment();
+
+    assertEquals(shaRange, undefined);
+    assertEquals(listCommentsSpy.calls.length, 1);
+    assertEquals(spies.listCommits.calls.length, 0);
+  });
+
+  it('should return undefined if no commits exist', async () => {
+    const listCommitsSpy = spy(() => Promise.resolve({ data: [] }));
+    const { mockOctokit, spies } = createMockOctokit({ listCommits: listCommitsSpy });
+    const vcs = new GitHubVCS(config, () => mockOctokit);
+    const shaRange = await vcs.getShaRangeSinceLastIssueComment();
+
+    assertEquals(shaRange, undefined);
+    assertEquals(spies.listComments.calls.length, 1);
+    assertEquals(listCommitsSpy.calls.length, 1);
+  });
+
+  it('should return undefined if no commits exist before the last comment', async () => {
+    const listCommitsSpy = spy(() =>
+      Promise.resolve({
+        data: [
+          { sha: 'commit2', commit: { committer: { date: '2024-01-02T12:00:00Z' } } },
+          { sha: 'commit3', commit: { committer: { date: '2024-01-02T15:00:00Z' } } },
+        ],
+      }),
+    );
+    const { mockOctokit, spies } = createMockOctokit({ listCommits: listCommitsSpy });
+    const vcs = new GitHubVCS(config, () => mockOctokit);
+    const shaRange = await vcs.getShaRangeSinceLastIssueComment();
+
+    assertEquals(shaRange, undefined);
+    assertEquals(spies.listComments.calls.length, 1);
+    assertEquals(listCommitsSpy.calls.length, 1);
+  });
+
   it('should create review batch', async () => {
     const { mockOctokit, spies } = createMockOctokit();
     const vcs = new GitHubVCS(config, () => mockOctokit);
