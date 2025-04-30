@@ -29,7 +29,8 @@ export class DifyProcessor extends BaseProcessor {
    * Constructor for DifyProcessor
    * @param reviewConfig - The overall review configuration object for Dify
    */
-  constructor(reviewConfig: DifyReviewConfig) { // Ensure constructor accepts DifyReviewConfig
+  constructor(reviewConfig: DifyReviewConfig) {
+    // Ensure constructor accepts DifyReviewConfig
     super();
 
     // Validate and extract Dify specific config from DifyReviewConfig

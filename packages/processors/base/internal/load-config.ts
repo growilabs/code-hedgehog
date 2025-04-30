@@ -6,28 +6,35 @@ import type { PathInstruction, ReviewConfig } from '../types.ts';
 
 // Define a Zod schema for the base configuration fields we expect from YAML
 // Matches the PathInstruction interface
-const PathInstructionSchema = z.object({
-  path: z.string(), // Correct property name
-  instructions: z.string(), // Correct property name
-}).passthrough(); // Allow other potential fields within PathInstruction
+const PathInstructionSchema = z
+  .object({
+    path: z.string(), // Correct property name
+    instructions: z.string(), // Correct property name
+  })
+  .passthrough(); // Allow other potential fields within PathInstruction
 
-const BaseConfigSchema = z.object({
-  file_path_instructions: z.array(PathInstructionSchema).optional(),
-  path_filters: z.string().optional(),
-  skip_simple_changes: z.boolean().optional(),
-  // path_instructions is required in ReviewConfig, but might be missing in YAML
-  path_instructions: z.array(PathInstructionSchema).optional(),
-  use_default_config: z.boolean().optional(), // Add this field
-}).passthrough(); // Allow other fields (processor-specific)
+const BaseConfigSchema = z
+  .object({
+    file_path_instructions: z.array(PathInstructionSchema).optional(),
+    path_filters: z.string().optional(),
+    skip_simple_changes: z.boolean().optional(),
+    // path_instructions is required in ReviewConfig, but might be missing in YAML
+    path_instructions: z.array(PathInstructionSchema).optional(),
+    use_default_config: z.boolean().optional(), // Add this field
+  })
+  .passthrough(); // Allow other fields (processor-specific)
 
 // Define a specific error type for configuration loading issues (optional but good practice)
 export class ConfigLoadError extends Error {
-  constructor(message: string, public override readonly cause?: unknown) { // Add 'override' modifier
+  constructor(
+    message: string,
+    public override readonly cause?: unknown,
+  ) {
+    // Add 'override' modifier
     super(message);
     this.name = 'ConfigLoadError';
   }
 }
-
 
 /**
  * Load configuration from a YAML file, merging with defaults.
@@ -42,7 +49,8 @@ export async function loadConfig(configPath = '.coderabbitai.yaml'): Promise<Rev
     // Removed fs.access check, rely on readFile's error handling
     const content = await fs.readFile(configPath, 'utf-8');
     yamlContent = parseYaml(content);
-  } catch (error: unknown) { // Use 'unknown' instead of 'any'
+  } catch (error: unknown) {
+    // Use 'unknown' instead of 'any'
     // Type guard to check if error is an object with a 'code' property
     if (error && typeof error === 'object' && 'code' in error && (error.code === 'ENOENT' || error.code === 'EACCES')) {
       console.warn(`Config file "${configPath}" not found or not readable, using default base config.`);

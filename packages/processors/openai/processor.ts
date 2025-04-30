@@ -24,7 +24,8 @@ export class OpenaiProcessor extends BaseProcessor {
     maxTokens: 4000,
   };
 
-  constructor(config: OpenaiReviewConfig) { // Accept OpenaiReviewConfig object
+  constructor(config: OpenaiReviewConfig) {
+    // Accept OpenaiReviewConfig object
     super();
     // Use openai_api_key from the config object
     if (!config.openai_api_key) {
