@@ -40,6 +40,28 @@ export const mockFiles = [
   },
 ];
 
+// Mock data for listComments
+const mockCommentsData = [
+  {
+    id: 1,
+    body: 'Old comment',
+    created_at: '2024-01-01T00:00:00Z',
+    user: { login: 'user1' },
+  },
+  {
+    id: 2,
+    body: 'Latest comment',
+    created_at: '2024-01-02T00:00:00Z',
+    user: { login: 'user2' },
+  },
+];
+
+// Mock data for listCommits
+const mockCommitsData = [
+  { sha: 'commit1', commit: { committer: { date: '2024-01-01T12:00:00Z' } } },
+  { sha: 'commit2', commit: { committer: { date: '2024-01-02T12:00:00Z' } } },
+];
+
 /**
  * Creates spy functions for all required API methods
  * Each spy returns a Promise that resolves to a mock response
@@ -50,12 +72,19 @@ function createSpies() {
     getPullRequest: spy(() => Promise.resolve(mockPullRequest)),
     listFiles: spy(() => Promise.resolve({ data: mockFiles })),
     createReview: spy(() => Promise.resolve({ data: {} })),
-    paginateIterator: spy(async function* () {
+    paginateIterator: spy(async function* (endpointOptions: { url: string }) {
+      // Determine the correct data structure based on the endpoint URL
+      const isCompareCommits = endpointOptions.url.includes('/compare/');
+      const responseData = isCompareCommits ? { files: mockFiles } : mockFiles;
+
       yield {
         headers: { 'x-ratelimit-remaining': '1000' },
-        data: mockFiles,
+        data: responseData,
       };
     }),
+    listComments: spy(() => Promise.resolve({ data: mockCommentsData })),
+    listCommits: spy(() => Promise.resolve({ data: mockCommitsData })),
+    compareCommits: spy(() => Promise.resolve({ data: { files: mockFiles } })),
   };
 }
 
@@ -73,10 +102,21 @@ export function createMockOctokit() {
         get: spies.getPullRequest,
         listFiles: Object.assign(spies.listFiles, {
           endpoint: {
-            merge: spy(() => 'GET /repos/{owner}/{repo}/pulls/{pull_number}/files'),
+            merge: spy(() => ({ url: 'GET /repos/{owner}/{repo}/pulls/{pull_number}/files' })),
           },
         }),
         createReview: spies.createReview,
+        listCommits: spies.listCommits,
+      },
+      issues: {
+        listComments: spies.listComments,
+      },
+      repos: {
+        compareCommits: Object.assign(spies.compareCommits, {
+          endpoint: {
+            merge: spy(() => ({ url: 'GET /repos/{owner}/{repo}/compare/{base}...{head}' })),
+          },
+        }),
       },
     },
     paginate: {

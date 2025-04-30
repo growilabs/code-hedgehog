@@ -157,7 +157,7 @@ export class GitHubVCS extends BaseVCS {
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
       const shaRange = await this.getShaRangeSinceLastIssueComment();
-      console.log(shaRange);
+
       const iterator = this.api.paginate.iterator(
         shaRange != null
           ? this.api.rest.repos.compareCommits.endpoint.merge({
