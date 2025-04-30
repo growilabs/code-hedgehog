@@ -3,6 +3,7 @@
 import process from 'node:process';
 import * as core from '@actions/core';
 import { FileManager, type IFileFilter, type IPullRequestProcessor, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import { DEFAULT_CONFIG, loadConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
 
 export class ActionRunner {
@@ -96,24 +97,44 @@ export class ActionRunner {
   }
 
   private async createProcessor(): Promise<IPullRequestProcessor> {
+    // Load the base configuration (ReviewConfig) from YAML and defaults
+    const baseConfig = await loadConfig(); // Returns ReviewConfig with only base fields from YAML + defaults
+    core.info(`Loaded base configuration for processor: ${this.config.processor}`);
+    core.debug(`Base config loaded: ${JSON.stringify(baseConfig)}`);
+
+    // Processor-specific configurations are loaded from environment variables only
     switch (this.config.processor) {
       case 'acme': {
-        const AcmeProcessor = (await import('@code-hedgehog/processor-acme')).AcmeProcessor;
+        const { AcmeProcessor } = await import('@code-hedgehog/processor-acme');
         return new AcmeProcessor();
       }
       case 'openai': {
-        const OpenaiProcessor = (await import('@code-hedgehog/processor-openai')).OpenaiProcessor;
-        return new OpenaiProcessor(process.env.OPENAI_API_KEY);
+        const { OpenaiProcessor } = await import('@code-hedgehog/processor-openai/mod.ts');
+        // Import the specific config type dynamically
+        const { OpenaiReviewConfig } = await import('@code-hedgehog/processor-openai/types.ts');
+        // Create the specific config by merging base config and env vars
+        const openaiConfig: OpenaiReviewConfig = {
+          ...baseConfig, // Spread the base config loaded from loadConfig
+          openai_api_key: process.env.OPENAI_API_KEY ?? '', // Load specific env var here
+        };
+        core.debug(`Final OpenAI config: ${JSON.stringify(openaiConfig)}`);
+        return new OpenaiProcessor(openaiConfig);
       }
       case 'dify': {
-        const DifyProcessor = (await import('@code-hedgehog/processor-dify')).DifyProcessor;
-        return new DifyProcessor({
-          baseUrl: process.env.DIFY_API_BASE_URL ?? '',
-          user: process.env.DIFY_API_EXEC_USER ?? '',
-          apiKeySummarize: process.env.DIFY_API_KEY_SUMMARIZE ?? '',
-          apiKeyGrouping: process.env.DIFY_API_KEY_GROUPING ?? '',
-          apiKeyReview: process.env.DIFY_API_KEY_REVIEW ?? '',
-        });
+        const { DifyProcessor } = await import('@code-hedgehog/processor-dify/mod.ts');
+        // Import the specific config type dynamically
+        const { DifyReviewConfig } = await import('@code-hedgehog/processor-dify/types.ts');
+        // Create the specific config by merging base config and env vars
+        const difyConfig: DifyReviewConfig = {
+          ...baseConfig, // Spread the base config loaded from loadConfig
+          dify_base_url: process.env.DIFY_API_BASE_URL ?? '', // Load specific env vars here
+          dify_user: process.env.DIFY_API_EXEC_USER ?? '',
+          dify_api_key_summarize: process.env.DIFY_API_KEY_SUMMARIZE ?? '',
+          dify_api_key_grouping: process.env.DIFY_API_KEY_GROUPING ?? '',
+          dify_api_key_review: process.env.DIFY_API_KEY_REVIEW ?? '',
+        };
+        core.debug(`Final Dify config: ${JSON.stringify(difyConfig)}`);
+        return new DifyProcessor(difyConfig);
       }
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);

@@ -3,8 +3,9 @@
     "@actions/core": "npm:@actions/core@1.11.1",
     "@code-hedgehog/core": "../core/mod.ts",
     "@code-hedgehog/processor-acme": "../processors/acme/mod.ts",
-    "@code-hedgehog/processor-dify": "../processors/dify/mod.ts",
-    "@code-hedgehog/processor-openai": "../processors/openai/mod.ts"
+    "@code-hedgehog/processor-dify/": "../processors/dify/",
+    "@code-hedgehog/processor-openai/": "../processors/openai/",
+    "@code-hedgehog/processor-base": "../processors/base/mod.ts" // Add import map for processor-base
   },
   "tasks": {
     "build": "deno run -A ./scripts/build-action.ts",

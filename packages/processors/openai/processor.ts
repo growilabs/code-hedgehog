@@ -10,10 +10,12 @@ import type {
   IReviewComment,
   OverallSummary,
   ReviewComment,
-  ReviewConfig,
+  // ReviewConfig, // Use specific type below
   SummarizeResult,
 } from './deps.ts';
 import { createGroupingPrompt, createReviewPrompt, createTriagePrompt } from './internal/prompts.ts';
+// Import the specific config type
+import type { OpenaiReviewConfig } from './types.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -22,19 +24,21 @@ export class OpenaiProcessor extends BaseProcessor {
     maxTokens: 4000,
   };
 
-  constructor(apiKey?: string) {
+  constructor(config: OpenaiReviewConfig) { // Accept OpenaiReviewConfig object
     super();
-    if (!apiKey) {
-      throw new Error('OpenAI API key is required');
+    // Use openai_api_key from the config object
+    if (!config.openai_api_key) {
+      throw new Error('OpenAI API key is required in the configuration (openai_api_key)');
     }
-    this.openai = new OpenAI({ apiKey });
+    this.openai = new OpenAI({ apiKey: config.openai_api_key });
   }
 
   /**
    * Implementation of summarize phase
    * Performs lightweight analysis using light weight model
    */
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  // Update config parameter type
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: OpenaiReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
     const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema, 'summarize_response');
 
@@ -220,11 +224,12 @@ export class OpenaiProcessor extends BaseProcessor {
    * Implementation of review phase
    * Performs detailed review using GPT-4
    */
+  // Update config parameter type
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig,
+    config?: OpenaiReviewConfig,
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];

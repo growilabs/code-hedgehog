@@ -1,9 +1,13 @@
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewConfig, SummarizeResult } from './deps.ts';
+// Base types and specific config type
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts'; // Removed ReviewConfig import
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
+// Import the specific config type
+import type { DifyReviewConfig } from './types.ts';
 
-type DifyProcessorConfig = {
+// Internal configuration type for DifyProcessor
+type InternalDifyConfig = {
   baseUrl: string;
   user: string;
   apiKeySummarize: string;
@@ -15,38 +19,43 @@ type DifyProcessorConfig = {
  * Processor implementation for Dify AI Service
  */
 export class DifyProcessor extends BaseProcessor {
-  private readonly config: DifyProcessorConfig;
+  private readonly config: InternalDifyConfig; // Use internal config type
   private readonly tokenConfig = {
     margin: 100,
-    maxTokens: 4000,
+    maxTokens: 4000, // Note: This seems low for modern models, consider increasing
   };
 
   /**
    * Constructor for DifyProcessor
-   * @param config - Configuration for Dify processor
+   * @param reviewConfig - The overall review configuration object for Dify
    */
-  constructor(config: DifyProcessorConfig) {
+  constructor(reviewConfig: DifyReviewConfig) { // Ensure constructor accepts DifyReviewConfig
     super();
 
-    if (config.baseUrl.length === 0) {
-      throw new Error('Base URL for Dify API is required');
+    // Validate and extract Dify specific config from DifyReviewConfig
+    if (!reviewConfig.dify_base_url) {
+      throw new Error('Base URL for Dify API is required in the configuration (dify_base_url)');
     }
-    if (config.user.length === 0) {
-      throw new Error('API execution user is required');
+    if (!reviewConfig.dify_user) {
+      throw new Error('API execution user is required in the configuration (dify_user)');
     }
-    if (config.apiKeySummarize.length === 0) {
-      throw new Error('API key for summarize workflow is required');
+    if (!reviewConfig.dify_api_key_summarize) {
+      throw new Error('API key for summarize workflow is required in the configuration (dify_api_key_summarize)');
     }
-    if (config.apiKeyGrouping.length === 0) {
-      throw new Error('API key for grouping workflow is required');
+    if (!reviewConfig.dify_api_key_grouping) {
+      throw new Error('API key for grouping workflow is required in the configuration (dify_api_key_grouping)');
     }
-    if (config.apiKeyReview.length === 0) {
-      throw new Error('API key for review workflow is required');
+    if (!reviewConfig.dify_api_key_review) {
+      throw new Error('API key for review workflow is required in the configuration (dify_api_key_review)');
     }
 
+    // Initialize internal config
     this.config = {
-      ...config,
-      baseUrl: config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl,
+      baseUrl: reviewConfig.dify_base_url.endsWith('/') ? reviewConfig.dify_base_url.slice(0, -1) : reviewConfig.dify_base_url,
+      user: reviewConfig.dify_user,
+      apiKeySummarize: reviewConfig.dify_api_key_summarize,
+      apiKeyGrouping: reviewConfig.dify_api_key_grouping,
+      apiKeyReview: reviewConfig.dify_api_key_review,
     };
   }
 
@@ -84,7 +93,8 @@ export class DifyProcessor extends BaseProcessor {
    * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  // Update config parameter type
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: DifyReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
 
     for (const file of files) {
@@ -254,7 +264,7 @@ export class DifyProcessor extends BaseProcessor {
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig,
+    config?: DifyReviewConfig, // Update config parameter type
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
