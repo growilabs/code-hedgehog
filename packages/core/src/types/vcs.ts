@@ -71,7 +71,7 @@ export interface ICommitComparisonShas {
   /**
    * The base commit SHA for comparison (e.g., previous push)
    */
-  beforeSha: string;
+  baseSha: string;
 
   /**
    * The head/after commit SHA for comparison (e.g., current push)

@@ -83,9 +83,10 @@ export class GitHubVCS extends BaseVCS {
    *
    * **Limitations:**
    * - **Comment Type:** Only considers issue comments. Review comments or commit-specific comments are ignored.
-   * - **Commit Limit:** Relies on `pulls.listCommits` which fetches a maximum of 100 commits by default. If the PR has more commits, or the latest comment refers to a commit older than the last 100, the calculated `beforeSha` might be inaccurate or the method might incorrectly return `undefined`.
+   * - **Commit Limit:** Relies on `pulls.listCommits` which fetches a maximum of 100 commits by default. If the PR has more commits, or the latest comment refers to a commit older than the last 100, the calculated `baseSha` might be inaccurate or the method might incorrectly return `undefined`.
    * - **No Comments/Commits:** Returns `undefined` if no issue comments or no commits are found in the PR.
    */
+  // TODO: Separate into BaseVCS without the API part when implementing GitLab.
   async getShaRangeSinceLastIssueComment(): Promise<ICommitComparisonShas | undefined> {
     try {
       const { data: issueComments } = await this.api.rest.issues.listComments({
@@ -133,9 +134,9 @@ export class GitHubVCS extends BaseVCS {
         return;
       }
 
-      const beforeSha = commitsBeforeLastComment[commitsBeforeLastComment.length - 1].sha;
+      const baseSha = commitsBeforeLastComment[commitsBeforeLastComment.length - 1].sha;
 
-      return { beforeSha, headSha };
+      return { baseSha, headSha };
     } catch (error) {
       throw this.formatError('get SHA range', error);
     }
@@ -162,7 +163,7 @@ export class GitHubVCS extends BaseVCS {
           ? this.api.rest.repos.compareCommits.endpoint.merge({
               owner: this.context.owner,
               repo: this.context.repo,
-              base: shaRange.beforeSha,
+              base: shaRange.baseSha,
               head: shaRange.headSha,
               per_page: pageSize,
             })
