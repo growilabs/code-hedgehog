@@ -93,8 +93,9 @@ function createSpies() {
  * subset of the GitHub API interface. The mock focuses only on the
  * methods actually used by our implementation.
  */
-export function createMockOctokit() {
-  const spies = createSpies();
+export function createMockOctokit(overrides: Partial<ReturnType<typeof createSpies>> = {}) {
+  const defaultSpies = createSpies();
+  const spies = { ...defaultSpies, ...overrides }; // Merge defaults with overrides
 
   const mockApi = {
     rest: {
