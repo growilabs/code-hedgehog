@@ -30,7 +30,13 @@ export async function loadConfig(configPath = '.coderabbitai.yaml'): Promise<Rev
     // Use Record<string, unknown> for safer type handling
     const parsedYaml = yamlContent as Record<string, unknown>;
     console.debug(`Loaded YAML content from ${configPath}:`, JSON.stringify(parsedYaml));
-
+ 
+    // Check if use_default_config is true
+    if (parsedYaml.use_default_config === true) {
+      console.log(`"use_default_config" is true in "${configPath}", using default base config.`);
+      return { ...DEFAULT_CONFIG }; // Return a copy of defaults
+    }
+ 
     // Merge only the base fields from YAML into the default config
     // Explicitly pick known base fields to avoid including processor-specific ones
     // Safely access properties from parsedYaml (unknown)
