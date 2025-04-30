@@ -13,8 +13,14 @@ describe('loadConfig', () => {
   });
 
   test('should return default config if file does not exist', async () => {
-    const accessStub = stub(fs, 'access', () => Promise.reject(new Error('File not found')));
-    const readFileStub = stub(fs, 'readFile');
+    // Stub readFile to throw ENOENT error
+    const readFileStub = stub(fs, 'readFile', () => {
+      // Use NodeJS.ErrnoException or a similar interface if available,
+      // otherwise, create an object matching the expected structure.
+      const error = new Error('File not found') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      return Promise.reject(error);
+    });
     const warnStub = stub(console, 'warn');
 
     const config = await loadConfig('nonexistent.yaml');
@@ -22,11 +28,16 @@ describe('loadConfig', () => {
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('not found or not readable');
-    expect(readFileStub.calls.length).toBe(0);
+    expect(readFileStub.calls.length).toBe(1); // readFile should be called now
   });
 
   test('should return default config if file is not readable', async () => {
-    const accessStub = stub(fs, 'access', () => Promise.reject(new Error('Permission denied')));
+    // Stub readFile to throw EACCES error
+    const readFileStub = stub(fs, 'readFile', () => {
+      const error = new Error('Permission denied') as NodeJS.ErrnoException;
+      error.code = 'EACCES';
+      return Promise.reject(error);
+    });
     const warnStub = stub(console, 'warn');
 
     const config = await loadConfig('unreadable.yaml');
@@ -34,6 +45,7 @@ describe('loadConfig', () => {
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('not found or not readable');
+    expect(readFileStub.calls.length).toBe(1); // readFile should be called
   });
 
   test('should load and merge config from valid YAML file', async () => {
@@ -43,7 +55,7 @@ describe('loadConfig', () => {
     };
     // Control the YAML string returned by readFile
     const yamlContent = yaml.dump(customConfig);
-    const accessStub = stub(fs, 'access', () => Promise.resolve());
+    // No fs.access stub needed
     const readFileStub = stub(fs, 'readFile', () => Promise.resolve(yamlContent));
     // No need to stub yaml.load (parseYaml)
     const warnStub = stub(console, 'warn');
@@ -60,7 +72,7 @@ describe('loadConfig', () => {
   test('should return default config and log error for invalid YAML format (parse error)', async () => {
     // Provide invalid YAML content to readFile
     const invalidYamlContent = 'invalid: yaml: content\n  bad-indent';
-    const accessStub = stub(fs, 'access', () => Promise.resolve());
+    // No fs.access stub needed
     const readFileStub = stub(fs, 'readFile', () => Promise.resolve(invalidYamlContent));
     // No need to stub yaml.load, let the actual parser handle it
     const errorStub = stub(console, 'error');
@@ -80,7 +92,7 @@ describe('loadConfig', () => {
   test('should return default config and warn if parsed content is not an object', async () => {
     // Provide YAML content that parses to a non-object (e.g., a simple string)
     const nonObjectContent = 'just a string';
-    const accessStub = stub(fs, 'access', () => Promise.resolve());
+    // No fs.access stub needed
     const readFileStub = stub(fs, 'readFile', () => Promise.resolve(nonObjectContent));
     // No need to stub yaml.load
     const warnStub = stub(console, 'warn');
@@ -95,9 +107,9 @@ describe('loadConfig', () => {
     expect(errorStub.calls.length).toBe(0);
   });
 
-  test('should return default config and log error if readFile fails', async () => {
-    const accessStub = stub(fs, 'access', () => Promise.resolve());
-    const readFileStub = stub(fs, 'readFile', () => Promise.reject(new Error('Read error')));
+  test('should return default config and log error if readFile fails (other than ENOENT/EACCES)', async () => {
+    // No fs.access stub needed
+    const readFileStub = stub(fs, 'readFile', () => Promise.reject(new Error('Some other read error')));
     const errorStub = stub(console, 'error');
     const warnStub = stub(console, 'warn');
 
@@ -116,7 +128,7 @@ describe('loadConfig', () => {
       use_default_config: true, // Flag to ignore other settings
     };
     const yamlContent = yaml.dump(customConfigWithFlag);
-    stub(fs, 'access', () => Promise.resolve());
+    // No fs.access stub needed
     stub(fs, 'readFile', () => Promise.resolve(yamlContent));
     const logStub = stub(console, 'log');
     const warnStub = stub(console, 'warn');
@@ -131,13 +143,7 @@ describe('loadConfig', () => {
     expect(errorStub.calls.length).toBe(0);
   });
   test('should use default path ".coderabbitai.yaml" if no path is provided', async () => {
-    // Stub access to succeed for the default path
-    const accessStub = stub(fs, 'access', (path) => {
-      if (path === '.coderabbitai.yaml') {
-        return Promise.resolve();
-      }
-      return Promise.reject(new Error('File not found'));
-    });
+    // No fs.access stub needed
     // Stub readFile to return an empty object for the default path
     const readFileStub = stub(fs, 'readFile', (path) => {
       if (path === '.coderabbitai.yaml') {
@@ -151,7 +157,7 @@ describe('loadConfig', () => {
     const config = await loadConfig(); // Call without arguments
 
     expect(config).toEqual(DEFAULT_CONFIG); // Should return defaults as the file is empty
-    expect(accessStub.calls[0].args[0]).toBe('.coderabbitai.yaml');
+    // expect(accessStub.calls[0].args[0]).toBe('.coderabbitai.yaml'); // Removed access check
     expect(readFileStub.calls[0].args[0]).toBe('.coderabbitai.yaml');
     expect(warnStub.calls.length).toBe(0);
     expect(errorStub.calls.length).toBe(0);
@@ -165,7 +171,7 @@ describe('loadConfig', () => {
       path_instructions: { path: 'invalid', instructions: 'object' }, // Invalid type
     };
     const yamlContent = yaml.dump(invalidTypeConfig);
-    stub(fs, 'access', () => Promise.resolve());
+    // No fs.access stub needed
     stub(fs, 'readFile', () => Promise.resolve(yamlContent));
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
@@ -177,7 +183,8 @@ describe('loadConfig', () => {
     expect(config.path_filters).toEqual(DEFAULT_CONFIG.path_filters);
     expect(config.skip_simple_changes).toEqual(DEFAULT_CONFIG.skip_simple_changes);
     expect(config.path_instructions).toEqual(DEFAULT_CONFIG.path_instructions);
-    expect(warnStub.calls.length).toBe(0); // No warning expected for type mismatches, just fallback
+    expect(warnStub.calls.length).toBe(1); // Expect 1 warning due to Zod validation failure
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format'); // Check warning message
     expect(errorStub.calls.length).toBe(0);
   });
 
@@ -187,7 +194,7 @@ describe('loadConfig', () => {
       skip_simple_changes: false, // Keep another field to ensure merging works
     };
     const yamlContent = yaml.dump(customConfigWithPathInstructions);
-    stub(fs, 'access', () => Promise.resolve());
+    // No fs.access stub needed
     stub(fs, 'readFile', () => Promise.resolve(yamlContent));
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
