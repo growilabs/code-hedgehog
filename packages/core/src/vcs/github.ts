@@ -7,7 +7,7 @@
  */
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
-import type { IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
+import type { ICommitComparisonShas, IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
 import { BaseVCS } from './base.ts';
 import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
 
@@ -21,11 +21,20 @@ interface IGitHubContext {
   pullNumber: number;
 }
 
+interface IApiFileChangeData {
+  filename: string;
+  patch?: string;
+  changes: number;
+  status: string;
+}
+
 /**
  * GitHub-specific VCS implementation
  * Handles API interactions, data transformation, and error handling
  */
 export class GitHubVCS extends BaseVCS {
+  static readonly MAX_PER_PAGE = 100;
+
   private readonly api: IGitHubAPI;
   private readonly context: IGitHubContext;
   private fileCount = 0;
@@ -70,6 +79,70 @@ export class GitHubVCS extends BaseVCS {
   }
 
   /**
+   * Fetches the commit SHA range representing changes since the last *issue* comment was posted on the pull request.
+   *
+   * **Limitations:**
+   * - **Comment Type:** Only considers issue comments. Review comments or commit-specific comments are ignored.
+   * - **Commit Limit:** Relies on `pulls.listCommits` which fetches a maximum of 100 commits by default. If the PR has more commits, or the latest comment refers to a commit older than the last 100, the calculated `baseSha` might be inaccurate or the method might incorrectly return `undefined`.
+   * - **No Comments/Commits:** Returns `undefined` if no issue comments or no commits are found in the PR.
+   */
+  // TODO: Separate into BaseVCS without the API part when implementing GitLab.
+  async getShaRangeSinceLastIssueComment(): Promise<ICommitComparisonShas | undefined> {
+    try {
+      const { data: issueComments } = await this.api.rest.issues.listComments({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        issue_number: this.context.pullNumber,
+        sort: 'created',
+        // direction: 'desc',
+        // per_page: 1, // only latest comment
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+
+      if (issueComments.length === 0) {
+        core.debug(`No issue comments found in PR #${this.context.pullNumber}`);
+        return;
+      }
+
+      // TODO: direction を 'asc' にしても 'desc' にしても昇順になるので調査して修正する
+      // 現在は仕方なく全件取得して配列の最後の要素を入れている
+      // const latestCommentTime = new Date(issueComments[0].created_at).getTime();
+      const latestCommentTime = new Date(issueComments[issueComments.length - 1].created_at).getTime();
+
+      // By default, returns commits in asc order (oldest first).
+      const { data: commits } = await this.api.rest.pulls.listCommits({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        pull_number: this.context.pullNumber,
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+
+      if (commits.length === 0) {
+        core.warning(`No commits found in PR #${this.context.pullNumber}`);
+        return;
+      }
+
+      const headSha = commits[commits.length - 1].sha;
+
+      const commitsBeforeLastComment = commits.filter((commit) => {
+        const commitTime = commit.commit.committer?.date ? new Date(commit.commit.committer.date).getTime() : 0;
+        return commitTime < latestCommentTime;
+      });
+
+      if (commitsBeforeLastComment.length === 0) {
+        core.debug('No commits found before the latest comment.');
+        return;
+      }
+
+      const baseSha = commitsBeforeLastComment[commitsBeforeLastComment.length - 1].sha;
+
+      return { baseSha, headSha };
+    } catch (error) {
+      throw this.formatError('get SHA range', error);
+    }
+  }
+
+  /**
    * Streams pull request changes from GitHub, handling pagination automatically
    * Includes safeguards for:
    * - Rate limiting (warns when rate limit is low)
@@ -83,13 +156,23 @@ export class GitHubVCS extends BaseVCS {
       // Optimize page size based on batch size to reduce API calls
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
-      const iterator = this.api.paginate.iterator<{ filename: string; patch?: string; changes: number; status: string }>(
-        this.api.rest.pulls.listFiles.endpoint.merge({
-          owner: this.context.owner,
-          repo: this.context.repo,
-          pull_number: this.context.pullNumber,
-          per_page: pageSize,
-        }),
+      const shaRange = await this.getShaRangeSinceLastIssueComment();
+
+      const iterator = this.api.paginate.iterator(
+        shaRange != null
+          ? this.api.rest.repos.compareCommits.endpoint.merge({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              base: shaRange.baseSha,
+              head: shaRange.headSha,
+              per_page: pageSize,
+            })
+          : this.api.rest.pulls.listFiles.endpoint.merge({
+              owner: this.context.owner,
+              repo: this.context.repo,
+              pull_number: this.context.pullNumber,
+              per_page: pageSize,
+            }),
       );
 
       let currentBatch: IFileChange[] = [];
@@ -101,7 +184,17 @@ export class GitHubVCS extends BaseVCS {
           core.warning(`GitHub API rate limit is running low: ${rateLimit} requests remaining`);
         }
 
-        for (const file of response.data) {
+        let files: IApiFileChangeData[] = [];
+        if (shaRange != null) {
+          // TODO: Fix the type to the correct one
+          const data = response.data as { files?: IApiFileChangeData[] | undefined };
+          files = data?.files ?? [];
+        } else {
+          // TODO: Fix the type to the correct one
+          files = (response.data as IApiFileChangeData[] | undefined) ?? [];
+        }
+
+        for (const file of files) {
           this.fileCount++;
           if (this.fileCount > 3000) {
             if (!isFileLimitWarned) {

@@ -65,6 +65,21 @@ export interface IPullRequestInfo {
 }
 
 /**
+ * Represents the pair of commit SHAs used for comparison (e.g., between pushes).
+ */
+export interface ICommitComparisonShas {
+  /**
+   * The base commit SHA for comparison (e.g., previous push)
+   */
+  baseSha: string;
+
+  /**
+   * The head/after commit SHA for comparison (e.g., current push)
+   */
+  headSha: string;
+}
+
+/**
  * Interface for VCS operations
  */
 export interface IVersionControlSystem {
