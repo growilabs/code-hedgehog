@@ -18,21 +18,25 @@ jobs:
     env:
       COVERAGE_THRESHOLD: 80 # カバレッジの閾値 (デフォルト80%)
     steps:
-      # ステップ1: Deno環境のセットアップ
+      # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ステップ2: Deno環境のセットアップ (Composite Actionを使用)
       - name: Setup Deno Environment
         uses: ./.github/actions/setup-deno # Use the composite action
         with:
           deno-version: 2.2.11
 
-      # ステップ2: リンターの実行
+      # ステップ3: リンターの実行
       - name: Run Linter
         run: deno task lint
 
-      # ステップ3: テストの実行とカバレッジデータの生成
+      # ステップ4: テストの実行とカバレッジデータの生成
       - name: Run Tests with Coverage
         run: deno task test:cov
 
-      # ステップ4: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
+      # ステップ5: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
       - name: Check Coverage Threshold
         uses: VeryGoodOpenSource/very_good_coverage@v2
         with:
@@ -44,12 +48,16 @@ jobs:
     # 依存ジョブ (testジョブが成功した後に実行)
     needs: test
     steps:
-      # ステップ1: Deno環境のセットアップ
+      # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ステップ2: Deno環境のセットアップ (Composite Actionを使用)
       - name: Setup Deno Environment
         uses: ./.github/actions/setup-deno # Use the composite action
         with:
           deno-version: 2.2.11
 
-      # ステップ2: GitHub Actionのビルド
+      # ステップ3: GitHub Actionのビルド
       - name: Build GitHub Action
         run: deno task build:action
