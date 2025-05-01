@@ -79,6 +79,39 @@ export class GitHubVCS extends BaseVCS {
   }
 
   /**
+   * Fetches all issue comments for the current pull request.
+   */
+  async getIssueComments() {
+    try {
+      return this.api.rest.issues.listComments({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        issue_number: this.context.pullNumber,
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+    } catch (error) {
+      throw this.formatError('fetch issue comments', error);
+    }
+  }
+
+  /**
+   * Fetches all commits for the current pull request.
+   * By default, returns commits in asc order (oldest first).
+   */
+  async getCommits() {
+    try {
+      return this.api.rest.pulls.listCommits({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        pull_number: this.context.pullNumber,
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+    } catch (error) {
+      throw this.formatError('fetch commits', error);
+    }
+  }
+
+  /**
    * Fetches the commit SHA range representing changes since the last *issue* comment was posted on the pull request.
    *
    * **Limitations:**
@@ -86,36 +119,20 @@ export class GitHubVCS extends BaseVCS {
    * - **Commit Limit:** Relies on `pulls.listCommits` which fetches a maximum of 100 commits by default. If the PR has more commits, or the latest comment refers to a commit older than the last 100, the calculated `baseSha` might be inaccurate or the method might incorrectly return `undefined`.
    * - **No Comments/Commits:** Returns `undefined` if no issue comments or no commits are found in the PR.
    */
-  // TODO: Separate into BaseVCS without the API part when implementing GitLab.
+  // TODO: Separate into BaseVCS when implementing GitLab.
   async getShaRangeSinceLastIssueComment(): Promise<ICommitComparisonShas | undefined> {
     try {
-      const { data: issueComments } = await this.api.rest.issues.listComments({
-        owner: this.context.owner,
-        repo: this.context.repo,
-        issue_number: this.context.pullNumber,
-        sort: 'created',
-        // direction: 'desc',
-        // per_page: 1, // only latest comment
-        per_page: GitHubVCS.MAX_PER_PAGE,
-      });
+      const { data: issueComments } = await this.getIssueComments();
 
       if (issueComments.length === 0) {
         core.debug(`No issue comments found in PR #${this.context.pullNumber}`);
         return;
       }
 
-      // TODO: direction を 'asc' にしても 'desc' にしても昇順になるので調査して修正する
-      // 現在は仕方なく全件取得して配列の最後の要素を入れている
-      // const latestCommentTime = new Date(issueComments[0].created_at).getTime();
-      const latestCommentTime = new Date(issueComments[issueComments.length - 1].created_at).getTime();
+      const latestComment = issueComments[issueComments.length - 1];
+      const latestCommentTime = new Date(latestComment.created_at).getTime();
 
-      // By default, returns commits in asc order (oldest first).
-      const { data: commits } = await this.api.rest.pulls.listCommits({
-        owner: this.context.owner,
-        repo: this.context.repo,
-        pull_number: this.context.pullNumber,
-        per_page: GitHubVCS.MAX_PER_PAGE,
-      });
+      const { data: commits } = await this.getCommits();
 
       if (commits.length === 0) {
         core.warning(`No commits found in PR #${this.context.pullNumber}`);
