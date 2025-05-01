@@ -96,24 +96,28 @@ export class ActionRunner {
   }
 
   private async createProcessor(): Promise<IPullRequestProcessor> {
+    core.info(`Creating processor: ${this.config.processor}`);
+    // Base configuration loading is now handled within the BaseProcessor or its inheritors
+
+    // Processor instantiation logic remains, but without passing baseConfig
     switch (this.config.processor) {
       case 'acme': {
-        const AcmeProcessor = (await import('@code-hedgehog/processor-acme')).AcmeProcessor;
+        const { AcmeProcessor } = await import('@code-hedgehog/processor-acme');
         return new AcmeProcessor();
       }
       case 'openai': {
-        const OpenaiProcessor = (await import('@code-hedgehog/processor-openai')).OpenaiProcessor;
-        return new OpenaiProcessor(process.env.OPENAI_API_KEY);
+        const { OpenaiProcessor } = await import('@code-hedgehog/processor-openai'); // Use import map without mod.ts
+        // Pass only the baseConfig to the constructor
+        // The processor itself will load specific environment variables
+        // Constructor now takes no arguments
+        return new OpenaiProcessor();
       }
       case 'dify': {
-        const DifyProcessor = (await import('@code-hedgehog/processor-dify')).DifyProcessor;
-        return new DifyProcessor({
-          baseUrl: process.env.DIFY_API_BASE_URL ?? '',
-          user: process.env.DIFY_API_EXEC_USER ?? '',
-          apiKeySummarize: process.env.DIFY_API_KEY_SUMMARIZE ?? '',
-          apiKeyGrouping: process.env.DIFY_API_KEY_GROUPING ?? '',
-          apiKeyReview: process.env.DIFY_API_KEY_REVIEW ?? '',
-        });
+        const { DifyProcessor } = await import('@code-hedgehog/processor-dify'); // Use import map without mod.ts
+        // Pass only the baseConfig to the constructor
+        // The processor itself will load specific environment variables
+        // Constructor now takes no arguments
+        return new DifyProcessor();
       }
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);

@@ -1,3 +1,5 @@
+# これは Coderabbit AI の設定ファイルのサンプルです。
+# この設定を使用するには、このファイルをリポジトリのルートに `.coderabbitai.yaml` としてコピーしてください。
 # パスベースのレビュー指示
 file_path_instructions:
   - path: "src/**/*.{ts,tsx}"
