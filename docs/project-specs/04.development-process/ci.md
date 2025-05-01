@@ -19,7 +19,7 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
 1.  **セットアップ**:
     -   リポジトリのコードをチェックアウトします (`actions/checkout`)。
     -   指定されたバージョンのDeno環境をセットアップします (`denoland/setup-deno`)。
-    -   Deno のキャッシュディレクトリを取得し、環境変数 `DENO_CACHE_DIR` に設定します。
+    -   `RUNNER_TEMP` 環境変数を使用して Deno のキャッシュディレクトリパスを決定し、環境変数 `DENO_CACHE_DIR` に設定します。
     -   `actions/cache` を使用して Deno の依存関係 (`DENO_CACHE_DIR`) をキャッシュします。キャッシュキーには `deno.lock` ファイルのハッシュが含まれ、依存関係の変更時にキャッシュが無効化されます。
 
 2.  **リンティング (`deno task lint`)**:
@@ -27,61 +27,29 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
     -   Biome を使用して、プロジェクト全体のコードスタイルと静的解析を行います。
     -   コードの一貫性を保ち、潜在的な問題を早期に検出します。
 
-3.  **テスト実行 (`deno task test`)**:
-    -   プロジェクトルートの `deno.jsonc` で定義された `test` タスクを実行します。
-    -   `packages` ディレクトリ以下のすべてのテストを並列実行します。
-    -   コードの正当性を検証します。
+3.  **テスト実行とカバレッジ生成 (`deno task test:cov`)**:
+    -   プロジェクトルートの `deno.jsonc` で定義された `test:cov` タスクを実行します。
+    -   これにより、テストが実行され、カバレッジデータが `./cov` ディレクトリに生成されます。
+    -   内部的に `deno coverage ./cov --lcov` が実行され、LCOV形式のレポート (`./cov/lcov.info`) も生成されます。
+    -   コードの正当性を検証し、テストの網羅性を測定します。
 
-4.  **テストカバレッジチェック**:
-    -   `deno task test:cov` を実行してテストを実行し、カバレッジデータを `./cov` ディレクトリに生成します。
-    -   数値比較に必要な `bc` コマンドをインストールします (`sudo apt-get update && sudo apt-get install -y bc`)。
-    -   `deno coverage ./cov` を実行してカバレッジレポートを取得します。
-    -   レポートの `All files` 行から全体の行カバレッジ率 (`Line %`) を抽出します。抽出には `grep`, `tr`, `awk`, `sed` を使用し、キャリッジリターンやANSIエスケープコードを除去します。
-    -   抽出したカバレッジ率が有効な数値か検証します。
-    -   抽出したカバレッジ率を、環境変数 `COVERAGE_THRESHOLD` で定義された閾値（デフォルト: 80%）と `bc` コマンドを使用して比較します。
+4.  **テストカバレッジ閾値チェック**:
+    -   `VeryGoodOpenSource/very_good_coverage` GitHub Action を使用して、生成された LCOV レポート (`./cov/lcov.info`) を基にカバレッジ率をチェックします。
+    -   環境変数 `COVERAGE_THRESHOLD` で定義された閾値（デフォルト: 80%）と比較します。
     -   カバレッジ率が閾値を下回る場合、CIジョブは失敗します。これにより、テストの網羅性を一定以上に保ちます。
     -   **実装例 (GitHub Actions)**:
         ```yaml
         env:
           COVERAGE_THRESHOLD: 80 # Default coverage threshold
         # ... other steps
-        - name: Generate Coverage Data
-          run: deno task test:cov # カバレッジデータを生成
-
-        - name: Install bc
-          # bcコマンド (数値計算用) をインストール
-          run: sudo apt-get update && sudo apt-get install -y bc
+        - name: Run Tests with Coverage
+          run: deno task test:cov # テスト実行とLCOVを含むカバレッジデータを生成
 
         - name: Check Coverage Threshold
-          run: |
-            # カバレッジレポートの出力を取得
-            COVERAGE_OUTPUT=$(deno coverage ./cov)
-
-            # カバレッジレポートから "All files" 行の行カバレッジ率 (%) を抽出
-            # 1. grep 'All files': "All files" を含む行を抽出
-            # 2. tr -d '\r': キャリッジリターン (\r) を削除
-            # 3. awk '{print $(NF-1)}': 行の末尾から2番目のフィールド (Line % の値) を取得
-            # 4. sed 's/\x1b\[[0-9;]*m//g': ANSIエスケープコード (色付け用コード) を削除
-            COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep 'All files' | tr -d '\r' | awk '{print $(NF-1)}' | sed 's/\x1b\[[0-9;]*m//g')
-
-            # 抽出したカバレッジ率が有効な数値 (整数または小数) か正規表現でチェック
-            if ! [[ "$COVERAGE" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-              echo "Error: Could not extract coverage percentage. Extracted value was '$COVERAGE'."
-              exit 1
-            fi
-
-            # 環境変数からカバレッジの閾値を取得
-            THRESHOLD=${COVERAGE_THRESHOLD}
-            echo "Current Coverage: $COVERAGE%"
-            echo "Required Threshold: $THRESHOLD%"
-
-            # bcコマンドを使って、現在のカバレッジ率が閾値を下回っているか比較
-            if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-              echo "Error: Code coverage is below the threshold ($THRESHOLD%)."
-              exit 1
-            else
-              echo "Code coverage meets the threshold."
-            fi
+          uses: VeryGoodOpenSource/very_good_coverage@v2
+          with:
+            path: ./cov/lcov.info # LCOVレポートのパス
+            min_coverage: ${{ env.COVERAGE_THRESHOLD }} # 最小カバレッジ閾値
         ```
 
 ### `build` ジョブ (`needs: test`)

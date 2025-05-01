@@ -26,7 +26,7 @@
   },
   "tasks": {
     "test": "deno test -A --parallel packages",
-    "test:cov": "deno test -A --coverage=./cov packages && deno coverage ./cov",
+    "test:cov": "deno test -A --coverage=./cov packages && deno coverage ./cov --lcov > ./cov/lcov.info",
     "lint": "deno run -A npm:@biomejs/biome check ./",
     "lint:fix": "deno run -A npm:@biomejs/biome check --write ./",
     "build:action": "cd packages/action && deno task build"
