@@ -122,7 +122,7 @@ export class DifyProcessor extends BaseProcessor {
     console.debug(`Processing ${entries.length} files in ${totalBatches} batches with ${PASSES} passes`);
 
     let accumulatedResult: OverallSummary | undefined;
-    let previousAnalysis: string | undefined;
+    let previousAnalysis: OverallSummary | undefined;
 
     // Begin multi-pass processing
     for (let pass = 1; pass <= PASSES; pass++) {
@@ -150,7 +150,11 @@ export class DifyProcessor extends BaseProcessor {
           // Upload previous analysis if available
           let previousAnalysisFileId: string | undefined;
           if (previousAnalysis) {
-            previousAnalysisFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, JSON.parse(previousAnalysis));
+            const uploadData = {
+              description: previousAnalysis.description,
+              crossCuttingConcerns: previousAnalysis.crossCuttingConcerns,
+            };
+            previousAnalysisFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, uploadData);
             console.debug(`[Pass ${pass}/${PASSES}] Uploaded previous analysis (${previousAnalysisFileId})`);
           }
 
@@ -218,8 +222,8 @@ export class DifyProcessor extends BaseProcessor {
           }
 
           // Update cumulative analysis for next batch
-          previousAnalysis = JSON.stringify(accumulatedResult, null, 2);
-          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
+          previousAnalysis = accumulatedResult;
+          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Current analysis state:`, previousAnalysis);
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
         }
