@@ -247,7 +247,7 @@ export class OpenaiProcessor extends BaseProcessor {
           title: prInfo.title,
           description: prInfo.body || '',
           filePath: file.path,
-          patch: file.patch || 'No changes',
+          patch: this.addLineNumbersToDiff(file.patch),
           instructions: this.getInstructionsForFile(file.path, config),
           aspects: summarizeResult.aspects.map((aspect) => ({
             name: aspect.key,
