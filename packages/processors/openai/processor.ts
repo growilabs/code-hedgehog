@@ -1,4 +1,6 @@
 import { ImpactLevel } from '../base/schema.ts';
+// Import the base config type
+import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { CommentType } from './deps.ts';
@@ -14,8 +16,6 @@ import type {
   SummarizeResult,
 } from './deps.ts';
 import { createGroupingPrompt, createReviewPrompt, createTriagePrompt } from './internal/prompts.ts';
-// Import the specific config type
-import type { OpenaiReviewConfig } from './types.ts';
 
 export class OpenaiProcessor extends BaseProcessor {
   private openai: OpenAI;
@@ -24,22 +24,23 @@ export class OpenaiProcessor extends BaseProcessor {
     maxTokens: 4000,
   };
 
-  constructor(config: OpenaiReviewConfig) {
-    // Accept OpenaiReviewConfig object
+  constructor() { // Constructor takes no arguments now
     super();
-    // Use openai_api_key from the config object
-    if (!config.openai_api_key) {
-      throw new Error('OpenAI API key is required in the configuration (openai_api_key)');
+    // Load OpenAI API key from environment variable
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable is not set');
     }
-    this.openai = new OpenAI({ apiKey: config.openai_api_key });
+    this.openai = new OpenAI({ apiKey });
+    // Base config loading is handled by BaseProcessor's process method
   }
 
   /**
    * Implementation of summarize phase
    * Performs lightweight analysis using light weight model
    */
-  // Update config parameter type
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: OpenaiReviewConfig): Promise<Map<string, SummarizeResult>> {
+  // Update config parameter type to base ReviewConfig
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
     const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema, 'summarize_response');
 
@@ -225,12 +226,12 @@ export class OpenaiProcessor extends BaseProcessor {
    * Implementation of review phase
    * Performs detailed review using GPT-4
    */
-  // Update config parameter type
+  // Update config parameter type to base ReviewConfig
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
-    config?: OpenaiReviewConfig,
+    config?: ReviewConfig,
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];

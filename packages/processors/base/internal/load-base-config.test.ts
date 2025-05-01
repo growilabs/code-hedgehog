@@ -5,9 +5,9 @@ import { restore, stub } from '@std/testing/mock'; // Removed unused 'type Stub'
 import * as yaml from 'js-yaml'; // Keep yaml import for dumping test data
 import { DEFAULT_CONFIG } from '../deps.ts';
 import type { ReviewConfig } from '../types.ts';
-import { loadConfig } from './load-config.ts';
+import { loadBaseConfig } from './load-base-config.ts';
 
-describe('loadConfig', () => {
+describe('loadBaseConfig', () => { // Rename describe block
   afterEach(() => {
     restore();
   });
@@ -23,7 +23,7 @@ describe('loadConfig', () => {
     });
     const warnStub = stub(console, 'warn');
 
-    const config = await loadConfig('nonexistent.yaml');
+    const config = await loadBaseConfig('nonexistent.yaml'); // Rename function call
 
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warnStub.calls.length).toBe(1);
@@ -40,7 +40,7 @@ describe('loadConfig', () => {
     });
     const warnStub = stub(console, 'warn');
 
-    const config = await loadConfig('unreadable.yaml');
+    const config = await loadBaseConfig('unreadable.yaml'); // Rename function call
 
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warnStub.calls.length).toBe(1);
@@ -61,7 +61,7 @@ describe('loadConfig', () => {
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
 
-    const config = await loadConfig('valid.yaml');
+    const config = await loadBaseConfig('valid.yaml'); // Rename function call
 
     const expectedConfig = { ...DEFAULT_CONFIG, ...customConfig };
     expect(config).toEqual(expectedConfig);
@@ -78,7 +78,7 @@ describe('loadConfig', () => {
     const errorStub = stub(console, 'error');
     const warnStub = stub(console, 'warn');
 
-    const config = await loadConfig('invalid-format.yaml');
+    const config = await loadBaseConfig('invalid-format.yaml'); // Rename function call
 
     // When yaml.load fails, it should be caught, logged via console.error, and return default config
     expect(config).toEqual(DEFAULT_CONFIG);
@@ -98,9 +98,9 @@ describe('loadConfig', () => {
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
 
-    const config = await loadConfig('non-object.yaml');
+    const config = await loadBaseConfig('non-object.yaml'); // Rename function call
 
-    // loadConfig should detect the non-object result and warn
+    // loadBaseConfig should detect the non-object result and warn
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
@@ -113,7 +113,7 @@ describe('loadConfig', () => {
     const errorStub = stub(console, 'error');
     const warnStub = stub(console, 'warn');
 
-    const config = await loadConfig('read-error.yaml');
+    const config = await loadBaseConfig('read-error.yaml'); // Rename function call
 
     expect(config).toEqual(DEFAULT_CONFIG);
     expect(errorStub.calls.length).toBe(1);
@@ -134,7 +134,7 @@ describe('loadConfig', () => {
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
 
-    const config = await loadConfig('use-default.yaml');
+    const config = await loadBaseConfig('use-default.yaml'); // Rename function call
 
     expect(config).toEqual(DEFAULT_CONFIG); // Should return default config
     expect(logStub.calls.length).toBe(1); // Should log the reason
@@ -154,7 +154,7 @@ describe('loadConfig', () => {
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
 
-    const config = await loadConfig(); // Call without arguments
+    const config = await loadBaseConfig(); // Rename function call
 
     expect(config).toEqual(DEFAULT_CONFIG); // Should return defaults as the file is empty
     // expect(accessStub.calls[0].args[0]).toBe('.coderabbitai.yaml'); // Removed access check
@@ -176,7 +176,7 @@ describe('loadConfig', () => {
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
 
-    const config = await loadConfig('invalid-types.yaml');
+    const config = await loadBaseConfig('invalid-types.yaml'); // Rename function call
 
     // Expect the config to have fallen back to defaults for the invalid fields
     expect(config.file_path_instructions).toEqual(DEFAULT_CONFIG.file_path_instructions);
@@ -199,7 +199,7 @@ describe('loadConfig', () => {
     const warnStub = stub(console, 'warn');
     const errorStub = stub(console, 'error');
 
-    const config = await loadConfig('valid-with-path-instructions.yaml');
+    const config = await loadBaseConfig('valid-with-path-instructions.yaml'); // Rename function call
 
     const expectedConfig = {
       ...DEFAULT_CONFIG,

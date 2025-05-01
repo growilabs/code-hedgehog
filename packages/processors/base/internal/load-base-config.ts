@@ -43,7 +43,7 @@ export class ConfigLoadError extends Error {
  * @returns The loaded base configuration (ReviewConfig) merged with defaults.
  *          Returns default config if file not found, unreadable, or validation fails.
  */
-export async function loadConfig(configPath = '.coderabbitai.yaml'): Promise<ReviewConfig> {
+export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<ReviewConfig> {
   let yamlContent: unknown;
   try {
     // Removed fs.access check, rely on readFile's error handling

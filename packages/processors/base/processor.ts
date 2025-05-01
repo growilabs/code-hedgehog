@@ -5,7 +5,7 @@ import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
-import { loadConfig as loadExternalConfig } from './internal/load-config.ts';
+import { loadBaseConfig as loadExternalBaseConfig } from './internal/load-config.ts'; // Rename import and alias
 import type { OverallSummary, ReviewComment } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
@@ -22,9 +22,9 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Load configuration using the external module.
    * This method now acts as a wrapper to update the instance's config.
    */
-  protected async loadConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
+  protected async loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<void> { // Rename method
     // Call the external function and update the instance's config
-    this.config = await loadExternalConfig(configPath);
+    this.config = await loadExternalBaseConfig(configPath); // Rename function call
   }
 
   /**
@@ -219,8 +219,8 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Main processing flow - now with 3 phases
    */
   async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
-    // 0. Load configuration
-    await this.loadConfig();
+    // 0. Load base configuration
+    await this.loadBaseConfig(); // Rename method call
 
     // 1. Execute summarize
     const summarizeResults = await this.summarize(prInfo, files, config);
