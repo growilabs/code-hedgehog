@@ -6,7 +6,7 @@
   "license": "MIT",
   "author": "Yuki Takei <yuki@weseek.co.jp>",
   "exports": "./mod.ts",
-  "nodeModulesDir": true,
+  "nodeModulesDir": "auto",
   "compilerOptions": {
     "strict": true
   },

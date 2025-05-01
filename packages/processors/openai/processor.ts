@@ -1,3 +1,4 @@
+import process from "node:process";
 import { ImpactLevel } from '../base/schema.ts';
 // Import the base config type
 import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig

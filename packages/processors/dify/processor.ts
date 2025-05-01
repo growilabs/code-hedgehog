@@ -1,3 +1,4 @@
+import process from 'node:process';
 // Import the base config type
 import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
@@ -29,7 +30,8 @@ export class DifyProcessor extends BaseProcessor {
    * Constructor for DifyProcessor
    * @param reviewConfig - The overall review configuration object for Dify
    */
-  constructor() { // Constructor takes no arguments now
+  constructor() {
+    // Constructor takes no arguments now
     super();
 
     // Load Dify specific config from environment variables
