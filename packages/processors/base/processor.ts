@@ -1,11 +1,10 @@
-// Removed fs and parseYaml imports, they are now in load-config.ts
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
 import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
-import { loadBaseConfig as loadExternalBaseConfig } from './internal/load-config.ts'; // Rename import and alias
+import { loadBaseConfig as loadExternalBaseConfig } from './internal/load-base-config.ts'; // Rename import and alias
 import type { OverallSummary, ReviewComment } from './schema.ts';
 import type { SummarizeResult } from './types.ts';
 import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
