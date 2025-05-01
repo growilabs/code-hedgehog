@@ -18,136 +18,46 @@ jobs:
     env:
       COVERAGE_THRESHOLD: 80 # カバレッジの閾値 (デフォルト80%)
     steps:
-      # ステップ1: リポジトリのチェックアウト
-      - name: Checkout repository
-        uses: actions/checkout@v4 # actions/checkout@v4 アクションを使用
+      # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      # ステップ2: Deno環境のセットアップ
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1 # denoland/setup-deno@v1 アクションを使用
-        # オプション: Denoのバージョン指定 (指定しない場合は最新安定版)
+      # ステップ2: Deno環境のセットアップ (Composite Actionを使用)
+      - name: Setup Deno Environment
+        uses: ./.github/actions/setup-deno # Use the composite action
         with:
-          deno-version: 2.2.11 
+          deno-version: 2.2.11
 
-      # ステップ3: Denoのキャッシュディレクトリを取得
-      - name: Get Deno cache directory
-        id: deno-cache-dir # このステップのID (後続ステップで参照可能)
-        run: |
-          set -e # エラー発生時にスクリプトを終了
-          DENO_INFO=$(deno info --json) # Denoの情報をJSON形式で取得
-          echo "Deno Info JSON: $DENO_INFO" # Debug output: Deno情報を表示
-          DENO_CACHE_PATH=$(echo "$DENO_INFO" | jq -r .denoDir) # JSONからDenoのキャッシュディレクトリパス(.denoDir)を抽出
-          # キャッシュパスが取得できなかった場合はエラー終了
-          if [ -z "$DENO_CACHE_PATH" ] || [ "$DENO_CACHE_PATH" == "null" ]; then
-            echo "Error: Could not get Deno cache directory (.denoDir) from deno info." # エラーメッセージ
-            exit 1
-          fi
-          # 抽出したキャッシュパスを環境変数GITHUB_ENVに設定し、後続ステップで利用可能にする
-          echo "DENO_CACHE_DIR=$DENO_CACHE_PATH" >> $GITHUB_ENV
-
-      # ステップ4: Denoの依存関係をキャッシュ
-      - name: Cache Deno dependencies
-        uses: actions/cache@v4 
-        with:
-          # キャッシュ対象のパス (前のステップで取得したDenoキャッシュディレクトリ)
-          path: ${{ env.DENO_CACHE_DIR }}
-          # キャッシュのキー (OS、'deno-'、deno.lockファイルのハッシュ値で構成)
-          # deno.lockが変わるとキャッシュキーも変わり、新しいキャッシュが作成される
-          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
-          # 復元キー (キーが完全一致しない場合に部分一致で復元試行)
-          # deno.lockが変わっても、OSが同じなら古いキャッシュを復元できる可能性がある
-          restore-keys: |
-            ${{ runner.os }}-deno-
-      # ステップ5: リンターの実行
+      # ステップ3: リンターの実行
       - name: Run Linter
         run: deno task lint
 
-      # ステップ6: テストの実行
-      - name: Run Tests
-        run: deno task test 
+      # ステップ4: テストの実行とカバレッジデータの生成
+      - name: Run Tests with Coverage
+        run: deno task test:cov
 
-      # ステップ7: カバレッジデータの生成
-      - name: Generate Coverage Data
-        run: deno task test:cov 
-
-      # ステップ8: bcコマンドのインストール
-      - name: Install bc
-        # bcコマンド (任意精度計算言語、カバレッジ比較で使用) をインストール
-        run: sudo apt-get update && sudo apt-get install -y bc
-
-      # ステップ9: カバレッジ閾値のチェック
+      # ステップ5: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
       - name: Check Coverage Threshold
-        run: |
-          # カバレッジレポートの出力を取得
-          COVERAGE_OUTPUT=$(deno coverage ./cov)
-
-          # カバレッジレポートから "All files" 行の行カバレッジ率 (%) を抽出
-          # 1. grep 'All files': "All files" を含む行を抽出
-          # 2. tr -d '\r': キャリッジリターン (\r) を削除 (Windows環境などでの問題を回避)
-          # 3. awk '{print $(NF-1)}': 行の末尾から2番目のフィールド (Line % の値) を取得
-          # 4. sed 's/\x1b\[[0-9;]*m//g': ANSIエスケープコード (色付け用コード) を削除
-          COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep 'All files' | tr -d '\r' | awk '{print $(NF-1)}' | sed 's/\x1b\[[0-9;]*m//g')
-
-          # 抽出したカバレッジ率が有効な数値 (整数または小数) か正規表現でチェック
-          if ! [[ "$COVERAGE" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
-            echo "Error: Could not extract coverage percentage. Extracted value was '$COVERAGE'." # エラーメッセージ (抽出した値を含む)
-            exit 1 # 無効な場合はエラー終了
-          fi
-
-          # 環境変数からカバレッジの閾値を取得
-          THRESHOLD=${COVERAGE_THRESHOLD}
-          echo "Current Coverage: $COVERAGE%" # 現在のカバレッジ率を表示
-          echo "Required Threshold: $THRESHOLD%" # 要求される閾値を表示
-
-          # bcコマンドを使って、現在のカバレッジ率が閾値を下回っているか比較
-          # (( $(...) )) は算術式評価。bc -l で浮動小数点比較を行う
-          # "$COVERAGE < $THRESHOLD" が真 (1) なら閾値未満、偽 (0) なら閾値以上
-          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
-            echo "Error: Code coverage is below the threshold ($THRESHOLD%)." # 閾値を下回っている場合はエラーメッセージを表示
-            exit 1 # エラー終了
-          else
-            echo "Code coverage meets the threshold." # 閾値を満たしている場合はメッセージを表示
-          fi
+        uses: VeryGoodOpenSource/very_good_coverage@v2
+        with:
+          path: ./cov/lcov.info
+          min_coverage: ${{ env.COVERAGE_THRESHOLD }}
 
   build:
     runs-on: ubuntu-latest
     # 依存ジョブ (testジョブが成功した後に実行)
     needs: test
     steps:
-      # ステップ1: リポジトリのチェックアウト
-      - name: Checkout repository
+      # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # ステップ2: Deno環境のセットアップ
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1 
-        # オプション: Denoのバージョン指定 (指定しない場合は最新安定版)
+      # ステップ2: Deno環境のセットアップ (Composite Actionを使用)
+      - name: Setup Deno Environment
+        uses: ./.github/actions/setup-deno # Use the composite action
         with:
           deno-version: 2.2.11
 
-      # ステップ3: Denoのキャッシュディレクトリを取得 (testジョブと同様)
-      - name: Get Deno cache directory
-        id: deno-cache-dir
-        run: |
-          set -e
-          DENO_INFO=$(deno info --json)
-          echo "Deno Info JSON: $DENO_INFO" # Debug output
-          DENO_CACHE_PATH=$(echo "$DENO_INFO" | jq -r .denoDir)
-          if [ -z "$DENO_CACHE_PATH" ] || [ "$DENO_CACHE_PATH" == "null" ]; then
-            echo "Error: Could not get Deno cache directory (.denoDir) from deno info."
-            exit 1
-          fi
-          echo "DENO_CACHE_DIR=$DENO_CACHE_PATH" >> $GITHUB_ENV
-
-      # ステップ4: Denoの依存関係をキャッシュ (testジョブと同様)
-      - name: Cache Deno dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.DENO_CACHE_DIR }}
-          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-deno-
-
-      # ステップ5: GitHub Actionのビルド
+      # ステップ3: GitHub Actionのビルド
       - name: Build GitHub Action
         run: deno task build:action

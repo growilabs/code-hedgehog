@@ -1,0 +1,35 @@
+name: 'Setup Deno Environment'
+description: 'Checks out repository, sets up Deno, and caches dependencies'
+inputs:
+  deno-version:
+    description: 'The Deno version to install'
+    required: true
+outputs:
+  deno-cache-dir:
+    description: "The path to the Deno cache directory"
+    value: ${{ steps.set-cache-dir.outputs.dir }}
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Deno
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: ${{ inputs.deno-version }}
+
+    - name: Set Deno cache directory
+      id: set-cache-dir # output を参照するために id を設定
+      shell: bash
+      run: |
+        dir_path="$RUNNER_TEMP/deno_cache"
+        echo "DENO_CACHE_DIR=$dir_path" >> $GITHUB_ENV
+        echo "dir=$dir_path" >> $GITHUB_OUTPUT # output 用
+
+    - name: Cache Deno dependencies
+      uses: actions/cache@v4
+      with:
+        # Use the environment variable set in the previous step
+        path: ${{ env.DENO_CACHE_DIR }}
+        # Improve cache key accuracy by including deno.jsonc
+        key: deno-${{ hashFiles('deno.jsonc', 'deno.lock') }}
+        restore-keys: |
+          deno-
