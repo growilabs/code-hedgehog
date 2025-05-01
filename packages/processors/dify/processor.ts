@@ -157,7 +157,7 @@ export class DifyProcessor extends BaseProcessor {
           // Upload files data
           const filesWithDefaults = batchFiles.map((file) => ({
             ...file,
-            patch: file.patch || 'No changes'  // Ensure patch is never null
+            patch: file.patch || 'No changes', // Ensure patch is never null
           }));
           const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, filesWithDefaults);
 
@@ -170,8 +170,8 @@ export class DifyProcessor extends BaseProcessor {
               path,
               summary: result.summary || '',
               needsReview: result.needsReview,
-              reason: result.reason || ''
-            }))
+              reason: result.reason || '',
+            })),
           );
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);

@@ -1,5 +1,5 @@
-import type { ImpactLevel, ReviewAspect, OverallSummary, SummaryResponse } from '../../base/schema.ts';
 import type { IFileChange } from '../../../core/src/types/file.ts';
+import type { ImpactLevel, OverallSummary, ReviewAspect, SummaryResponse } from '../../base/schema.ts';
 import { UploadResponseSchema } from './schema.ts';
 
 /**
@@ -11,10 +11,10 @@ export type UploadFileChange = Pick<IFileChange, 'path' | 'patch'> & { type?: 'c
  * Valid content types for upload
  */
 export type UploadContent =
-  | UploadFileChange                                                         // File change data
-  | SummaryResponse                                                          // File summary data
-  | { key: string; description: string; impact: ImpactLevel }               // Review aspect data
-  | { description: string; crossCuttingConcerns: string[] | undefined };    // Partial overall summary
+  | UploadFileChange // File change data
+  | SummaryResponse // File summary data
+  | { key: string; description: string; impact: ImpactLevel } // Review aspect data
+  | { description: string; crossCuttingConcerns: string[] | undefined }; // Partial overall summary
 
 /**
  * Upload a JSON file to Dify API and get file ID.
@@ -31,7 +31,7 @@ export async function uploadFile(
   baseUrl: string,
   apiKey: string,
   user: string,
-  content: UploadContent | UploadContent[] | string,  // Allow JSON string
+  content: UploadContent | UploadContent[] | string, // Allow JSON string
   fileName = 'data.json',
 ): Promise<string> {
   const maxRetries = 3;
