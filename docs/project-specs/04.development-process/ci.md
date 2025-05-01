@@ -18,9 +18,7 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
 
 1.  **セットアップ**:
     -   リポジトリのコードをチェックアウトします (`actions/checkout`)。
-    -   指定されたバージョンのDeno環境をセットアップします (`denoland/setup-deno`)。
-    -   `RUNNER_TEMP` 環境変数を使用して Deno のキャッシュディレクトリパスを決定し、環境変数 `DENO_CACHE_DIR` に設定します。
-    -   `actions/cache` を使用して Deno の依存関係 (`DENO_CACHE_DIR`) をキャッシュします。キャッシュキーには `deno.lock` ファイルのハッシュが含まれ、依存関係の変更時にキャッシュが無効化されます。
+    -   指定されたバージョンのDeno環境をセットアップします (ローカルの Composite Action `./.github/actions/setup-deno` を使用)。
 
 2.  **リンティング (`deno task lint`)**:
     -   プロジェクトルートの `deno.jsonc` で定義された `lint` タスクを実行します。
@@ -55,7 +53,7 @@ CIパイプラインは `test` と `build` の2つのジョブで構成されま
 ### `build` ジョブ (`needs: test`)
 
 1.  **セットアップ**:
-    -   `test` ジョブと同様に、リポジトリのチェックアウト、Deno のセットアップ、キャッシュのリストアを行います。
+    -   `test` ジョブと同様に、リポジトリのチェックアウトと Deno のセットアップを行います。
 
 2.  **GitHub Actionのビルド (`deno task build:action`)**:
     -   プロジェクトルートの `deno.jsonc` で定義された `build:action` タスクを実行します。
