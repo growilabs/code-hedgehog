@@ -18,39 +18,21 @@ jobs:
     env:
       COVERAGE_THRESHOLD: 80 # カバレッジの閾値 (デフォルト80%)
     steps:
-      # ステップ1: リポジトリのチェックアウト
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # ステップ2: Deno環境のセットアップ
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
+      # ステップ1: Deno環境のセットアップ
+      - name: Setup Deno Environment
+        uses: ./.github/actions/setup-deno # Use the composite action
         with:
-          deno-version: 2.2.11 
+          deno-version: 2.2.11
 
-      # ステップ3: Denoのキャッシュディレクトリを設定
-      - name: Set Deno cache directory
-        shell: bash
-        run: echo "DENO_CACHE_DIR=$RUNNER_TEMP/deno_cache" >> $GITHUB_ENV
-
-      # ステップ4: Denoの依存関係をキャッシュ
-      - name: Cache Deno dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.DENO_CACHE_DIR }}
-          key: deno-${{ hashFiles('deno.lock') }}
-          restore-keys: |
-            deno-
-
-      # ステップ5: リンターの実行
+      # ステップ2: リンターの実行
       - name: Run Linter
         run: deno task lint
 
-      # ステップ6: テストの実行とカバレッジデータの生成
+      # ステップ3: テストの実行とカバレッジデータの生成
       - name: Run Tests with Coverage
         run: deno task test:cov
 
-      # ステップ7: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
+      # ステップ4: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
       - name: Check Coverage Threshold
         uses: VeryGoodOpenSource/very_good_coverage@v2
         with:
@@ -62,30 +44,12 @@ jobs:
     # 依存ジョブ (testジョブが成功した後に実行)
     needs: test
     steps:
-      # ステップ1: リポジトリのチェックアウト
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # ステップ2: Deno環境のセットアップ
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1 
+      # ステップ1: Deno環境のセットアップ
+      - name: Setup Deno Environment
+        uses: ./.github/actions/setup-deno # Use the composite action
         with:
           deno-version: 2.2.11
 
-      # ステップ3: Denoのキャッシュディレクトリを設定
-      - name: Set Deno cache directory
-        shell: bash
-        run: echo "DENO_CACHE_DIR=$RUNNER_TEMP/deno_cache" >> $GITHUB_ENV
-
-      # ステップ4: Denoの依存関係をキャッシュ
-      - name: Cache Deno dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.DENO_CACHE_DIR }}
-          key: deno-${{ hashFiles('deno.lock') }}
-          restore-keys: |
-            deno-
-
-      # ステップ5: GitHub Actionのビルド
+      # ステップ2: GitHub Actionのビルド
       - name: Build GitHub Action
         run: deno task build:action
