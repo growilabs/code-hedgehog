@@ -121,27 +121,6 @@ describe('loadBaseConfig', () => { // Rename describe block
     expect(warnStub.calls.length).toBe(0);
   });
 
-  test('should return default config if use_default_config is true', async () => {
-    const customConfigWithFlag: Partial<ReviewConfig> = {
-      file_path_instructions: [{ path: 'src/*', instructions: 'Custom instruction' }],
-      skip_simple_changes: false, // Different from default
-      use_default_config: true, // Flag to ignore other settings
-    };
-    const yamlContent = yaml.dump(customConfigWithFlag);
-    // No fs.access stub needed
-    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
-    const logStub = stub(console, 'log');
-    const warnStub = stub(console, 'warn');
-    const errorStub = stub(console, 'error');
-
-    const config = await loadBaseConfig('use-default.yaml'); // Rename function call
-
-    expect(config).toEqual(DEFAULT_CONFIG); // Should return default config
-    expect(logStub.calls.length).toBe(1); // Should log the reason
-    expect(logStub.calls[0].args[0]).toContain('"use_default_config" is true');
-    expect(warnStub.calls.length).toBe(0);
-    expect(errorStub.calls.length).toBe(0);
-  });
   test('should use default path ".coderabbitai.yaml" if no path is provided', async () => {
     // No fs.access stub needed
     // Stub readFile to return an empty object for the default path

@@ -33,11 +33,6 @@ export interface LocalReviewConfig {
   file_path_instructions?: PathInstruction[];
   path_filters?: string;
   skip_simple_changes?: boolean;
-  /**
-   * If true, ignore all other settings in this file and use the default base configuration.
-   * @default false
-   */
-  use_default_config?: boolean;
 }
 
 // Combined review configuration using the imported alias

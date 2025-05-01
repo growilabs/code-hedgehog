@@ -1,3 +1,5 @@
+# これは Coderabbit AI の設定ファイルのサンプルです。
+# この設定を使用するには、このファイルをリポジトリのルートに `.coderabbitai.yaml` としてコピーしてください。
 # パスベースのレビュー指示
 file_path_instructions:
   - path: "src/**/*.{ts,tsx}"
@@ -22,6 +24,3 @@ path_filters: |
 
 # シンプルな変更のスキップ設定
 skip_simple_changes: true
-
-# デフォルト設定を使用するかどうか (trueにすると上記の設定は無視される)
-use_default_config: true

@@ -20,7 +20,6 @@ const BaseConfigSchema = z
     skip_simple_changes: z.boolean().optional(),
     // path_instructions is required in ReviewConfig, but might be missing in YAML
     path_instructions: z.array(PathInstructionSchema).optional(),
-    use_default_config: z.boolean().optional(), // Add this field
   })
   .passthrough(); // Allow other fields (processor-specific)
 
@@ -75,12 +74,6 @@ export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise
 
   const parsedYaml = validationResult.data; // Use validated data
   console.debug(`Validated YAML content from ${configPath}:`, JSON.stringify(parsedYaml));
-
-  // Check if use_default_config is explicitly true
-  if (parsedYaml.use_default_config === true) {
-    console.log(`"use_default_config" is true in "${configPath}", using default base config.`);
-    return { ...DEFAULT_CONFIG }; // Return a copy of defaults
-  }
 
   // Merge validated fields into the default config
   // Zod ensures the types are correct (or optional and thus undefined)
