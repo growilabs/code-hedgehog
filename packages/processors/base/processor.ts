@@ -21,7 +21,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Load configuration using the external module.
    * This method now acts as a wrapper to update the instance's config.
    */
-  protected async loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<void> { // Rename method
+  protected async loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
     // Call the external function and update the instance's config
     this.config = await loadExternalBaseConfig(configPath); // Rename function call
   }

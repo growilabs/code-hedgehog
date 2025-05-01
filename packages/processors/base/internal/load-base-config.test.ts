@@ -7,7 +7,7 @@ import { DEFAULT_CONFIG } from '../deps.ts';
 import type { ReviewConfig } from '../types.ts';
 import { loadBaseConfig } from './load-base-config.ts';
 
-describe('loadBaseConfig', () => { // Rename describe block
+describe('loadBaseConfig', () => {
   afterEach(() => {
     restore();
   });

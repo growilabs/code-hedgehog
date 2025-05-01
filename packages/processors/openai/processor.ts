@@ -1,4 +1,4 @@
-import process from "node:process";
+import process from 'node:process';
 import { ImpactLevel } from '../base/schema.ts';
 // Import the base config type
 import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
@@ -25,7 +25,8 @@ export class OpenaiProcessor extends BaseProcessor {
     maxTokens: 4000,
   };
 
-  constructor() { // Constructor takes no arguments now
+  constructor() {
+    // Constructor takes no arguments now
     super();
     // Load OpenAI API key from environment variable
     const apiKey = process.env.OPENAI_API_KEY;
