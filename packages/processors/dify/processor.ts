@@ -146,7 +146,7 @@ export class DifyProcessor extends BaseProcessor {
           batchFiles.map((f) => f.path),
         );
         if (previousAnalysis) {
-          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
+          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, JSON.stringify(previousAnalysis, null, 2));
         }
 
         try {
