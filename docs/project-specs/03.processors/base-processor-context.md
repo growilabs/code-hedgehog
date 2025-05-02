@@ -1,167 +1,119 @@
-# BaseProcessorのコンテキスト管理拡張仕様
+# BaseProcessorのコンテキスト管理拡張仕様 (旧設計案)
 
-## 1. 概要
+**重要:** このドキュメントは、Code Hedgehog の初期設計段階で検討された、`BaseProcessor` が独自のコンテキスト管理機能を持つことを前提とした**古い仕様案**です。現在の設計では、コンテキスト収集は主に `Action Runner` が行い、プロセッサは `IPullRequestProcessor` インターフェースを実装します。
 
-BaseProcessorにコンテキスト管理機能を追加し、より高度なレビュー機能を実現します。
+現在のプロセッサ仕様やコンテキスト管理に関する仕様は、以下のドキュメントを参照してください。
+-   [GitHub Bot 仕様](../../project-specs/05.github-bot/overview.md)
+-   [GitHub Bot: コメント関連機能仕様](../../project-specs/05.github-bot/comment-chain-features.md)
+-   [レビューコンテキスト管理仕様 (旧設計案)](../02.core/review-context.md)
+-   [コンテキスト管理の仕様 (旧設計案)](../02.core/review-system/context.md)
+
+---
+
+## 1. 概要 (旧設計案)
+
+(旧設計案) `BaseProcessor` に、Bot が内部で管理するコンテキスト (レビュー履歴、コメントチェーン) にアクセス・操作するための機能を追加することを想定していました。
 
 ```mermaid
 graph TD
-    A[BaseProcessor] --> B[基本機能]
-    A --> C[コンテキスト機能]
+    A[BaseProcessor (旧案)] --> B[基本機能 (旧案)]
+    A --> C[コンテキスト機能 (旧案)]
     
-    B --> D[トリアージ]
-    B --> E[アスペクト分析]
-    B --> F[レビュー実行]
+    B --> D[トリアージ (旧案)]
+    B --> E[アスペクト分析 (旧案)]
+    B --> F[レビュー実行 (旧案)]
     
-    C --> G[履歴管理]
-    C --> H[コメントチェーン]
-    C --> I[コンテキストプロバイダー]
+    C --> G[履歴管理アクセス (旧案)]
+    C --> H[コメントチェーンアクセス (旧案)]
+    C --> I[ContextProvider 利用 (旧案)]
 ```
 
-## 2. インターフェース拡張
+**現在の設計との違い:** 現在の `BaseProcessor` (存在する場合) は、`Action Runner` から渡されたコンテキスト情報 (`ProcessInput`/`InteractionInput`) を利用するためのヘルパー機能を提供する可能性がありますが、Bot 内部のコンテキスト DB に直接アクセスするような機能は持ちません。
 
-### 2.1 コンテキスト対応インターフェース
+## 2. インターフェース拡張 (旧設計案)
+
+(旧設計案) `BaseProcessor` がコンテキスト管理機能を持つためのインターフェース拡張案です。
+
+### 2.1 コンテキスト対応インターフェース (旧設計案)
+
+(旧設計案) `IContextAwareProcessor` のようなインターフェースを定義し、`ContextProvider` (Bot 内部のコンテキスト管理モジュール) へのアクセスや、履歴・コメントチェーンの直接操作メソッドを想定していました。
 
 ```typescript
+// 旧設計案のインターフェース
 interface IContextAwareProcessor extends IBaseProcessor {
-  // コンテキストプロバイダーの取得
-  getContextProvider(): ContextProvider;
-
-  // レビュー履歴の参照
-  getReviewHistory(path: string): Promise<ReviewHistory>;
-
-  // コメントチェーンの操作
-  getCommentChain(commentId: string): Promise<CommentChain>;
-  updateCommentChain(chain: CommentChain): Promise<void>;
+  getContextProvider(): ContextProvider; // Bot 内部モジュールへのアクセス
+  getReviewHistory(path: string): Promise<ReviewHistory>; // Bot DB から履歴取得
+  getCommentChain(commentId: string): Promise<CommentChain>; // Bot DB からチェーン取得
+  updateCommentChain(chain: CommentChain): Promise<void>; // Bot DB のチェーン更新
 }
 ```
 
-### 2.2 既存メソッドの拡張
+**現在の設計との違い:** 現在のプロセッサは `IPullRequestProcessor` を実装します。このインターフェースは `process` と `handleInteraction` メソッドを持ち、引数として `Action Runner` が収集したコンテキスト情報 (`ProcessInput`/`InteractionInput`) を受け取ります。プロセッサが Bot 内部の `ContextProvider` や DB を直接操作することはありません。
+
+### 2.2 既存メソッドの拡張 (旧設計案)
+
+(旧設計案) 旧設計の `BaseProcessor` が持っていた `summarize`, `generateOverallSummary`, `review` メソッド (3段階レビュープロセス) の引数に `ReviewContext` を追加することを想定していました。
 
 ```typescript
+// 旧設計案のメソッドシグネチャ拡張
 abstract class BaseProcessor {
-  // summarizeの拡張
-  abstract summarize(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-    config?: ReviewConfig,
-    context?: ReviewContext  // 追加
-  ): Promise<Map<string, SummarizeResult>>;
-
-  // generateOverallSummaryの拡張
-  abstract generateOverallSummary(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-    summarizeResults: Map<string, SummarizeResult>,
-    context?: ReviewContext  // 追加
-  ): Promise<OverallSummary | undefined>;
-
-  // reviewの拡張
-  abstract review(
-    prInfo: IPullRequestInfo,
-    files: IFileChange[],
-    summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig,
-    overallSummary?: OverallSummary,
-    context?: ReviewContext  // 追加
-  ): Promise<IPullRequestProcessedResult>;
+  abstract summarize(..., context?: ReviewContext): Promise<Map<string, SummarizeResult>>;
+  abstract generateOverallSummary(..., context?: ReviewContext): Promise<OverallSummary | undefined>;
+  abstract review(..., context?: ReviewContext): Promise<IPullRequestProcessedResult>;
 }
 ```
 
-## 3. コンテキスト活用の仕組み
+**現在の設計との違い:** 現在の `IPullRequestProcessor` の `process` や `handleInteraction` メソッドは、引数として `ProcessInput` や `InteractionInput` を受け取ります。これらの中に必要なコンテキスト情報 (PR 情報, ファイル差分, コメント履歴など) が含まれています。
 
-### 3.1 レビューフェーズでのコンテキスト利用
+## 3. コンテキスト活用の仕組み (旧設計案)
+
+(旧設計案) プロセッサが `ContextProvider` を介してコンテキストを取得・更新するフローを想定していました。
+
+### 3.1 レビューフェーズでのコンテキスト利用 (旧設計案)
 
 ```mermaid
 sequenceDiagram
-    participant P as Processor
-    participant C as ContextProvider
-    participant R as ReviewEngine
+    participant P as Processor (旧案)
+    participant C as ContextProvider (Bot Backend - 旧案)
+    participant R as ReviewEngine (AI - 旧案)
     
-    P->>C: コンテキスト要求
-    C->>C: 履歴検索
-    C->>C: コメントチェーン取得
+    P->>C: コンテキスト要求 (getReviewHistory など)
+    C->>C: 履歴検索 (Bot DB)
+    C->>C: コメントチェーン取得 (Bot DB)
     C->>P: コンテキスト提供
-    P->>R: レビュー実行
+    P->>R: レビュー実行 (AI 呼び出し、コンテキスト含む)
     R->>P: レビュー結果
-    P->>C: コンテキスト更新
+    P->>C: コンテキスト更新 (updateCommentChain など)
 ```
 
-### 3.2 コンテキストの種類
+**現在の設計との違い:** `Action Runner` が事前に GitHub API からコンテキスト (コメント履歴など) を取得し、`ProcessInput`/`InteractionInput` としてプロセッサに渡します。プロセッサは渡された情報を利用して AI を呼び出し、結果 (`ProcessOutput`/`InteractionOutput`) を `Action Runner` に返します。プロセッサが Bot 内部のコンテキスト DB を更新することはありません。
 
-1. **レビュー履歴コンテキスト**
-   - 過去の類似変更
-   - 解決済みの指摘
-   - 回帰的な問題
+### 3.2 コンテキストの種類 (旧設計案)
 
-2. **コメントチェーンコンテキスト**
-   - 進行中の議論
-   - 未解決の課題
-   - レビューの優先度
+(旧設計案) レビュー履歴、コメントチェーン、ファイルコンテキストなどを Bot が管理・提供することを想定していました。
 
-3. **ファイルコンテキスト**
-   - 関連する変更
-   - 影響範囲
-   - 依存関係
+**現在の設計との違い:** レビュー履歴やコメントチェーンの情報は GitHub API から取得され、`Action Runner` を経由してプロセッサに渡されます。ファイルコンテキスト (依存関係など) の分析は、プロセッサの責務となります。
 
-## 4. 実装ガイドライン
+## 4. 実装ガイドライン (旧設計案)
 
-### 4.1 トリアージフェーズ
+(旧設計案) 旧設計の3フェーズ (`トリアージ`, `サマリー`, `レビュー`) でコンテキストを活用するためのガイドライン。
 
-- 過去のレビュー履歴を考慮したトリアージ
-- 類似変更パターンの検出
-- コンテキストベースの優先度付け
+**現在の設計との違い:** 現在のプロセッサは `process` メソッド内で、渡されたコンテキスト (`ProcessInput`) を活用してレビューを行います。重複指摘の防止などは、`commentHistory` を参照して実装します。
 
-### 4.2 サマリーフェーズ
+## 5. パフォーマンス考慮事項 (旧設計案)
 
-- レビュー履歴からのパターン抽出
-- コメントチェーンの分析
-- アスペクトの動的調整
+(旧設計案) Bot 内部のコンテキスト DB アクセス最適化 (選択的読み込み、キャッシュ) や並行処理について。
 
-### 4.3 レビューフェーズ
+**現在の設計との違い:** パフォーマンスの焦点は、GitHub API の効率的な利用、`Action Runner` の処理速度、プロセッサのトークン管理などに移ります。
 
-- コンテキストを考慮したレビュー生成
-- 重複指摘の防止
-- インテリジェントな提案生成
+## 6. エラー処理 (旧設計案)
 
-## 5. パフォーマンス考慮事項
+(旧設計案) Bot 内部のコンテキスト取得エラーや DB の整合性維持について。
 
-### 5.1 コンテキストの最適化
+**現在の設計との違い:** GitHub API アクセスエラーやプロセッサ内部のエラーハンドリングが中心となります。Bot 独自の DB 整合性を考慮する必要はありません。
 
-- 必要なコンテキストの選択的読み込み
-- キャッシュ戦略の実装
-- メモリ使用量の制御
+## 7. 拡張性 (旧設計案)
 
-### 5.2 並行処理の活用
+(旧設計案) カスタムコンテキストの追加やフィードバックループによる自動学習について。
 
-- 非同期コンテキスト読み込み
-- バッチ処理の活用
-- 優先度ベースの処理順序
-
-## 6. エラー処理
-
-### 6.1 コンテキスト取得エラー
-
-- フォールバック戦略
-- 部分的なコンテキスト利用
-- エラーレポーティング
-
-### 6.2 整合性の維持
-
-- トランザクション的な更新
-- 競合解決メカニズム
-- バージョン管理
-
-## 7. 拡張性
-
-### 7.1 カスタムコンテキスト
-
-- プロジェクト固有のコンテキスト
-- 外部システムとの連携
-- プラグイン機構
-
-### 7.2 フィードバックループ
-
-- レビュー効果の測定
-- コンテキスト利用の最適化
-- 自動学習メカニズム
+**現在の設計との違い:** 拡張性はプロセッサの追加・選択や Action ワークフローのカスタマイズで実現します。Bot 自身が自動学習する仕組みは持ちません。

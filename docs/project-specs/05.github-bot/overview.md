@@ -19,8 +19,8 @@ GitHub と Code Hedgehog コアレビューシステム間のインターフェ�
 
 -   **基本情報:** トリガーイベントから PR 番号、リポジトリ情報、コミット SHA、コメント情報 (ID, 内容, 投稿者) などを抽出。
 -   **差分取得:** GitHub API を使用して、レビュー対象の差分情報 (`IFileChange[]`) を取得。
--   **設定読み込み:** Action の実行コンテキスト (リポジトリ内) から設定ファイル (`.codehedgehog/review.yaml` など) を読み込み、Action の入力設定 (`action.yml` 経由) とマージする。
--   **コメント履歴取得:** GitHub API を使用して、PR に存在する既存のレビューコメント (特に Bot が投稿したものや関連するスレッド) を取得し、履歴的コンテキスト (`CommentInfo[]`) として整形。
+-   **設定読み込み:** Action の実行コンテキスト (リポジトリ内) から設定ファイル (`.codehedgehog/review.yaml` など) を読み込み、Action の入力設定 (`action.yml` 経由) とマージする。詳細は [パスベース設定システム仕様](./../02.core/path-based-config.md) を参照。
+-   **コメント履歴取得:** GitHub API を使用して、PR に存在する既存のレビューコメントを取得し、プロセッサへのコンテキスト (`CommentInfo[]`) として整形する。詳細は [コメント関連機能](./comment-chain-features.md#31-コメント履歴の収集と活用) を参照。
 -   **関連情報 (オプション):** 設定に応じて、CI/CD の結果 (Checks API 経由) や関連 Issue の情報を収集。
 -   **整形:** 収集した情報をプロセッサが要求する入力形式 (`ProcessInput` または `InteractionInput`) に整形する。
 
@@ -35,7 +35,7 @@ GitHub と Code Hedgehog コアレビューシステム間のインターフェ�
 -   **形式整形:** 結果を GitHub API が要求する形式に整形する。
 -   **コメント投稿:**
     -   `ProcessOutput.comments` (`IReviewComment[]`) を GitHub API (VCS クライアント経由) を使用して PR にコメントとして投稿。
-    -   **スレッド活用:** 新規指摘は新しいコメント、既存指摘への追加コメントやインタラクション応答 (`InteractionOutput.replyBody`) は元のコメントへの返信 (スレッド内) として投稿する。
+    -   **スレッド活用:** GitHub のコメントスレッド (返信) 機能を活用して議論を整理する。詳細は [コメント関連機能](./comment-chain-features.md#32-コメント投稿とスレッド活用) を参照。
 -   **Checks API 更新:** `ProcessOutput.summary` があれば、それを使用して GitHub Checks API のサマリーを更新する。
 -   **エラー処理:** プロセッサや GitHub API でエラーが発生した場合、エラー内容を PR コメントや Checks API で報告する。
 
@@ -43,39 +43,17 @@ GitHub と Code Hedgehog コアレビューシステム間のインターフェ�
 
 -   **レビュー状況表示 (GitHub Checks API):**
     -   **目的:** レビュープロセスの実行状況をユーザーにリアルタイムでフィードバックする。
-    -   **実装:**
-        -   GitHub Actions のワークフロー開始時に、Checks API を使用して Check Run を `status: queued` または `in_progress` で作成する (例: "Code Review")。
-        -   レビュー処理中は `status: in_progress` を維持する。
-        -   レビュー完了時:
-            -   正常完了: `status: completed`, `conclusion: success`。`output.summary` に結果概要 (例: "✅ Review completed. 5 suggestions found.") を表示。任意で `output.annotations` に指摘事項を登録。
-            -   エラー発生: `status: completed`, `conclusion: failure`。`output.summary` にエラー発生の旨を表示。`output.text` 等で詳細を提供。
-            -   スキップ時: `status: completed`, `conclusion: skipped`。`output.summary` に理由を表示。
+    -   **実装:** GitHub Actions のワークフロー開始/終了時に Checks API を更新し、`status` (in_progress, completed) と `conclusion` (success, failure, skipped) を設定する。エラー発生時やスキップ時には `output.summary` に理由を表示する。
 
 -   **指摘解決追跡 (GitHub "Resolve conversation" 連携):**
     -   **目的:** Bot が投稿したレビューコメント (指摘事項) の解決状況を追跡し、PR 全体のレビュー状況を可視化する。
-    -   **実装:**
-        -   **トリガー:** GitHub の "Resolve conversation" 機能と連携する。以下のいずれかの方法で変更を検知する。
-            -   **Webhook (推奨):** GitHub App として `pull_request_review_thread.resolved` および `pull_request_review_thread.unresolved` イベントを購読し、リアルタイムで状態変更を検知する。 (注意: GitHub Actions 以外のインフラが必要になる可能性あり)
-            -   **API ポーリング (代替案):** GitHub Actions の `schedule` イベントや `workflow_run` イベントを利用し、定期的に GitHub API で PR のコメントスレッド状態を取得・比較する。リアルタイム性は劣る。
-        -   **状態把握 & フィードバック (Checks API 更新):**
-            -   レビュー完了時および状態変更検知時 (Webhook/ポーリング) に、GitHub API で対象 PR のレビューコメントスレッドを取得し、Bot が起点となっている未解決のスレッド数をカウントする。
-            -   カウントした未解決数を、該当する Check Run の `output.summary` に反映させる (例: "Code Review: 3 unresolved issues remaining.")。
-            -   すべての指摘が解決された場合は、サマリーを更新する (例: "✨ All suggestions resolved!")。
-        -   **Check Run の Conclusion:**
-            -   デフォルトでは、未解決の指摘があっても Check Run の `conclusion` は `success` のままにする (CI/CD の成否とは独立)。
-            -   (オプション) 設定ファイル (`.codehedgehog/review.yaml` など) で、未解決の指摘がある場合に `conclusion` を `failure` または `neutral` に変更するオプションを提供する (マージ制限等に活用可能)。
-        -   **キーワードコマンド:** `/resolve` 等のキーワードによる解決コマンドは、GitHub 標準機能と重複するため**実装しない**。
+    -   **実装:** GitHub の "Resolve conversation" 機能と連携し、未解決の指摘数を Checks API のサマリーに反映させる。詳細は [コメント関連機能](./comment-chain-features.md#33-指摘解決追跡-resolve-conversation-連携) を参照。
+    -   **オプション:** 設定 (`checks.fail_on_unresolved_issues`) により、未解決指摘がある場合に Check Run の `conclusion` を `failure` にすることも可能。
 
-### 2.6. インタラクティブ機能
+### 2.6. インタラクティブ機能 (`@bot`)
 
--   **トリガー:** ユーザーが Bot をメンションし、自由形式の指示を含むコメントを投稿 (`@bot <自由形式の指示>`)。
-    -   ユーザーは自然言語で、説明要求、修正提案、無視指示などを行う。
--   **処理フロー:**
-    1.  **新しい GitHub Action** が `issue_comment` イベントでトリガーされる。
-    2.  コメント内容から Bot へのメンションと指示内容 (`userInstruction`) を抽出する。対象となる元の Bot コメント (`targetComment`) を特定する。
-    3.  関連コンテキスト (元の指摘内容、関連コード差分 (`diff`)、コメント履歴 (`commentHistory`) など) を収集・整形し、`InteractionInput` を作成する。
-    4.  `InteractionInput` を引数として、プロセッサの `handleInteraction` メソッドを呼び出す。プロセッサ側で指示内容を解釈し、適切な応答 (`InteractionOutput.replyBody`) を生成する。
-    5.  プロセッサからの応答を受け取り、元のコメントへの返信として投稿する (VCS クライアント経由)。
+-   **目的:** ユーザーが Bot の指摘に対して質問したり指示を出したりできるようにし、レビュープロセスを対話的にする。
+-   **実装:** ユーザーがコメントで `@bot` をメンションすると、専用の GitHub Action がトリガーされ、プロセッサの `handleInteraction` メソッドを呼び出して応答を生成し、元のコメントへの返信として投稿する。詳細は [コメント関連機能](./comment-chain-features.md#34-インタラクティブ機能-bot) を参照。
 
 ### 2.7. プロセッサ (コアレビューシステム) との関係
 
