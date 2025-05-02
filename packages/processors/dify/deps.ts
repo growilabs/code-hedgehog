@@ -6,6 +6,7 @@ export {
   BaseProcessor,
   type SummarizeResult,
   type OverallSummary,
+  type SummaryResponse,
   ImpactLevel,
   SummaryResponseSchema,
   OverallSummarySchema,

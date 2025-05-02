@@ -1,3 +1,4 @@
+import { ImpactLevel } from '../../deps.ts';
 import { uploadFile } from '../../internal/mod.ts';
 import { processReviewResponse } from '../../internal/run-workflow.ts';
 import type { DifyRequestBody } from '../../internal/schema.ts';
@@ -15,12 +16,14 @@ async function main() {
 
   const testAspects = [
     {
-      name: 'security',
+      key: 'security',
       description: 'Implementation of authentication system',
+      impact: ImpactLevel.High,
     },
     {
-      name: 'domain:auth',
+      key: 'domain:auth',
       description: 'User authentication and authorization features',
+      impact: ImpactLevel.Medium,
     },
   ];
 
@@ -31,14 +34,12 @@ async function main() {
 
   // Upload aspects data
   console.log('Uploading aspects data...');
-  const aspectsJson = JSON.stringify(testAspects);
-  const aspectsFileId = await uploadFile(baseUrl, apiKey, 'moogle', aspectsJson);
+  const aspectsFileId = await uploadFile(baseUrl, apiKey, 'moogle', testAspects);
   console.log('Aspects uploaded, ID:', aspectsFileId);
 
   // Upload overall summary data
   console.log('Uploading overall summary data...');
-  const overallSummaryJson = JSON.stringify(testOverallSummary);
-  const overallSummaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', overallSummaryJson);
+  const overallSummaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', testOverallSummary);
   console.log('Overall summary uploaded, ID:', overallSummaryFileId);
 
   // Execute workflow
