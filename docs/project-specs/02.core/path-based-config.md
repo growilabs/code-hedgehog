@@ -4,6 +4,18 @@
 
 パスベース設定システムは、ファイルパスパターンに基づいてレビュー方針やルールを定義する機能を提供します。このシステムにより、ファイルの種類や場所に応じて適切なレビュー指示を設定できます。
 
+## Glob パターンについて
+
+本設定ファイルでは、ブランチ名やファイルパスを指定する際に Glob パターンを使用します。これは Unix シェルのようなワイルドカードを用いたパターンマッチング記法です。
+
+-   **実装:** [minimatch](https://github.com/isaacs/minimatch) ライブラリの仕様に準拠します。
+-   **主な記号:**
+    -   `*`: スラッシュ (`/`) を除く任意の0文字以上の文字列にマッチします。
+    -   `**`: 任意の0文字以上の文字列 (ディレクトリ階層を含む) にマッチします。
+    -   `?`: スラッシュ (`/`) を除く任意の1文字にマッチします。
+    -   `{alt1,alt2}`: `alt1` または `alt2` のいずれかにマッチします。
+-   **パス:** パターンはプロジェクトルートからの相対パスとして解釈されます。
+
 ## 設定ファイル
 
 ### 基本構造
@@ -11,15 +23,33 @@
 設定ファイルは `.coderabbitai.yaml` という名前でプロジェクトのルートディレクトリに配置します。
 
 ```yaml
-# パスベースのレビュー指示
-file_path_instructions:
+# レビュー言語
+review_language: "ja-JP" # デフォルトは "en-US"
+
+# PRレベルの制御
+ignore_draft_prs: true # ドラフトPRを無視するか (デフォルト: true)
+ignored_branches: # レビュー対象外のブランチ (Globパターン)
+  - "dev/*"
+  - "release"
+ignored_titles: # レビュー対象外のPRタイトルに含まれる文字列
+  - "WIP"
+  - "DO NOT MERGE"
+limit_reviews_by_labels: # レビュー対象を特定のラベルを持つPRに限定 (空の場合は制限なし)
+  - "needs-review"
+
+# ファイルレベルの制御
+skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
+path_filters: # レビュー対象外のファイルパス (Globパターン, 除外専用)
+  - "dist/**"
+  - "**/*.min.js"
+  - "**/*.map"
+file_path_instructions: # パスごとのレビュー指示
   - path: "src/**/*.{ts,tsx}"
     instructions: |
       TypeScriptコードのレビュー指示：
       - 型の適切な使用
       - nullチェックの完全性
       - 非同期処理の適切な実装
-
   - path: "test/**/*.ts"
     instructions: |
       テストコードのレビュー指示：
@@ -27,53 +57,83 @@ file_path_instructions:
       - エッジケースの考慮
       - テストの独立性確保
 
-# パスフィルター（レビュー対象外のパス）
-path_filters: |
-  !dist/**
-  !*.min.js
-  !*.map
-
-# シンプルな変更のスキップ設定
-skip_simple_changes: true
+# GitHub Checks API 連携設定
+checks:
+  fail_on_unresolved_issues: false # 未解決の指摘がある場合に Check Run を failure にするか (デフォルト: false)
 ```
 
 ## 設定項目
 
-### file_path_instructions
+### review_language
 
-```typescript
-interface PathInstruction {
-  /** Globパターンによるファイルパスの指定 */
-  path: string;
-  
-  /** そのパスパターンに対する具体的なレビュー指示 */
-  instructions: string;
-}
-```
+-   レビューに使用する言語コード (例: `"ja-JP"`, `"en-US"`)。
+-   型: `string`
+-   デフォルト: `"en-US"`
 
-- `path`: [minimatch](https://github.com/isaacs/minimatch) 形式のGlobパターン
-- `instructions`: マークダウン形式のレビュー指示
+### ignore_draft_prs
 
-### path_filters
+-   `true` の場合、ドラフト状態のプルリクエストをレビュー対象外とします。
+-   型: `boolean`
+-   デフォルト: `true`
 
-- レビュー対象から除外するファイルパスパターン
-- 各行が1つのパターンとして解釈される
-- `!` プレフィックスで除外パターンを指定
-- デフォルトで以下のパターンが除外される：
-  ```yaml
-  !dist/**
-  !**/*.min.js
-  !**/*.map
-  !**/node_modules/**
-  ```
+### ignored_branches
+
+-   レビュー対象外とするブランチ名の Glob パターンリスト。
+-   型: `string[]`
+-   デフォルト: `[]`
+
+### ignored_titles
+
+-   レビュー対象外とするプルリクエストのタイトルに含まれる文字列リスト (大文字小文字を区別しない)。
+-   型: `string[]`
+-   デフォルト: `[]`
+
+### limit_reviews_by_labels
+
+-   レビュー対象を、ここに指定されたラベルのいずれかを持つプルリクエストに限定します。
+-   空のリストの場合は、ラベルによる制限を行いません。
+-   型: `string[]`
+-   デフォルト: `[]`
 
 ### skip_simple_changes
 
-- シンプルな変更をスキップするかどうかのフラグ
-- 以下の変更がシンプルな変更として扱われる：
-  - フォーマットの変更のみ
-  - コメントの追加・修正のみ
-  - 空白行の変更のみ
+-   `true` の場合、シンプルな変更 (フォーマット、コメント、空白行のみ) をレビュー対象外とします。
+-   型: `boolean`
+-   デフォルト: `false`
+
+### path_filters
+
+-   レビュー対象から**除外**するファイルパスの Glob パターンリスト。
+-   このリストは除外専用であり、包含パターン (`!` プレフィックスなど) は指定できません。指定されたパターンにマッチするファイルはレビュー対象外となります。
+-   型: `string[]`
+-   デフォルト:
+    ```yaml
+    - "dist/**"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "**/node_modules/**"
+    - "**/vendor/**" # 例として追加
+    ```
+
+### file_path_instructions
+
+-   ファイルパスパターンごとに適用するレビュー指示のリスト。
+-   型: `Array<{ path: string; instructions: string }>`
+-   `path`: [minimatch](https://github.com/isaacs/minimatch) 形式の Glob パターン。
+-   `instructions`: マークダウン形式のレビュー指示。AI へのプロンプトに追加されます。
+-   デフォルト: `[]`
+
+### checks
+
+-   GitHub Checks API の挙動を制御する設定。
+
+#### checks.fail_on_unresolved_issues
+
+-   `true` に設定すると、Code Hedgehog Bot が投稿したレビューコメント (指摘) が1つでも未解決 (unresolved) の場合、関連する Check Run の `conclusion` を `failure` に設定します。
+-   これにより、未解決の指摘がある場合に PR のマージをブロックするなどの連携が可能になります。
+-   `false` の場合、未解決の指摘があっても Check Run の `conclusion` は `success` (またはエラーが発生した場合は `failure`) となり、指摘の解決状況は `conclusion` に影響しません。
+-   型: `boolean`
+-   デフォルト: `false`
 
 ## パターンマッチング
 
@@ -108,40 +168,60 @@ interface PathInstruction {
 
 ## 使用例
 
-### 1. 基本的な設定
+### 1. 基本的な設定 (TypeScript プロジェクト)
 
 ```yaml
+review_language: "ja-JP"
+skip_simple_changes: true
+path_filters:
+  - "dist/**"
+  - "**/*.map"
 file_path_instructions:
   - path: "src/**/*.ts"
-    instructions: "TypeScriptコードの標準レビュー"
+    instructions: |
+      TypeScriptのベストプラクティスに従ってください。
+      - any型を避ける
+      - 未使用の変数やインポートがないか確認
+  - path: "**/*.test.ts"
+    instructions: |
+      テストコードの品質を確認してください。
+      - 十分なアサーションがあるか
+      - モックが適切に使用されているか
 ```
 
-### 2. 複数パターンの設定
+### 2. PR レベルでの制御例
 
 ```yaml
+# WIP の PR と dev ブランチへの PR はレビューしない
+ignored_titles:
+  - "WIP"
+ignored_branches:
+  - "dev/*"
+
+# "ready-for-review" ラベルが付いた PR のみレビューする
+limit_reviews_by_labels:
+  - "ready-for-review"
+
+# ドラフト PR はレビューしない (デフォルト)
+ignore_draft_prs: true
+```
+
+### 3. 複数パスへの指示と除外
+
+```yaml
+path_filters:
+  - "**/generated/**" # 生成されたコードを除外
+  - "**/fixtures/**" # テストフィクスチャを除外
 file_path_instructions:
-  - path: "src/api/**/*.ts"
+  - path: "src/core/**/*.py"
     instructions: |
-      APIエンドポイントのレビュー基準：
-      - 入力値の検証
-      - エラーハンドリング
-      - レスポンス形式
-
-  - path: "src/models/**/*.ts"
-    instructions: |
-      モデルの実装基準：
-      - 不変性の確保
-      - バリデーションルール
-      - 型の完全性
-```
-
-### 3. 特定ファイルの除外
-
-```yaml
-path_filters: |
-  !src/generated/**
-  !**/*.test.ts
-  !**/*.spec.ts
+      コアロジックのレビュー：
+      - パフォーマンスへの影響を考慮
+      - エラーハンドリングの網羅性
+  - path: "src/utils/**/*.py"
+    instructions: "ユーティリティ関数のレビュー：再利用性とドキュメントを確認"
+  - path: "**/*.py" # 上記以外の Python ファイルへの指示
+    instructions: "Python の標準的なコーディング規約 (PEP8) を確認"
 ```
 
 ## 注意事項
