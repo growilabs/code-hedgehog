@@ -262,6 +262,8 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     const comments: IReviewComment[] = [];
+    // Map to collect review summaries for each file
+    const fileSummaries = new Map<string, string>();
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);
@@ -327,6 +329,9 @@ export class DifyProcessor extends BaseProcessor {
         }
 
         if (review.summary) {
+          // Store individual file summary
+          fileSummaries.set(file.path, review.summary);
+          
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
@@ -344,11 +349,19 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // Add overall summary to regular comments
+    // Format collected file summaries into a table
+    let fileSummaryTable = '| File | Description |\n|------|-------------|';
+    for (const [path, summary] of fileSummaries) {
+      // Replace newlines with spaces for cleaner table display
+      const formattedSummary = summary.replace(/\n/g, ' ');
+      fileSummaryTable += `\n| \`${path}\` | ${formattedSummary} |`;
+    }
+
+    // Add overall summary with file summaries table to regular comments
     if (overallSummary != null) {
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}`,
+        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`,
         type: 'pr',
       });
     }
