@@ -15,3 +15,4 @@ export {
 // OpenAI dependencies
 export { default as OpenAI } from '@openai/openai';
 export { zodResponseFormat } from '@openai/openai/helpers/zod';
+export { z } from 'zod';

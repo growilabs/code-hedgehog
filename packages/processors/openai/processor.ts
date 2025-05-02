@@ -5,6 +5,7 @@ import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { CommentType } from './deps.ts';
+import type { z } from './deps.ts'; // Import zod for type assertion
 import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
@@ -44,7 +45,8 @@ export class OpenaiProcessor extends BaseProcessor {
   // Update config parameter type to base ReviewConfig
   override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
-    const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema, 'summarize_response');
+    // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
+    const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema as unknown as any, 'summarize_response');
 
     for (const file of files) {
       // Basic token check and simple change detection
@@ -124,7 +126,8 @@ export class OpenaiProcessor extends BaseProcessor {
     const PASSES = 2; // Number of analysis passes
     const entries = Array.from(summarizeResults.entries());
     const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
-    const overallSummaryFormat = zodResponseFormat(OverallSummarySchema, 'overall_summary_response');
+    // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
+    const overallSummaryFormat = zodResponseFormat(OverallSummarySchema as unknown as any, 'overall_summary_response');
 
     console.debug(`Processing ${entries.length} files in ${totalBatches} batches with ${PASSES} passes`);
 
@@ -237,7 +240,8 @@ export class OpenaiProcessor extends BaseProcessor {
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
-    const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema, 'review_response');
+    // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
+    const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema as unknown as any, 'review_response');
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);

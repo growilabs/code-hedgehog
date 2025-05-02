@@ -1,6 +1,6 @@
 import process from 'node:process';
-// Import the base config type
-import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
+// Import the base config type and PathInstruction
+import type { PathInstruction, ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig and PathInstruction
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 // Base types and specific config type
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
@@ -8,7 +8,8 @@ import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryRespo
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 // Internal configuration type for DifyProcessor
-type InternalDifyConfig = {
+type InternalDifyConfig = ReviewConfig & {
+  // Extend ReviewConfig to ensure compatibility
   baseUrl: string;
   user: string;
   apiKeySummarize: string;
@@ -20,7 +21,8 @@ type InternalDifyConfig = {
  * Processor implementation for Dify AI Service
  */
 export class DifyProcessor extends BaseProcessor {
-  private readonly config: InternalDifyConfig; // Use internal config type
+  // Use a different name for Dify specific config to avoid conflict with private base config
+  protected readonly difyConfig: InternalDifyConfig;
   private readonly tokenConfig = {
     margin: 100,
     maxTokens: 4000, // Note: This seems low for modern models, consider increasing
@@ -58,13 +60,15 @@ export class DifyProcessor extends BaseProcessor {
       throw new Error('DIFY_API_KEY_REVIEW environment variable is not set');
     }
 
-    // Initialize internal config
-    this.config = {
+    // Initialize Dify specific config
+    this.difyConfig = {
       baseUrl: baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl,
       user: user,
       apiKeySummarize: apiKeySummarize,
       apiKeyGrouping: apiKeyGrouping,
       apiKeyReview: apiKeyReview,
+      // Initialize path_instructions as empty, BaseProcessor might populate it later
+      path_instructions: [],
     };
     // Base config loading is handled by BaseProcessor's process method
   }
@@ -112,7 +116,7 @@ export class DifyProcessor extends BaseProcessor {
       const baseResult = await this.shouldPerformDetailedReview(file, this.tokenConfig);
 
       try {
-        const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeySummarize, {
+        const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeySummarize, {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || '',
@@ -121,7 +125,7 @@ export class DifyProcessor extends BaseProcessor {
             needsReviewPre: String(baseResult.needsReview),
           },
           response_mode: 'blocking' as const,
-          user: this.config.user,
+          user: this.difyConfig.user,
         });
 
         const summaryResponse = SummaryResponseSchema.parse(response);
@@ -191,22 +195,22 @@ export class DifyProcessor extends BaseProcessor {
           // Upload previous analysis if available
           let previousAnalysisFileId: string | undefined;
           if (previousAnalysis) {
-            previousAnalysisFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, previousAnalysis);
+            previousAnalysisFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, previousAnalysis);
             console.debug(`[Pass ${pass}/${PASSES}] Uploaded previous analysis (${previousAnalysisFileId})`);
           }
 
           // Upload files data
           const filesJson = this.formatFilesToJson(batchFiles);
-          const filesFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, filesJson);
+          const filesFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, filesJson);
 
           // Upload summarize results
           const summaryJson = this.formatSummarizeResultsToJson(batchEntries);
-          const summaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyGrouping, this.config.user, summaryJson);
+          const summaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, summaryJson);
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
 
           // Execute workflow with uploaded file IDs
-          const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyGrouping, {
+          const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyGrouping, {
             inputs: {
               title: prInfo.title,
               description: prInfo.body || '',
@@ -229,7 +233,7 @@ export class DifyProcessor extends BaseProcessor {
                 : undefined,
             },
             response_mode: 'blocking' as const,
-            user: this.config.user,
+            user: this.difyConfig.user,
           });
 
           if (!response) {
@@ -295,7 +299,7 @@ export class DifyProcessor extends BaseProcessor {
       try {
         // Upload aspects data
         const aspectsJson = JSON.stringify(summarizeResult.aspects);
-        const aspectsFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyReview, this.config.user, aspectsJson);
+        const aspectsFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, aspectsJson);
 
         // Upload overall summary data if available
         let overallSummaryFileId: string | undefined;
@@ -304,10 +308,10 @@ export class DifyProcessor extends BaseProcessor {
             description: overallSummary.description,
             crossCuttingConcerns: overallSummary.crossCuttingConcerns,
           });
-          overallSummaryFileId = await uploadFile(this.config.baseUrl, this.config.apiKeyReview, this.config.user, overallSummaryJson);
+          overallSummaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, overallSummaryJson);
         }
 
-        const response = await runWorkflow(`${this.config.baseUrl}/workflows/run`, this.config.apiKeyReview, {
+        const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || '',
@@ -328,7 +332,7 @@ export class DifyProcessor extends BaseProcessor {
               : undefined,
           },
           response_mode: 'blocking' as const,
-          user: this.config.user,
+          user: this.difyConfig.user,
         });
         const review = ReviewResponseSchema.parse(response);
 
