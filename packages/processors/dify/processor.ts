@@ -25,7 +25,7 @@ export class DifyProcessor extends BaseProcessor {
    */
   constructor() {
     super();
-    
+
     // Load Dify specific config from environment variables
     const baseUrl = process.env.DIFY_API_BASE_URL;
     const user = process.env.DIFY_API_EXEC_USER;
