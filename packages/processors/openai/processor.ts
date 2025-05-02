@@ -1,4 +1,7 @@
+import process from 'node:process';
 import { ImpactLevel } from '../base/schema.ts';
+// Import the base config type
+import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { CommentType } from './deps.ts';
@@ -10,7 +13,7 @@ import type {
   IReviewComment,
   OverallSummary,
   ReviewComment,
-  ReviewConfig,
+  // ReviewConfig, // Use specific type below
   SummarizeResult,
 } from './deps.ts';
 import { createGroupingPrompt, createReviewPrompt, createTriagePrompt } from './internal/prompts.ts';
@@ -22,18 +25,23 @@ export class OpenaiProcessor extends BaseProcessor {
     maxTokens: 4000,
   };
 
-  constructor(apiKey?: string) {
+  constructor() {
+    // Constructor takes no arguments now
     super();
+    // Load OpenAI API key from environment variable
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error('OpenAI API key is required');
+      throw new Error('OPENAI_API_KEY environment variable is not set');
     }
     this.openai = new OpenAI({ apiKey });
+    // Base config loading is handled by BaseProcessor's process method
   }
 
   /**
    * Implementation of summarize phase
    * Performs lightweight analysis using light weight model
    */
+  // Update config parameter type to base ReviewConfig
   override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
     const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema, 'summarize_response');
@@ -220,6 +228,7 @@ export class OpenaiProcessor extends BaseProcessor {
    * Implementation of review phase
    * Performs detailed review using GPT-4
    */
+  // Update config parameter type to base ReviewConfig
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
