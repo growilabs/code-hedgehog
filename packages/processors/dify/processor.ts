@@ -351,7 +351,7 @@ export class DifyProcessor extends BaseProcessor {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'pr',
+            type: 'file',
           });
         }
       } catch (error) {

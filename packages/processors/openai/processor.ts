@@ -310,7 +310,7 @@ export class OpenaiProcessor extends BaseProcessor {
           comments.push({
             path: file.path,
             body: `## Review Summary\n\n${review.summary}`,
-            type: 'inline',
+            type: 'file',
           });
         }
       } catch (error) {
