@@ -226,7 +226,7 @@ export class DifyProcessor extends BaseProcessor {
 
           // Update cumulative analysis for next batch
           previousAnalysis = accumulatedResult;
-          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Current analysis state:`, previousAnalysis);
+          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Current analysis state:`, JSON.stringify(previousAnalysis, null, 2));
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
         }
