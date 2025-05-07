@@ -183,6 +183,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   protected abstract generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined>;
 
@@ -194,7 +195,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param config Optional review configuration
    * @returns Map of file paths to summarized results
    */
-  abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>>;
+  abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config: ReviewConfig): Promise<Map<string, SummarizeResult>>;
 
   /**
    * Review phase - Execute detailed review based on summarized results
@@ -209,26 +210,26 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   abstract review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig,
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult>;
 
   /**
    * Main processing flow - now with 3 phases
    */
-  async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
+  async process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult> {
     // 0. Load base configuration
     await this.loadBaseConfig(); // Rename method call
 
     // 1. Execute summarize
-    const summarizeResults = await this.summarize(prInfo, files, config);
+    const summarizeResults = await this.summarize(prInfo, files, this.config);
 
     // 2. Generate overall summary
-    const overallSummary = await this.generateOverallSummary(prInfo, files, summarizeResults);
+    const overallSummary = await this.generateOverallSummary(prInfo, files, this.config, summarizeResults);
 
     // 3. Execute detailed review with context
-    return this.review(prInfo, files, summarizeResults, config, overallSummary);
+    return this.review(prInfo, files, this.config, summarizeResults, overallSummary);
   }
   /**
    * Format review comment with suggestion

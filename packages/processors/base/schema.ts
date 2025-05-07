@@ -72,6 +72,7 @@ export const PathInstructionSchema = z.object({
 });
 
 export const ConfigSchema = z.object({
+  language: z.string().optional(),
   file_path_instructions: z.array(PathInstructionSchema).optional(),
   path_filters: z.string().optional(),
   skip_simple_changes: z.boolean().optional().default(false),
@@ -81,6 +82,7 @@ export type Config = z.infer<typeof ConfigSchema>;
 
 // Default configuration (Moved from deps.ts, now using ReviewConfig type)
 export const DEFAULT_CONFIG: ReviewConfig = {
+  language: 'en-US',
   path_instructions: [], // Required by core
   file_path_instructions: [], // Local extension
   path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),

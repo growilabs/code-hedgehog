@@ -43,7 +43,7 @@ export class OpenaiProcessor extends BaseProcessor {
    * Performs lightweight analysis using light weight model
    */
   // Update config parameter type to base ReviewConfig
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
     // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
     const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema as unknown as any, 'summarize_response');
@@ -119,6 +119,7 @@ export class OpenaiProcessor extends BaseProcessor {
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
@@ -158,6 +159,7 @@ export class OpenaiProcessor extends BaseProcessor {
 
         try {
           const prompt = createGroupingPrompt({
+            config,
             title: prInfo.title,
             description: prInfo.body || '',
             files: batchFiles.map((f) => ({
@@ -235,8 +237,8 @@ export class OpenaiProcessor extends BaseProcessor {
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig,
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
@@ -257,6 +259,7 @@ export class OpenaiProcessor extends BaseProcessor {
 
       try {
         const prompt = createReviewPrompt({
+          config,
           title: prInfo.title,
           description: prInfo.body || '',
           filePath: file.path,

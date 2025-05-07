@@ -74,7 +74,7 @@ export class DifyProcessor extends BaseProcessor {
    * Analyze each file change lightly to determine if detailed review is needed
    */
   // Update config parameter type to base ReviewConfig
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
 
     for (const file of files) {
@@ -122,6 +122,7 @@ export class DifyProcessor extends BaseProcessor {
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
@@ -213,6 +214,7 @@ export class DifyProcessor extends BaseProcessor {
                     type: 'document',
                   }
                 : undefined,
+              language: config.language,
             },
             response_mode: 'blocking' as const,
             user: this.difyConfig.user,
@@ -259,8 +261,8 @@ export class DifyProcessor extends BaseProcessor {
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig, // Update config parameter type to base ReviewConfig
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig, // Update config parameter type to base ReviewConfig
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     // If we don't have overall summary, we can't do a proper review
@@ -317,6 +319,7 @@ export class DifyProcessor extends BaseProcessor {
                   type: 'document',
                 }
               : undefined,
+            language: config.language,
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,
