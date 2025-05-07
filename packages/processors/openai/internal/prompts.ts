@@ -2,6 +2,7 @@
  * OpenAI processor prompt templates
  */
 
+import type { ReviewConfig } from '../../base/types.ts';
 import type { ReviewAspect } from './aspects.ts';
 import { defaultReviewAspects } from './aspects.ts';
 
@@ -58,6 +59,7 @@ Consider these factors:
  * Template for grouping/overall summary phase prompt
  */
 export const createGroupingPrompt = ({
+  config,
   title,
   description,
   files,
@@ -65,6 +67,7 @@ export const createGroupingPrompt = ({
   previousAnalysis,
   aspects = defaultReviewAspects,
 }: {
+  config: ReviewConfig;
   title: string;
   description: string;
   files: { path: string; patch: string }[];
@@ -72,6 +75,8 @@ export const createGroupingPrompt = ({
   previousAnalysis?: string;
   aspects?: ReviewAspect[];
 }) => `You are analyzing code changes in a pull request.
+
+IMPORTANT: Response must be in the language with ISO code: ${config.language}
 
 ${
   previousAnalysis
@@ -221,6 +226,7 @@ Note about cross-cutting concerns:
  * Template for detailed review phase prompt
  */
 export const createReviewPrompt = ({
+  config,
   title,
   description,
   filePath,
@@ -228,6 +234,7 @@ export const createReviewPrompt = ({
   instructions,
   aspects,
 }: {
+  config: ReviewConfig;
   title: string;
   description: string;
   filePath: string;
@@ -236,6 +243,8 @@ export const createReviewPrompt = ({
   aspects?: { name: string; description: string }[];
 }) => `You are a code reviewer performing detailed analysis.
 Please review the following code changes and provide specific feedback.
+
+IMPORTANT: Response must be in the language with ISO code: ${config.language}
 
 ## Context
 
