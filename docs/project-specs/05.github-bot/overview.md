@@ -81,3 +81,29 @@ GitHub Bot の代表的な処理フローの概要です。詳細なステップ
     -   詳細は [GitHub Bot Runner 仕様](./github-bot-runner.md#9-アーキテクチャと処理フロー-runner-視点) を参照してください。
 -   **5.2. インタラクション (Runner 視点):** `issue_comment` イベント (`@bot` メンション) をトリガーに、Runner がコメント解析、コンテキスト収集、Processor の `handleInteraction` 呼び出し、応答投稿を行います。
     -   詳細は [GitHub Bot Runner 仕様](./github-bot-runner.md#9-アーキテクチャと処理フロー-runner-視点) を参照してください。
+
+## 6. 将来的な拡張性 (オプション)
+
+### 6.1. GitLab への対応
+
+現状の Code Hedgehog Bot は GitHub プラットフォーム向けに設計されていますが、アーキテクチャの分離 (Runner と Processor) および VCS 連携部分の抽象化 (`@code-hedgehog/core` の `IVCSConfig`, `createVCS`) により、将来的には GitLab などの他のバージョン管理プラットフォームへの対応も視野に入れています。
+
+GitLab へ対応するためには、主に以下の開発・検討が必要となります。
+
+-   **GitLab 用 VCS Client の実装:**
+    -   GitLab API と連携するための新しい `GitLabVCSClient` を `@code-hedgehog/core` 内に実装します。
+    -   これには、Merge Request 情報取得、差分取得、コメント投稿 (ディスカッション、スレッド機能)、CI/CD パイプラインステータス更新などの GitLab API ラッパーが含まれます。
+-   **GitLab Runner (アダプター) の開発:**
+    -   GitLab CI/CD パイプライン上で動作する新しい `GitLab Bot Runner` を開発します。
+    -   この Runner は、GitLab のイベント (Merge Request 作成・更新、コメント投稿など) をトリガーとし、`GitLabVCSClient` を使用して GitLab と通信し、収集した情報を Processor に渡します。
+-   **イベントトリガーの対応:**
+    -   GitLab CI/CD の `rules` や `workflow` を使用して、GitHub Actions と同等のイベントトリガーを設定します。
+-   **API と機能の差異吸収:**
+    -   GitLab API のエンドポイント、認証方法、リクエスト/レスポンス形式に対応します。
+    -   GitHub の "Checks API" や "Resolve conversation" に相当する GitLab の機能 (例: Merge Request のパイプラインステータス、ディスカッションの解決機能) との連携方法を設計・実装します。
+-   **設定ファイルの管理:**
+    -   GitLab リポジトリ内での設定ファイルの配置場所や読み込み方法を定義します。
+-   **インタラクション (`@bot`) の実現:**
+    -   GitLab のコメントシステムで `@bot` メンションを検知し、同様のインタラクションフローを実現する方法を検討します。
+
+`Processor` 自体は VCS プラットフォームに依存しない設計であるため、`Runner` が適切な情報を提供できれば、GitLab 環境でも共通して利用できる見込みです。GitLab への正式対応は将来的な課題となりますが、設計段階から拡張性を考慮しています。
