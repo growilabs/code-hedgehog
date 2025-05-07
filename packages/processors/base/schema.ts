@@ -47,10 +47,13 @@ export type OverallSummary = z.infer<typeof OverallSummarySchema>;
 /**
  * Structure for review comments
  */
+/**
+ * Schema for review comments
+ */
 export const ReviewCommentSchema = z.object({
-  message: z.string(),
-  line_number: z.number().optional(),
-  suggestion: z.string().optional(),
+  message: z.string(),      // Important review comment
+  suggestion: z.string().optional(),  // Optional improvement suggestion
+  line_number: z.number().optional()  // Optional line number reference
 });
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
 
@@ -58,8 +61,9 @@ export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
  * Response format for review workflow
  */
 export const ReviewResponseSchema = z.object({
-  comments: z.array(ReviewCommentSchema),
-  summary: z.string().optional(),
+  comments: z.array(ReviewCommentSchema),  // Comments to be written in PR
+  suppressed_comments: z.array(ReviewCommentSchema),  // Comments not to be written directly in PR
+  summary: z.string().optional(),  // Overall evaluation of changes
 });
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
 
