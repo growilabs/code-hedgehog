@@ -28,13 +28,13 @@ jobs:
         with:
           deno-version: 2.2.11
 
-      # ステップ3: リンターの実行
-      - name: Run Linter
-        run: deno task lint
+      # ステップ3: リンターと型チェックの実行
+      - name: Run Checks
+        run: deno task check-all
 
-      # ステップ4: テストの実行とカバレッジデータの生成
-      - name: Run Tests with Coverage
-        run: deno task test:cov
+      # ステップ4: テストの実行とカバレッジデータの生成 (CI用)
+      - name: Run Tests with Coverage (CI)
+        run: deno task test:cov:ci
 
       # ステップ5: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
       - name: Check Coverage Threshold

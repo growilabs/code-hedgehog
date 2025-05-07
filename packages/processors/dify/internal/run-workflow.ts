@@ -1,12 +1,10 @@
 import process from 'node:process';
 import type { z } from '../deps.ts';
+
+import type { OverallSummary, ReviewResponse, SummaryResponse } from '../deps.ts';
 import { OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from '../deps.ts';
 import type { DifyRequestBody } from './schema.ts';
 import { DifyOutputsSchema } from './schema.ts';
-
-type SummaryResponse = z.infer<typeof SummaryResponseSchema>;
-type OverallSummary = z.infer<typeof OverallSummarySchema>;
-type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
 
 type WorkflowType = 'summarize' | 'grouping' | 'review';
 
