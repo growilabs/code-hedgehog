@@ -24,7 +24,7 @@
 
 ```yaml
 # レビュー言語
-review_language: "ja-JP" # デフォルトは "en-US"
+language: "ja-JP" # デフォルトは "en-US"
 
 # PRレベルの制御
 ignore_draft_prs: true # ドラフトPRを無視するか (デフォルト: true)
@@ -64,7 +64,7 @@ checks:
 
 ## 設定項目
 
-### review_language
+### language
 
 -   レビューに使用する言語コード (例: `"ja-JP"`, `"en-US"`)。
 -   型: `string`
@@ -171,7 +171,7 @@ checks:
 ### 1. 基本的な設定 (TypeScript プロジェクト)
 
 ```yaml
-review_language: "ja-JP"
+language: "ja-JP"
 skip_simple_changes: true
 path_filters:
   - "dist/**"
