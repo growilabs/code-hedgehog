@@ -1,6 +1,5 @@
 import process from 'node:process';
-// Import the base config type and PathInstruction
-import type { PathInstruction, ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig and PathInstruction
+import type { ReviewConfig } from '../base/types.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
