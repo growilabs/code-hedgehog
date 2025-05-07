@@ -214,6 +214,7 @@ export class DifyProcessor extends BaseProcessor {
                     type: 'document',
                   }
                 : undefined,
+              language: config.language,
             },
             response_mode: 'blocking' as const,
             user: this.difyConfig.user,
@@ -318,6 +319,7 @@ export class DifyProcessor extends BaseProcessor {
                   type: 'document',
                 }
               : undefined,
+            language: config.language,
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,
