@@ -41,14 +41,22 @@ async function main() {
 
   // Upload file data
   console.log('Uploading files data...');
-  const filesJson = JSON.stringify(testFiles);
-  const filesFileId = await uploadFile(baseUrl, apiKey, 'moogle', filesJson);
+  const filesData = testFiles.map((file) => ({
+    path: file.path,
+    patch: file.patch,
+  }));
+  const filesFileId = await uploadFile(baseUrl, apiKey, 'moogle', filesData);
   console.log('Files uploaded, ID:', filesFileId);
 
   // Upload summary data
   console.log('Uploading summary data...');
-  const summaryJson = JSON.stringify(testSummarizeResults);
-  const summaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', summaryJson);
+  const summaryData = testSummarizeResults.map((result) => ({
+    path: result.path,
+    summary: result.summary,
+    needsReview: result.needsReview,
+    reason: result.reason,
+  }));
+  const summaryFileId = await uploadFile(baseUrl, apiKey, 'moogle', summaryData);
   console.log('Summary uploaded, ID:', summaryFileId);
 
   // Execute workflow
