@@ -9,11 +9,15 @@ export type {
   IPullRequestInfo,
   IPullRequestProcessedResult,
   IPullRequestProcessor,
+  ProcessInput, // Added
+  ReviewConfig, // Added
+  CommentInfo, // Added
 } from '@code-hedgehog/core';
 
 // Local schema types and constants re-exported
 export { DEFAULT_CONFIG } from './schema.ts';
-// export type { ReviewConfig, TokenConfig } from './types.ts'; // Removed re-export, types are defined in types.ts
+// TokenConfig is specific to base processor, so it's imported directly from ./types.ts in processor.ts
+// export type { TokenConfig } from './types.ts';
 
 // Internal utilities re-exported
 export { matchesGlobPattern } from './internal/matches-glob-pattern.ts';

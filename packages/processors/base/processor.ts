@@ -1,5 +1,6 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
-import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
+// NOTE: ReviewConfig is now imported from deps.ts which gets it from @code-hedgehog/core
+import type { CommentInfo, IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, ProcessInput, ReviewConfig } from './deps.ts';
+import type { TokenConfig } from './types.ts'; // TokenConfig is specific to base processor
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
@@ -44,19 +45,23 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Check if file should be filtered based on path_filters
    */
   protected isFileFiltered(filePath: string): boolean {
-    if (!this.config.path_filters) return false;
-
-    const filters = this.config.path_filters
-      .split('\n')
-      .map((f: string) => f.trim())
-      .filter(Boolean);
-
-    return filters.some((filter: string) => {
-      if (filter.startsWith('!')) {
-        return matchesGlobPattern(filePath, filter.slice(1));
-      }
-      return false;
-    });
+    // TODO: path_filters was part of the old schema.
+    // The new ReviewConfig from @code-hedgehog/core has path_instructions which is an array of objects.
+    // This filtering logic needs to be adapted to the new structure if path-based filtering is still desired.
+    // For now, returning false to not filter anything based on old logic.
+    // if (!this.config.path_instructions || this.config.path_instructions.length === 0) return false;
+    //
+    // const filters = this.config.path_instructions
+    //   .map((pi) => pi.path) // Assuming we might want to filter based on the path patterns themselves
+    //   .filter(Boolean);
+    //
+    // return filters.some((filter: string) => {
+    //   if (filter.startsWith('!')) { // This logic might need to change based on how PathInstruction is used for filtering
+    //     return matchesGlobPattern(filePath, filter.slice(1));
+    //   }
+    //   return false; // Or true depending on inclusive/exclusive logic
+    // });
+    return false; // Placeholder: not filtering for now
   }
 
   /**
@@ -94,7 +99,8 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     // Determine if changes are simple
     const isSimpleChange = this.isSimpleChange(file.patch);
-    if (isSimpleChange && this.config.skip_simple_changes) {
+    if (isSimpleChange && this.config.skipSimpleChanges) {
+      // Changed to skipSimpleChanges
       return {
         needsReview: false,
         reason: 'Changes appear to be simple (formatting, comments, etc.)',
@@ -184,6 +190,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
+    commentHistory?: CommentInfo[],
   ): Promise<OverallSummary | undefined>;
 
   /**
@@ -192,9 +199,15 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param prInfo Pull request information
    * @param files List of file changes to review
    * @param config Optional review configuration
+   * @param commentHistory Optional array of existing comments
    * @returns Map of file paths to summarized results
    */
-  abstract summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>>;
+  abstract summarize(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    config?: ReviewConfig,
+    commentHistory?: CommentInfo[],
+  ): Promise<Map<string, SummarizeResult>>;
 
   /**
    * Review phase - Execute detailed review based on summarized results
@@ -204,6 +217,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * @param summarizeResults Previous summarized results
    * @param config Optional review configuration
    * @param overallSummary Overall summary of changes to provide context, if available
+   * @param commentHistory Optional array of existing comments
    * @returns Review comments and optionally updated PR info
    */
   abstract review(
@@ -212,23 +226,33 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     summarizeResults: Map<string, SummarizeResult>,
     config?: ReviewConfig,
     overallSummary?: OverallSummary,
+    commentHistory?: CommentInfo[],
   ): Promise<IPullRequestProcessedResult>;
 
   /**
    * Main processing flow - now with 3 phases
    */
-  async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
-    // 0. Load base configuration
-    await this.loadBaseConfig(); // Rename method call
+  async process(input: ProcessInput): Promise<IPullRequestProcessedResult> {
+    const { prInfo, files, config: inputConfig, commentHistory } = input;
+
+    // 0. Load base configuration from .coderabbitai.yaml (or default path)
+    // This sets `this.config`.
+    await this.loadBaseConfig();
+
+    // Determine the effective configuration to use.
+    // If inputConfig is provided (e.g., from Action inputs), it might override or merge with `this.config`.
+    // For now, we'll prioritize inputConfig if it exists, otherwise use the loaded `this.config`.
+    // A more sophisticated merging strategy might be needed later.
+    const effectiveConfig = inputConfig ?? this.config;
 
     // 1. Execute summarize
-    const summarizeResults = await this.summarize(prInfo, files, config);
+    const summarizeResults = await this.summarize(prInfo, files, effectiveConfig, commentHistory);
 
     // 2. Generate overall summary
-    const overallSummary = await this.generateOverallSummary(prInfo, files, summarizeResults);
+    const overallSummary = await this.generateOverallSummary(prInfo, files, summarizeResults, commentHistory);
 
     // 3. Execute detailed review with context
-    return this.review(prInfo, files, summarizeResults, config, overallSummary);
+    return this.review(prInfo, files, summarizeResults, effectiveConfig, overallSummary, commentHistory);
   }
   /**
    * Format review comment with suggestion

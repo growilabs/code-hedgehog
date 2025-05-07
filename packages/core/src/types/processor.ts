@@ -1,5 +1,5 @@
 import type { IFileChange } from './file.ts';
-import type { IReviewComment } from './review.ts';
+import type { CommentInfo, IReviewComment } from './review.ts';
 import type { IPullRequestInfo } from './vcs.ts';
 
 /**
@@ -26,11 +26,21 @@ export type IPullRequestProcessedResult = {
 };
 
 /**
+ * Input for the main processing flow of a pull request.
+ */
+export interface ProcessInput {
+  prInfo: IPullRequestInfo;
+  files: IFileChange[];
+  config?: ReviewConfig;
+  commentHistory?: CommentInfo[];
+}
+
+/**
  * Interface for processor implementing two-phase review process
  */
 export interface IPullRequestProcessor {
   /**
    * Main processing flow
    */
-  process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult>;
+  process(input: ProcessInput): Promise<IPullRequestProcessedResult>;
 }

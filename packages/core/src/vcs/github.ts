@@ -7,7 +7,16 @@
  */
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
-import type { ICommitComparisonShas, IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
+import type {
+  CommentInfo,
+  CreateCheckRunParams,
+  ICommitComparisonShas,
+  IFileChange,
+  IPullRequestInfo,
+  IReviewComment,
+  IVCSConfig,
+  UpdateCheckRunParams,
+} from '../types/mod.ts';
 import { BaseVCS } from './base.ts';
 import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
 
@@ -330,6 +339,145 @@ export class GitHubVCS extends BaseVCS {
       }
     } catch (error) {
       throw this.formatError('create review', error);
+    }
+  }
+
+  /**
+   * Fetches existing comments on a pull request.
+   * This includes both review comments and general PR (issue) comments.
+   */
+  async getComments(pullRequestId: string | number): Promise<CommentInfo[]> {
+    const prNumber = Number(pullRequestId);
+    if (Number.isNaN(prNumber)) {
+      throw new Error('Invalid pullRequestId for getComments');
+    }
+
+    const allComments: CommentInfo[] = [];
+
+    try {
+      // Fetch review comments
+      const reviewCommentsPaginator = this.api.paginate.iterator(this.api.rest.pulls.listReviewComments, {
+        owner: this.context.owner,
+        repo: this.context.repo,
+        pull_number: prNumber,
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+
+      for await (const response of reviewCommentsPaginator) {
+        for (const comment of response.data) {
+          allComments.push({
+            id: String(comment.id),
+            body: comment.body,
+            user: comment.user?.login ?? 'unknown',
+            createdAt: comment.created_at,
+            url: comment.html_url,
+            path: comment.path,
+            position: comment.line ?? comment.original_line, // Prefer 'line' if available (for multi-line comments)
+            in_reply_to_id: comment.in_reply_to_id ? String(comment.in_reply_to_id) : undefined,
+          });
+        }
+      }
+      core.debug(`Fetched ${allComments.length} review comments for PR #${prNumber}`);
+
+      // Fetch issue comments (general PR comments)
+      let issueCommentsCount = 0;
+      const issueCommentsPaginator = this.api.paginate.iterator(this.api.rest.issues.listComments, {
+        owner: this.context.owner,
+        repo: this.context.repo,
+        issue_number: prNumber, // For PRs, issue_number is the same as pull_number
+        per_page: GitHubVCS.MAX_PER_PAGE,
+      });
+
+      for await (const response of issueCommentsPaginator) {
+        for (const comment of response.data) {
+          // Avoid adding the main PR description as a comment if it appears here
+          if (comment.user?.type === 'Bot' && comment.body && comment.body.includes('<!-- PULL_REQUEST_DESCRIPTION -->')) {
+            continue;
+          }
+          allComments.push({
+            id: String(comment.id),
+            body: comment.body_text ?? comment.body ?? '', // Prefer body_text, then body, then empty string
+            user: comment.user?.login ?? 'unknown',
+            createdAt: comment.created_at,
+            url: comment.html_url,
+            // Issue comments are not typically associated with a specific file path or line
+            path: undefined,
+            position: undefined,
+            // Issue comments don't have in_reply_to_id in the same way review comment threads do
+            in_reply_to_id: undefined,
+          });
+          issueCommentsCount++;
+        }
+      }
+      core.debug(`Fetched ${issueCommentsCount} issue comments for PR #${prNumber}`);
+
+      // Sort comments by creation date
+      allComments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      core.info(`Fetched a total of ${allComments.length} comments for PR #${prNumber}`);
+      return allComments;
+    } catch (error) {
+      throw this.formatError(`fetch comments for PR #${prNumber}`, error);
+    }
+  }
+
+  /**
+   * Creates a new check run.
+   * @param params Parameters for creating the check run.
+   * @returns A promise that resolves to the ID of the created check run.
+   */
+  async createCheckRun(params: CreateCheckRunParams): Promise<number> {
+    try {
+      const apiParams = {
+        name: params.name,
+        head_sha: params.head_sha,
+        status: params.status,
+        conclusion: params.conclusion,
+        started_at: params.started_at,
+        completed_at: params.completed_at,
+        output: params.output,
+        details_url: params.details_url,
+        external_id: params.external_id,
+        // TODO: Add actions if/when CheckRunAction is defined and used
+      };
+      const response = await this.api.rest.checks.create({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        ...apiParams,
+      });
+      core.debug(`Created check run #${response.data.id} with name "${apiParams.name}" and status "${apiParams.status ?? 'queued'}"`);
+      return response.data.id;
+    } catch (error) {
+      throw this.formatError(`create check run with name "${params.name}"`, error); // Keep original params.name for error logging consistency
+    }
+  }
+
+  /**
+   * Updates an existing check run.
+   * @param checkRunId The ID of the check run to update.
+   * @param params Parameters for updating the check run.
+   * @returns A promise that resolves when the check run is updated.
+   */
+  async updateCheckRun(checkRunId: number, params: UpdateCheckRunParams): Promise<void> {
+    try {
+      await this.api.rest.checks.update({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        check_run_id: checkRunId,
+        // Explicitly map params for update as well, to be safe
+        name: params.name,
+        status: params.status,
+        conclusion: params.conclusion,
+        completed_at: params.completed_at,
+        output: params.output,
+        details_url: params.details_url,
+        // TODO: Add actions if/when CheckRunAction is defined and used
+      });
+      core.debug(
+        `Updated check run #${checkRunId}${params.name ? ` with name "${params.name}"` : ''}${params.status ? ` to status "${params.status}"` : ''}${params.conclusion ? ` with conclusion "${params.conclusion}"` : ''}`,
+      );
+    } catch (error) {
+      throw this.formatError(`update check run #${checkRunId}`, error);
     }
   }
 }

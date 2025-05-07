@@ -1,7 +1,16 @@
 import process from 'node:process';
-import type { ReviewConfig } from '../base/types.ts';
+// import type { ReviewConfig } from '../base/types.ts'; // No longer from base/types
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
+import type {
+  CommentInfo,
+  IFileChange,
+  IPullRequestInfo,
+  IPullRequestProcessedResult,
+  IReviewComment,
+  OverallSummary,
+  ReviewConfig,
+  SummarizeResult,
+} from './deps.ts'; // Added ReviewConfig, CommentInfo
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
@@ -73,8 +82,13 @@ export class DifyProcessor extends BaseProcessor {
    * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
-  // Update config parameter type to base ReviewConfig
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  // Update config parameter type to core ReviewConfig and add commentHistory
+  override async summarize(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    config?: ReviewConfig,
+    commentHistory?: CommentInfo[],
+  ): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
 
     for (const file of files) {
@@ -89,6 +103,7 @@ export class DifyProcessor extends BaseProcessor {
             filePath: file.path,
             patch: file.patch || 'No changes',
             needsReviewPre: String(baseResult.needsReview),
+            // TODO: Potentially pass commentHistory or relevant parts to the Dify workflow inputs
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,
@@ -123,6 +138,7 @@ export class DifyProcessor extends BaseProcessor {
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
+    commentHistory?: CommentInfo[], // Added commentHistory
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
     const BATCH_SIZE = 2; // Number of files to process at once
@@ -213,6 +229,7 @@ export class DifyProcessor extends BaseProcessor {
                     type: 'document',
                   }
                 : undefined,
+              // TODO: Potentially pass commentHistory or relevant parts to the Dify workflow inputs
             },
             response_mode: 'blocking' as const,
             user: this.difyConfig.user,
@@ -260,8 +277,9 @@ export class DifyProcessor extends BaseProcessor {
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig, // Update config parameter type to base ReviewConfig
+    config?: ReviewConfig, // config parameter type is now core ReviewConfig
     overallSummary?: OverallSummary,
+    commentHistory?: CommentInfo[], // Added commentHistory
   ): Promise<IPullRequestProcessedResult> {
     // If we don't have overall summary, we can't do a proper review
     if (!overallSummary) {
@@ -317,6 +335,7 @@ export class DifyProcessor extends BaseProcessor {
                   type: 'document',
                 }
               : undefined,
+            // TODO: Potentially pass commentHistory or relevant parts to the Dify workflow inputs
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,

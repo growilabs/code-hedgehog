@@ -1,7 +1,5 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig } from '../../core/mod.ts';
+import type { CommentInfo, IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ProcessInput, ReviewConfig } from '../../core/mod.ts'; // Added ProcessInput, CommentInfo
 import { BaseProcessor } from '../base/mod.ts';
-// Remove duplicate import below
-// import { BaseProcessor } from '../base/mod.ts';
 // Import OverallSummary from schema and SummarizeResult from types
 import type { OverallSummary } from '../base/schema.ts';
 import type { SummarizeResult } from '../base/types.ts';
@@ -10,7 +8,8 @@ export class AcmeProcessor extends BaseProcessor {
   /**
    * @inheritdoc
    */
-  override async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
+  override async process(input: ProcessInput): Promise<IPullRequestProcessedResult> {
+    const { prInfo, files, config } = input;
     // simply comment on each file
     const comments: IReviewComment[] = await Promise.all(
       files.map(async (file) => {
@@ -36,8 +35,9 @@ export class AcmeProcessor extends BaseProcessor {
   override async generateOverallSummary(
     _prInfo: IPullRequestInfo,
     _files: IFileChange[],
-    summarizeResults: Map<string, SummarizeResult>, // Use Map<string, SummarizeResult>
-    _config?: ReviewConfig,
+    summarizeResults: Map<string, SummarizeResult>,
+    // _config?: ReviewConfig, // BaseProcessor's generateOverallSummary does not have config
+    _commentHistory?: CommentInfo[],
   ): Promise<OverallSummary | undefined> {
     // Use OverallSummary here
     // TODO: Implement actual overall summary generation
@@ -50,10 +50,10 @@ export class AcmeProcessor extends BaseProcessor {
    */
   // Correct the signature to match BaseProcessor
   override async summarize(
-    // summarize should take files array
     _prInfo: IPullRequestInfo,
     files: IFileChange[],
-    _config?: ReviewConfig,
+    _config?: ReviewConfig, // BaseProcessor's summarize has config
+    _commentHistory?: CommentInfo[],
   ): Promise<Map<string, SummarizeResult>> {
     // TODO: Implement actual summarization
     console.warn('[ACME] summarize not implemented', files);
@@ -65,12 +65,12 @@ export class AcmeProcessor extends BaseProcessor {
    */
   // Correct the signature to match BaseProcessor
   override async review(
-    // review needs summarizeResults and overallSummary
     _prInfo: IPullRequestInfo,
     _files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
-    _config?: ReviewConfig,
-    _overallSummary?: OverallSummary, // Use OverallSummary here
+    _config?: ReviewConfig, // BaseProcessor's review has config
+    _overallSummary?: OverallSummary,
+    _commentHistory?: CommentInfo[],
   ): Promise<IPullRequestProcessedResult> {
     // TODO: Implement actual review generation
     console.warn('[ACME] review not implemented', summarizeResults);

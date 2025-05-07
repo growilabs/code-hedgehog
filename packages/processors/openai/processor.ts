@@ -1,20 +1,28 @@
 import process from 'node:process';
-import { ImpactLevel } from '../base/schema.ts';
-// Import the base config type
-import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
+import { ImpactLevel } from '../base/schema.ts'; // This might be from an old schema, ensure it's still relevant or update.
+// Import the base config type from core via deps.ts
+// import type { ReviewConfig } from '../base/types.ts'; // No longer from base/types
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { CommentType } from './deps.ts';
 import type { z } from './deps.ts'; // Import zod for type assertion
-import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
+import {
+  BaseProcessor,
+  type CommentInfo,
+  OpenAI,
+  OverallSummarySchema,
+  type ReviewConfig,
+  ReviewResponseSchema,
+  SummaryResponseSchema,
+  zodResponseFormat,
+} from './deps.ts'; // Added ReviewConfig, CommentInfo from deps
 import type {
   IFileChange,
   IPullRequestInfo,
   IPullRequestProcessedResult,
   IReviewComment,
   OverallSummary,
-  ReviewComment,
-  // ReviewConfig, // Use specific type below
+  ReviewComment, // This is likely the schema for individual comments within ReviewResponseSchema
   SummarizeResult,
 } from './deps.ts';
 import { createGroupingPrompt, createReviewPrompt, createTriagePrompt } from './internal/prompts.ts';
@@ -42,8 +50,13 @@ export class OpenaiProcessor extends BaseProcessor {
    * Implementation of summarize phase
    * Performs lightweight analysis using light weight model
    */
-  // Update config parameter type to base ReviewConfig
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  // Update config parameter type to base ReviewConfig and add commentHistory
+  override async summarize(
+    prInfo: IPullRequestInfo,
+    files: IFileChange[],
+    config?: ReviewConfig,
+    commentHistory?: CommentInfo[],
+  ): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
     // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
     const summaryResponseFormat = zodResponseFormat(SummaryResponseSchema as unknown as any, 'summarize_response');
@@ -59,6 +72,7 @@ export class OpenaiProcessor extends BaseProcessor {
           filePath: file.path,
           patch: file.patch || 'No changes',
           needsReviewPre: baseResult.needsReview,
+          // TODO: Potentially pass commentHistory or relevant parts to the prompt
         });
 
         const response = await this.openai.responses.create({
@@ -120,6 +134,7 @@ export class OpenaiProcessor extends BaseProcessor {
     prInfo: IPullRequestInfo,
     files: IFileChange[],
     summarizeResults: Map<string, SummarizeResult>,
+    commentHistory?: CommentInfo[], // Added commentHistory
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
     const BATCH_SIZE = 2; // Number of files to process at once
@@ -171,6 +186,7 @@ export class OpenaiProcessor extends BaseProcessor {
               reason: result.reason,
             })),
             previousAnalysis,
+            // TODO: Potentially pass commentHistory or relevant parts to the prompt
           });
 
           const response = await this.openai.responses.create({
@@ -238,6 +254,7 @@ export class OpenaiProcessor extends BaseProcessor {
     summarizeResults: Map<string, SummarizeResult>,
     config?: ReviewConfig,
     overallSummary?: OverallSummary,
+    commentHistory?: CommentInfo[], // Added commentHistory
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
     // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
@@ -266,6 +283,7 @@ export class OpenaiProcessor extends BaseProcessor {
             name: aspect.key,
             description: aspect.description,
           })),
+          // TODO: Potentially pass commentHistory or relevant parts to the prompt
         });
 
         const response = await this.openai.responses.create({

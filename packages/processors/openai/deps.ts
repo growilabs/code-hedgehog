@@ -1,5 +1,5 @@
 // Core dependencies
-export type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, CommentType } from '@code-hedgehog/core';
+export type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, ReviewConfig, CommentType, CommentInfo } from '@code-hedgehog/core'; // Added CommentInfo
 
 // Base processor
 export {
