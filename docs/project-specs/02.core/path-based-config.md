@@ -11,6 +11,10 @@
 設定ファイルは `.coderabbitai.yaml` という名前でプロジェクトのルートディレクトリに配置します。
 
 ```yaml
+# LLM のレスポンスの言語
+# ISO 言語コードを指定する、デフォルトは "en-US"
+language: "ja-JP"
+
 # パスベースのレビュー指示
 file_path_instructions:
   - path: "src/**/*.{ts,tsx}"
