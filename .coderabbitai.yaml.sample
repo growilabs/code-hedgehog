@@ -1,5 +1,10 @@
 # これは Coderabbit AI の設定ファイルのサンプルです。
 # この設定を使用するには、このファイルをリポジトリのルートに `.coderabbitai.yaml` としてコピーしてください。
+
+# LLM のレスポンスの言語
+# ISO 言語コードを指定する、デフォルトは "en-US"
+language: "ja-JP"
+
 # パスベースのレビュー指示
 file_path_instructions:
   - path: "src/**/*.{ts,tsx}"

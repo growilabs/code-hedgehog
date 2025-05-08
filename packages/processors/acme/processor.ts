@@ -10,11 +10,11 @@ export class AcmeProcessor extends BaseProcessor {
   /**
    * @inheritdoc
    */
-  override async process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult> {
+  override async process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult> {
     // simply comment on each file
     const comments: IReviewComment[] = await Promise.all(
       files.map(async (file) => {
-        const instructions = this.getInstructionsForFile(file.path, config);
+        const instructions = this.getInstructionsForFile(file.path);
         return {
           path: file.path,
           position: 1,
@@ -36,8 +36,8 @@ export class AcmeProcessor extends BaseProcessor {
   override async generateOverallSummary(
     _prInfo: IPullRequestInfo,
     _files: IFileChange[],
+    _config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>, // Use Map<string, SummarizeResult>
-    _config?: ReviewConfig,
   ): Promise<OverallSummary | undefined> {
     // Use OverallSummary here
     // TODO: Implement actual overall summary generation
@@ -68,8 +68,8 @@ export class AcmeProcessor extends BaseProcessor {
     // review needs summarizeResults and overallSummary
     _prInfo: IPullRequestInfo,
     _files: IFileChange[],
+    _config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
-    _config?: ReviewConfig,
     _overallSummary?: OverallSummary, // Use OverallSummary here
   ): Promise<IPullRequestProcessedResult> {
     // TODO: Implement actual review generation

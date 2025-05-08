@@ -30,6 +30,7 @@ export interface PathInstruction {
 
 // Base review configuration extending the core config
 export interface LocalReviewConfig {
+  language?: string;
   file_path_instructions?: PathInstruction[];
   path_filters?: string;
   skip_simple_changes?: boolean;
