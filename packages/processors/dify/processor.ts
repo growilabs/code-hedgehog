@@ -2,7 +2,7 @@ import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
-import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
+import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, ReviewCommentSchema, SummaryResponseSchema, type ReviewComment } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 // Internal configuration type for DifyProcessor
@@ -32,7 +32,7 @@ export class DifyProcessor extends BaseProcessor {
   protected readonly difyConfig: InternalDifyConfig;
 
   // Collection of suppressed comments grouped by file path
-  private suppressedComments: Record<string, IReviewComment[]> = {};
+  private suppressedComments: Record<string, ReviewComment[]> = {};
 
   /**
    * Group comments by file path and line number
@@ -98,7 +98,7 @@ export class DifyProcessor extends BaseProcessor {
   /**
    * Collect suppressed comment for a file
    */
-  private collectSuppressedComment(filePath: string, comment: IReviewComment): void {
+  private collectSuppressedComment(filePath: string, comment: ReviewComment): void {
     if (!this.suppressedComments[filePath]) {
       this.suppressedComments[filePath] = [];
     }
@@ -440,7 +440,8 @@ export class DifyProcessor extends BaseProcessor {
         // Collect suppressed comments
         if (review.suppressed_comments && review.suppressed_comments.length > 0) {
           for (const comment of review.suppressed_comments) {
-            this.collectSuppressedComment(file.path, comment);
+            // comment is already of type ReviewComment as it comes from ReviewCommentSchema
+            this.collectSuppressedComment(file.path, comment as ReviewComment);
           }
         }
       } catch (error) {
