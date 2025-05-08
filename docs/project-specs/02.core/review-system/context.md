@@ -1,553 +1,164 @@
-# コンテキスト管理の仕様
+# コンテキスト管理の仕様 (旧設計案)
 
-## 1. 概要
+**重要:** このドキュメントは、Code Hedgehog の初期設計段階で検討された、より複雑なコンテキスト管理システムに関する**古い仕様案**です。特に「3段階レビュープロセス」や「アスペクト」といった概念は、現在の GitHub Actions ベースの設計では採用されていません。
 
-このドキュメントでは、[3段階レビュープロセス](./process.md)を支えるコンテキスト管理システムの仕様を説明します。
+現在のコンテキスト収集・管理に関する仕様は、以下のドキュメントを参照してください。
+-   [GitHub Bot 仕様](../../project-specs/05.github-bot/overview.md) (特にセクション 2.2 コンテキスト収集)
+-   [GitHub Bot: コメント関連機能仕様](../../project-specs/05.github-bot/comment-chain-features.md)
+-   [レビューコンテキスト管理仕様 (旧設計案)](./review-context.md) (よりシンプルな旧設計案)
 
-code-hedgehogのコンテキスト管理システムは、高品質なコードレビューを実現するための基盤となるシステムです。
-レビューの文脈を理解・管理し、より深い洞察と効率的なレビュープロセスを実現します。
+---
 
-### 1.1 背景と意図
+## 1. 概要 (旧設計案)
 
-コンテキスト管理システムは、以下の課題認識から設計されました：
+(旧設計案) このドキュメントでは、以前検討されていた「3段階レビュープロセス」を支える、より高度なコンテキスト管理システムの仕様案を説明します。Bot 自身がレビューの文脈を深く理解・管理し、最適化することを目的としていました。
 
-1. **部分的な理解の限界**
-   - 個々のファイルの変更だけを見ても、その意図や影響範囲を正確に理解することは困難
-   - 関連する変更やシステム全体への影響を把握する必要がある
-   - レビュー時に必要な背景情報を効率的に収集・活用したい
+### 1.1 背景と意図 (旧設計案)
 
-2. **一貫性のある判断の必要性**
-   - 同様の変更に対して一貫したレビューコメントを提供したい
-   - レビュー基準をコンテキストに応じて適切に調整したい
-   - 重複や矛盾する指摘を防止したい
+(旧設計案) コンテキスト管理システムは、以下の課題認識から設計されました：
 
-3. **リソースの効率的な活用**
-   - すべての変更を同じ深さでレビューすることは非効率
-   - 変更の重要度や影響度に応じて、リソース（トークン、処理時間）を適切に配分したい
-   - インクリメンタルな処理で効率を向上させたい
+1.  **部分的な理解の限界:** 個々の変更だけでなく、関連性や全体への影響を把握する必要性。
+2.  **一貫性のある判断の必要性:** レビュー基準の一貫性維持と重複・矛盾の防止。
+3.  **リソースの効率的な活用:** 変更の重要度に応じたリソース配分とインクリメンタル処理。
 
-### 1.2 設計思想
+**現在の設計との関連:** これらの課題認識自体は現在の設計でも重要ですが、解決アプローチが異なります。現在の設計では、GitHub の機能を活用し、Bot 自身の状態管理をシンプルにすることで、効率性と保守性を両立しようとしています。
 
-コンテキスト管理は、以下の原則に基づいて設計されています：
+### 1.2 設計思想 (旧設計案)
 
-1. **階層化された理解**
-   - PR全体、ファイル単位、変更単位という3つの層でコンテキストを管理
-   - 各層で適切な粒度の情報を収集・分析
-   - 層間の関係性を明確に定義
+(旧設計案) コンテキスト管理は、以下の原則に基づいて設計されていました：
 
-2. **インクリメンタルな処理**
-   - 軽量な分析から開始し、必要に応じて詳細な分析を実施
-   - 前回のレビュー結果を活用して重複を防止
-   - バッチ処理による効率的な文脈理解
+1.  **階層化された理解:** PR全体、ファイル単位、変更単位の3層でのコンテキスト管理 (「アスペクト」などの概念を含む)。
+2.  **インクリメンタルな処理:** 軽量な分析から開始し、必要に応じて詳細化。バッチ処理による効率化。
+3.  **拡張可能なアーキテクチャ:** プロセッサによる独自コンテキスト管理、パスベース設定、外部連携。
 
-3. **拡張可能なアーキテクチャ**
-   - プロセッサーによる独自のコンテキスト管理の実装
-   - パスベースの柔軟な設定
-   - 外部システムとの連携ポイントの提供
+**現在の設計との違い:** 現在の設計では、「階層化された理解」は主にプロセッサの責務となり、「アスペクト」のような Bot 共通の概念は持ちません。インクリメンタル処理は実装されていません。拡張性はプロセッサの選択・追加や Action ワークフローのカスタマイズで実現します。
 
-## 2. コンテキストの階層構造
+## 2. コンテキストの階層構造 (旧設計案)
 
-### 2.1 PRレベルのコンテキスト [実装済み]
+(旧設計案) 3つの階層でコンテキストを管理する想定でした。`[実装済み]` の記述は旧設計段階のものです。
 
-PRレベルのコンテキストは、変更全体を理解するための情報を管理します。
+### 2.1 PRレベルのコンテキスト (旧設計案)
+
+(旧設計案) PR全体の情報を管理。`OverallSummary` や「アスペクト」(`aspectMappings`)、「マルチパス分析」といった概念は、現在の設計では採用されていません。
 
 ```typescript
-interface IPullRequestInfo {
-  title: string;        // PRのタイトル
-  description: string;  // PRの説明文
-  author: string;      // 作成者
-  // 他の基本情報
-}
+// 旧設計案のインターフェース
+interface IPullRequestInfo { /* ... */ }
+interface OverallSummary { /* アスペクト情報などを含む */ }
+```
 
-interface OverallSummary {
-  description: string;   // 変更の全体像
-  aspectMappings: Array<{
-    aspect: {
-      key: string;         // アスペクトの識別子
-      description: string; // アスペクトの説明
-      impact: 'high' | 'medium' | 'low';  // 影響度
-    };
-    files: string[];     // 関連するファイル
-  }>;
-  crossCuttingConcerns?: string[];  // 横断的な懸念事項
+**現在の設計:** `Action Runner` は PR の基本情報 (`IPullRequestInfo` に相当) を GitHub API から取得し、`ProcessInput` に含めます。PR 全体のサマリー (`ProcessOutput.summary`) は、レビュー後にプロセッサが生成します。
+
+### 2.2 ファイルレベルのコンテキスト (旧設計案)
+
+(旧設計案) 個々のファイルの変更を文脈化。「パス設定」(`PathInstruction`) は現在の設計でも `.coderabbitai.yaml` の `path_instructions` として存在します。「アスペクト管理」や `SummarizeResult` のような詳細な初期分析結果の管理は、現在の設計では行いません。「変更の分類」(`isSimpleChange`, `shouldPerformDetailedReview`) は、プロセッサ内部で判断される可能性がありますが、`BaseProcessor` の共通機能としては定義されていません。
+
+```typescript
+// 旧設計案のインターフェース
+interface PathInstruction { /* ... */ }
+interface SummarizeResult { /* アスペクト情報などを含む */ }
+```
+
+**現在の設計:** `Action Runner` はファイル差分情報 (`IFileChange[]`) を収集します。パスベースの設定 (`path_instructions`, `path_filters`) は `Action Runner` または `FileManager` で適用されます。ファイルごとの詳細な初期分析や分類は行わず、プロセッサに処理を委ねます。
+
+### 2.3 変更レベルのコンテキスト (旧設計案)
+
+(旧設計案) 個々の変更 (Hunk) レベルのコンテキスト。「レビューコメント管理」(`IReviewComment`) は、現在の設計では GitHub API から取得するコメント情報 (`CommentInfo`) に近いです。「トークン管理」(`TokenConfig`) は現在の設計でも重要であり、プロセッサや `Action Runner` で考慮されます。「重複防止」は、現在の設計ではプロセッサが `commentHistory` を参照して行います。
+
+```typescript
+// 旧設計案のインターフェース
+interface IReviewComment { /* ... */ }
+interface TokenConfig { /* ... */ }
+```
+
+**現在の設計:** `Action Runner` はコメント履歴 (`CommentInfo[]`) を収集します。トークン管理はプロセッサの責務です。重複防止もプロセッサが `commentHistory` を見て判断します。
+
+## 3. コンテキスト処理フロー (旧設計案)
+
+(旧設計案) 「3フェーズレビュー」(`summarize`, `generateOverallSummary`, `review`) は、現在の設計では採用されていません。
+
+### 3.1 3フェーズレビュー (旧設計案)
+
+(旧設計案) 軽量な初期分析 (Summarize)、全体像把握 (Overall Summary)、詳細レビュー (Review) の3段階で処理を進める想定でした。
+
+```typescript
+// 旧設計案のプロセッサメソッド
+abstract summarize(...): Promise<Map<string, SummarizeResult>>;
+protected abstract generateOverallSummary(...): Promise<OverallSummary | undefined>;
+abstract review(...): Promise<IPullRequestProcessedResult>;
+```
+
+**現在の設計:** 現在のプロセッサインターフェース (`IPullRequestProcessor`) は、主に `process` メソッドを持ち、この中でレビュー処理全体（コンテキスト解釈、AI 呼び出し、結果生成）を行います。インタラクション用に `handleInteraction` メソッドも持ちます。3段階のような固定的なフェーズ分けはありません。
+
+### 3.2 インクリメンタル処理 (旧設計案)
+
+(旧設計案) バッチ処理 (`createHorizontalBatches`, `createVerticalBatches`) や結果の統合 (`mergeOverallSummaries`) による効率化を想定していました。
+
+**現在の設計:** バッチ処理は、GitHub API 呼び出し (コメント投稿など) で有効ですが、旧設計案のような複雑な分析バッチは行いません。インクリメンタル処理（差分レビュー）は実装されていません。エラー処理は `Action Runner` とプロセッサの両方で必要です。
+
+## 4. 拡張ポイント (旧設計案)
+
+(旧設計案) プロセッサによるカスタム分析や将来的な拡張計画。
+
+### 4.1 カスタム分析 (旧設計案)
+
+(旧設計案) プロセッサが独自のアスペクト定義や分析ロジックを実装することを想定していました。
+
+**現在の設計:** プロセッサは `IPullRequestProcessor` インターフェースを実装し、`process` メソッド内で自由に分析ロジックを実装できます。ただし、「アスペクト」のような Bot 共通の概念はありません。
+
+### 4.2 将来の拡張計画 (旧設計案)
+
+(旧設計案) コメントチェーン管理 (Bot 内部)、リソース最適化 (キャッシュ)、外部システム連携、履歴分析の強化などを検討していました。
+
+**現在の設計との関連:**
+-   **コメントチェーン管理:** GitHub の機能を利用する方針に変更。
+-   **リソース最適化:** キャッシュよりも API 効率化やトークン管理が中心。
+-   **外部システム連携:** GitHub Actions のエコシステムを活用。
+-   **履歴分析:** Bot 自身での高度な分析は行わない方針。
+
+## 5. 制限事項 (旧設計案)
+
+(旧設計案) トークン制限や処理制約、その最適化について。
+
+### 5.1 現在の制限 (旧設計案)
+
+(旧設計案) トークン制限やバッチサイズ、並行処理数などの制約。
+
+**現在の設計:** 同様の制約は存在し、プロセッサや `Action Runner` で考慮が必要です。
+
+### 5.2 最適化のポイント (旧設計案)
+
+(旧設計案) トークン使用の最適化、バッチ処理の調整、キャッシュ活用。
+
+**現在の設計:** トークン最適化とバッチ処理は重要です。キャッシュは限定的な利用（設定ファイルのキャッシュなど）に留まる可能性があります。
+
+## 6. 実装ガイドライン (旧設計案)
+
+(旧設計案) 旧設計の `BaseProcessor` を継承したプロセッサの実装ガイドライン。
+
+### 6.1 プロセッサーの実装 (旧設計案)
+
+(旧設計案) `summarize`, `generateOverallSummary`, `review` メソッドの実装を要求していました。
+
+```typescript
+// 旧設計案のプロセッサ構造
+class YourProcessor extends BaseProcessor {
+  override async summarize(...) { }
+  protected override async generateOverallSummary(...) { }
+  override async review(...) { }
 }
 ```
 
-このレベルでは以下の情報を管理します：
+**現在の設計:** プロセッサは `IPullRequestProcessor` インターフェースを実装し、主に `process` と `handleInteraction` メソッドを実装します。`BaseProcessor` は存在するかもしれませんが、旧設計とは異なる責務を持つ可能性があります。
 
-1. **PR基本情報**
-   - 変更の目的と概要
-   - 作成者の意図
-   - 関連するイシューやタスク
-   
-   これらの情報は、レビューの文脈を理解する起点となります。変更がなぜ必要なのか、どのような問題を解決しようとしているのかを把握することで、適切なレビュー基準を設定できます。
+### 6.2 設定と調整 (旧設計案)
 
-2. **変更の全体像**
-   - 主要な変更点の特定
-   - アスペクトごとの影響度評価
-   - クロスカッティングな問題の把握
-   
-   全体像の理解により、個々の変更をより広い文脈で評価できます。例えば、パフォーマンス改善のためのリファクタリングなのか、新機能の追加なのかによって、レビューの観点や深度を調整します。
+(旧設計案) パス設定 (`path_instructions`) やトークン設定 (`tokenConfig`)。
 
-3. **マルチパス分析**
-   ```typescript
-   // 2パスでの分析実装例
-   const BATCH_SIZE = 2;  // バッチサイズ
-   const PASSES = 2;      // 分析パス数
-   
-   // 水平方向の分析（1パス目）
-   const horizontalBatches = createHorizontalBatches(entries, BATCH_SIZE);
-   
-   // 垂直方向の分析（2パス目）
-   const verticalBatches = createVerticalBatches(entries, BATCH_SIZE);
-   ```
-   
-   異なる視点からの分析により、より深い理解と関連性の発見を可能にします。
+**現在の設計:** パス設定は `.coderabbitai.yaml` で行い、`Action Runner` が読み込みます。トークン設定はプロセッサ固有の設定や環境変数で管理される可能性があります。
 
-### 2.2 ファイルレベルのコンテキスト
+---
 
-ファイルレベルでは、個々のファイルの変更を文脈化します。
+(旧設計案の結論) この仕様書で定義されたコンテキスト管理システムにより、code-hedgehogは効率的で高品質なコードレビューを実現します。システムの各コンポーネントは明確な責務を持ち、拡張性と保守性を確保しながら、実用的なレビュー支援を提供します。
 
-1. **パス設定** [実装済]
-   ```typescript
-   interface PathInstruction {
-     path: string;        // Globパターン
-     instructions: string; // レビュー指示
-   }
-   ```
-   
-   パスベースの設定により：
-   - ファイルの種類に応じたレビュー基準の適用
-   - 重要度に基づく注目ポイントの指定
-   - カスタマイズ可能なレビュー指示
-
-2. **アスペクト管理** [実装済み]
-   ```typescript
-   interface SummarizeResult {
-     needsReview: boolean;   // 詳細レビューの要否
-     reason: string;         // 判断理由
-     aspects: Array<{        // 関連するアスペクト
-       key: string;
-       description: string;
-       impact: 'high' | 'medium' | 'low';
-     }>;
-   }
-   ```
-   
-   アスペクトベースの分析により：
-   - 変更の性質を分類
-   - 関連するコンポーネントや機能の特定
-   - 影響度の評価
-
-3. **変更の分類** [実装済み]
-   ```typescript
-   class BaseProcessor {
-     protected isSimpleChange(patch: string): boolean {
-       // コメントや整形のみの変更を判定
-     }
-     
-     protected shouldPerformDetailedReview(
-       file: IFileChange,
-       tokenConfig: TokenConfig
-     ): Promise<SummarizeResult>;
-   }
-   ```
-   
-   変更の性質に基づく分類により：
-   - リソースの効率的な配分
-   - 重要な変更への注力
-   - 軽微な変更の効率的な処理
-
-### 2.3 変更レベルのコンテキスト [実装済み]
-
-最も詳細なレベルで、個々の変更の意味を理解します。
-
-1. **レビューコメント管理**
-   ```typescript
-   /**
-    * レビューコメントの基本インターフェース
-    */
-   interface IReviewComment {
-     /**
-      * 対象ファイルのパス
-      */
-     path: string;
-
-     /**
-      * 差分内の位置（インラインコメント用）
-      */
-     position?: number;
-
-     /**
-      * コメントの内容
-      */
-     body: string;
-
-     /**
-      * コメントの種類（インラインまたはファイルまたはPR全体）
-      */
-     type: 'inline' | 'file' | 'pr';
-   }
-   ```
-
-2. **トークン管理**
-   ```typescript
-   interface TokenConfig {
-     margin: number;    // 余裕分
-     maxTokens: number; // 上限
-   }
-   ```
-   
-   トークンベースの制御により：
-   - API制限内での効率的な処理
-   - 大規模な変更の適切な分割
-   - コストの最適化
-
-3. **重複防止** [一部実装済み]
-   ```mermaid
-   sequenceDiagram
-       participant RP as ReviewProcessor
-       participant DC as DuplicationChecker
-       participant CM as ContextManager
-       
-       RP->>DC: レビュー要求
-       DC->>CM: コンテキスト取得
-       CM-->>DC: 既存レビュー情報
-       DC->>DC: 重複分析
-       alt 重複あり
-           DC-->>RP: スキップ通知
-       else 重複なし
-           DC-->>RP: レビュー許可
-       end
-   ```
-
-## 3. コンテキスト処理フロー
-
-### 3.1 3フェーズレビュー [実装済み]
-
-コンテキスト管理は3つのフェーズで実行されます：
-
-1. **Summarize フェーズ**
-   ```typescript
-   abstract summarize(
-     prInfo: IPullRequestInfo,
-     files: IFileChange[],
-     config?: ReviewConfig
-   ): Promise<Map<string, SummarizeResult>>;
-   ```
-   
-   このフェーズでは：
-   - 軽量な初期分析を実行
-   - レビューの必要性を判断
-   - リソースの効率的な配分を決定
-
-2. **Overall Summary フェーズ**
-   ```typescript
-   protected abstract generateOverallSummary(
-     prInfo: IPullRequestInfo,
-     files: IFileChange[],
-     summarizeResults: Map<string, SummarizeResult>
-   ): Promise<OverallSummary | undefined>;
-   ```
-   
-   このフェーズでは：
-   - PR全体の文脈を理解
-   - アスペクト間の関連を分析
-   - クロスカッティングな問題を特定
-
-3. **Review フェーズ**
-   ```typescript
-   abstract review(
-     prInfo: IPullRequestInfo,
-     files: IFileChange[],
-     summarizeResults: Map<string, SummarizeResult>,
-     config?: ReviewConfig,
-     overallSummary?: OverallSummary
-   ): Promise<IPullRequestProcessedResult>;
-   ```
-   
-   このフェーズでは：
-   - 文脈を考慮した詳細レビュー
-   - 関連する指摘の集約
-   - 一貫性のある指摘の生成
-
-### 3.2 インクリメンタル処理 [実装済み]
-
-効率的な処理のために、以下の最適化を実装：
-
-1. **バッチ処理**
-   ```typescript
-   // 水平方向のバッチ処理
-   function createHorizontalBatches<T>(
-     items: T[],
-     batchSize: number
-   ): T[][] {
-     // 関連する項目をグループ化
-   }
-   
-   // 垂直方向のバッチ処理
-   function createVerticalBatches<T>(
-     items: T[],
-     batchSize: number
-   ): T[][] {
-     // 異なる視点での再グループ化
-   }
-   ```
-
-2. **結果の統合**
-   ```typescript
-   function mergeOverallSummaries(
-     summaries: OverallSummary[]
-   ): OverallSummary {
-     // バッチ処理結果の統合
-     // アスペクトの結合
-     // 影響度の調整
-   }
-   ```
-
-3. **エラー処理** [検討中]
-   処理中のエラーに対して、以下の戦略を検討しています：
-   - 部分的な再計算によるリカバリー
-   - フォールバック方式の採用
-   - エラー状態の明確な管理
-   - トランザクション的な一貫性の確保
-
-## 4. 拡張ポイント
-
-### 4.1 カスタム分析 [実装済み]
-
-プロセッサーは以下の方法で独自の分析を実装できます：
-
-1. **アスペクト定義**
-   ```typescript
-   interface CustomAspect {
-     key: string;
-     description: string;
-     impact: 'high' | 'medium' | 'low';
-     customFields?: Record<string, unknown>;
-   }
-   ```
-
-2. **分析ロジック**
-   ```typescript
-   class CustomProcessor extends BaseProcessor {
-     protected override async generateOverallSummary(
-       // カスタムな文脈理解の実装
-     }
-   }
-   ```
-
-### 4.2 将来の拡張計画 [検討中]
-
-1. **コメントチェーン管理**
-   ```typescript
-   interface CommentChain {
-     parent: {
-       id: string;
-       body: string;
-       path: string;
-       position: number;
-     };
-     replies: Array<{
-       id: string;
-       body: string;
-       in_reply_to: string;
-     }>;
-     meta: {
-       status: 'open' | 'resolved';
-       context: ReviewContext;
-     };
-   }
-   ```
-
-   期待される効果：
-   - 議論の文脈の保持と追跡
-   - レビュー状態の明確な管理
-   - 関連コメントの整理と集約
-
-   実装の主なポイント：
-   - コメントの階層構造の管理
-   - 状態遷移の追跡
-   - 関連性の維持
-
-2. **リソース最適化**
-   ```typescript
-   interface CacheStrategy {
-     storage: {
-       type: 'memory' | 'persistent';
-       ttl: number;
-     };
-     policies: {
-       maxSize: number;
-       evictionPolicy: 'lru' | 'fifo';
-     };
-     monitoring: {
-       hitRate: number;
-       size: number;
-     };
-   }
-   ```
-
-   期待される効果：
-   - レスポンス時間の改善
-   - リソース使用の効率化
-   - API制限の遵守
-
-   実装の主なポイント：
-   - キャッシュ戦略の実装
-   - メモリ管理の最適化
-   - モニタリングの実装
-
-3. **外部システム連携**
-   ```typescript
-   interface ExternalIntegration {
-     ci: {
-       buildStatus: string;
-       testResults: TestResult[];
-     };
-     notifications: {
-       channels: string[];
-       rules: NotificationRule[];
-     };
-   }
-   ```
-
-   期待される効果：
-   - 開発プロセスとの統合
-   - 情報の集約と活用
-   - 自動化の促進
-
-   実装の主なポイント：
-   - APIインテグレーション
-   - イベント管理
-   - エラー処理
-
-4. **履歴分析の強化**
-   ```typescript
-   interface HistoricalAnalysis {
-     patterns: {
-       common: Pattern[];
-       emerging: Pattern[];
-     };
-     trends: {
-       improvements: Trend[];
-       regressions: Trend[];
-     };
-   }
-   ```
-
-   期待される効果：
-   - パターンの発見と活用
-   - 品質の継続的改善
-   - 問題の早期発見
-
-   実装の主なポイント：
-   - データ収集と分析
-   - パターン認識
-   - トレンド分析
-
-これらの拡張は、以下の優先順位で実装を検討します：
-
-1. コメントチェーン管理（短期）
-   - レビュープロセスの透明性向上
-   - 議論の追跡性改善
-   - コミュニケーションの効率化
-
-2. リソース最適化（中期）
-   - システム全体の応答性向上
-   - コスト効率の改善
-   - スケーラビリティの確保
-
-3. 外部システム連携（長期）
-   - 開発プロセス全体との統合
-   - 自動化の促進
-   - 情報共有の効率化
-
-4. 履歴分析（長期）
-   - 長期的な品質向上
-   - 知識の蓄積と活用
-   - プロアクティブな問題解決
-
-## 5. 制限事項
-
-### 5.1 現在の制限 [実装済み]
-
-1. **トークン制限**
-   - 1ファイルあたりの最大トークン数: 4000
-   - 必要なマージン: 100トークン
-   - 分割処理の必要性
-
-2. **処理制約**
-   - バッチサイズの制限
-   - 並行処理数の制限
-   - タイムアウト設定
-
-### 5.2 最適化のポイント [実装済み]
-
-1. **トークン使用の最適化**
-   ```typescript
-   function isWithinLimit(
-     content: string,
-     config: TokenConfig
-   ): boolean {
-     // トークン数の見積もり
-     // 制限のチェック
-   }
-   ```
-
-2. **バッチ処理の調整**
-   - バッチサイズの動的調整
-   - 処理順序の最適化
-   - キャッシュの活用
-
-## 6. 実装ガイドライン
-
-### 6.1 プロセッサーの実装 [実装済み]
-
-プロセッサーを実装する際は：
-
-1. **基本構造**
-   ```typescript
-   class YourProcessor extends BaseProcessor {
-     constructor(config: YourConfig) {
-       super();
-       // 初期化処理
-     }
-     
-     // 必須メソッドの実装
-     override async summarize(...) { }
-     protected override async generateOverallSummary(...) { }
-     override async review(...) { }
-   }
-   ```
-
-2. **エラー処理**
-   - APIエラーの適切な処理
-   - リトライロジックの実装
-   - エラー状態の管理
-
-### 6.2 設定と調整 [実装済]
-
-1. **パス設定**
-   ```typescript
-   const config: ReviewConfig = {
-     path_instructions: [
-       {
-         path: "src/**/*.ts",
-         instructions: "TypeScriptファイルのレビュー基準..."
-       }
-     ],
-     skipSimpleChanges: true
-   };
-   ```
-
-2. **トークン設定**
-   ```typescript
-   const tokenConfig = {
-     margin: 100,
-     maxTokens: 4000
-   };
-   ```
-
-この仕様書で定義されたコンテキスト管理システムにより、code-hedgehogは効率的で高品質なコードレビューを実現します。
-システムの各コンポーネントは明確な責務を持ち、拡張性と保守性を確保しながら、実用的なレビュー支援を提供します。
+**現在の設計の結論:** 現在の Code Hedgehog は、GitHub Actions をベースとし、GitHub の標準機能を活用することで、よりシンプルで保守しやすく、GitHub エコシステムと親和性の高いアーキテクチャを目指しています。コンテキスト管理の複雑さの多くは GitHub プラットフォームと各プロセッサに委ねられます。
