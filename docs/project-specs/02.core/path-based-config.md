@@ -23,8 +23,9 @@
 設定ファイルは `.coderabbitai.yaml` という名前でプロジェクトのルートディレクトリに配置します。
 
 ```yaml
-# レビュー言語
-language: "ja-JP" # デフォルトは "en-US"
+# LLM のレスポンスの言語
+# ISO 言語コードを指定する、デフォルトは "en-US"
+language: "ja-JP"
 
 # PRレベルの制御
 ignore_draft_prs: true # ドラフトPRを無視するか (デフォルト: true)

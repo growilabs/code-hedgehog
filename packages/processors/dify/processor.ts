@@ -1,8 +1,6 @@
 import process from 'node:process';
-// Import the base config type and PathInstruction
-import type { PathInstruction, ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig and PathInstruction
+import type { ReviewConfig } from '../base/types.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-// Base types and specific config type
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
@@ -30,10 +28,8 @@ export class DifyProcessor extends BaseProcessor {
 
   /**
    * Constructor for DifyProcessor
-   * @param reviewConfig - The overall review configuration object for Dify
    */
   constructor() {
-    // Constructor takes no arguments now
     super();
 
     // Load Dify specific config from environment variables
@@ -74,41 +70,11 @@ export class DifyProcessor extends BaseProcessor {
   }
 
   /**
-   * Convert IFileChange array to JSON string
-   * @param files Array of file changes
-   * @returns JSON string representation of files
-   */
-  private formatFilesToJson(files: IFileChange[]): string {
-    return JSON.stringify(
-      files.map((file) => ({
-        path: file.path,
-        patch: file.patch || 'No changes',
-      })),
-    );
-  }
-
-  /**
-   * Convert summarize results to JSON string
-   * @param entries Array of [path, result] tuples
-   * @returns JSON string representation of summarize results
-   */
-  private formatSummarizeResultsToJson(entries: [string, SummarizeResult][]): string {
-    return JSON.stringify(
-      entries.map(([path, result]) => ({
-        path,
-        summary: result.summary,
-        needsReview: result.needsReview,
-        reason: result.reason,
-      })),
-    );
-  }
-
-  /**
    * Implementation of summarize phase
    * Analyze each file change lightly to determine if detailed review is needed
    */
   // Update config parameter type to base ReviewConfig
-  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<Map<string, SummarizeResult>> {
+  override async summarize(prInfo: IPullRequestInfo, files: IFileChange[], config: ReviewConfig): Promise<Map<string, SummarizeResult>> {
     const results = new Map<string, SummarizeResult>();
 
     for (const file of files) {
@@ -156,6 +122,7 @@ export class DifyProcessor extends BaseProcessor {
   protected async generateOverallSummary(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig,
     summarizeResults: Map<string, SummarizeResult>,
   ): Promise<OverallSummary | undefined> {
     console.debug('Starting overall summary generation with batch processing');
@@ -167,7 +134,7 @@ export class DifyProcessor extends BaseProcessor {
     console.debug(`Processing ${entries.length} files in ${totalBatches} batches with ${PASSES} passes`);
 
     let accumulatedResult: OverallSummary | undefined;
-    let previousAnalysis: string | undefined;
+    let previousAnalysis: OverallSummary | undefined;
 
     // Begin multi-pass processing
     for (let pass = 1; pass <= PASSES; pass++) {
@@ -188,24 +155,40 @@ export class DifyProcessor extends BaseProcessor {
           batchFiles.map((f) => f.path),
         );
         if (previousAnalysis) {
-          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, previousAnalysis);
+          console.debug(`[Pass ${pass}/${PASSES}] Previous cumulative analysis:`, JSON.stringify(previousAnalysis, null, 2));
         }
 
         try {
           // Upload previous analysis if available
           let previousAnalysisFileId: string | undefined;
           if (previousAnalysis) {
-            previousAnalysisFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, previousAnalysis);
+            const uploadData = {
+              description: previousAnalysis.description,
+              crossCuttingConcerns: previousAnalysis.crossCuttingConcerns,
+            };
+            previousAnalysisFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, uploadData);
             console.debug(`[Pass ${pass}/${PASSES}] Uploaded previous analysis (${previousAnalysisFileId})`);
           }
 
           // Upload files data
-          const filesJson = this.formatFilesToJson(batchFiles);
-          const filesFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, filesJson);
+          const filesWithDefaults = batchFiles.map((file) => ({
+            ...file,
+            patch: file.patch || 'No changes', // Ensure patch is never null
+          }));
+          const filesFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, filesWithDefaults);
 
-          // Upload summarize results
-          const summaryJson = this.formatSummarizeResultsToJson(batchEntries);
-          const summaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyGrouping, this.difyConfig.user, summaryJson);
+          // Upload summarize results (convert Map entries to SummaryResponse[])
+          const summaryFileId = await uploadFile(
+            this.difyConfig.baseUrl,
+            this.difyConfig.apiKeyGrouping,
+            this.difyConfig.user,
+            batchEntries.map(([path, result]) => ({
+              path,
+              summary: result.summary || '',
+              needsReview: result.needsReview,
+              reason: result.reason || '',
+            })),
+          );
 
           console.debug(`[Pass ${pass}/${PASSES}] Uploaded files (${filesFileId}) and summary (${summaryFileId})`);
 
@@ -231,6 +214,7 @@ export class DifyProcessor extends BaseProcessor {
                     type: 'document',
                   }
                 : undefined,
+              language: config.language,
             },
             response_mode: 'blocking' as const,
             user: this.difyConfig.user,
@@ -251,8 +235,8 @@ export class DifyProcessor extends BaseProcessor {
           }
 
           // Update cumulative analysis for next batch
-          previousAnalysis = JSON.stringify(accumulatedResult, null, 2);
-          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Cumulative analysis:`, previousAnalysis);
+          previousAnalysis = accumulatedResult;
+          console.debug(`[Pass ${pass}/${PASSES}] Batch ${batchNumber} complete. Current analysis state:`, JSON.stringify(previousAnalysis, null, 2));
         } catch (error) {
           console.error(`[Pass ${pass}/${PASSES}] Error in batch ${batchNumber}/${totalBatches}:`, error);
         }
@@ -277,10 +261,16 @@ export class DifyProcessor extends BaseProcessor {
   override async review(
     prInfo: IPullRequestInfo,
     files: IFileChange[],
+    config: ReviewConfig, // Update config parameter type to base ReviewConfig
     summarizeResults: Map<string, SummarizeResult>,
-    config?: ReviewConfig, // Update config parameter type to base ReviewConfig
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
+    // If we don't have overall summary, we can't do a proper review
+    if (!overallSummary) {
+      console.warn('No overall summary available, skipping review');
+      return { comments: [] };
+    }
+
     const comments: IReviewComment[] = [];
 
     for (const file of files) {
@@ -298,17 +288,16 @@ export class DifyProcessor extends BaseProcessor {
 
       try {
         // Upload aspects data
-        const aspectsJson = JSON.stringify(summarizeResult.aspects);
-        const aspectsFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, aspectsJson);
+        const aspectsFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, summarizeResult.aspects);
 
         // Upload overall summary data if available
         let overallSummaryFileId: string | undefined;
         if (overallSummary) {
-          const overallSummaryJson = JSON.stringify({
+          const overallSummaryData = {
             description: overallSummary.description,
             crossCuttingConcerns: overallSummary.crossCuttingConcerns,
-          });
-          overallSummaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, overallSummaryJson);
+          };
+          overallSummaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, overallSummaryData);
         }
 
         const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, {
@@ -330,6 +319,7 @@ export class DifyProcessor extends BaseProcessor {
                   type: 'document',
                 }
               : undefined,
+            language: config.language,
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,

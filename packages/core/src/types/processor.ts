@@ -32,5 +32,5 @@ export interface IPullRequestProcessor {
   /**
    * Main processing flow
    */
-  process(prInfo: IPullRequestInfo, files: IFileChange[], config?: ReviewConfig): Promise<IPullRequestProcessedResult>;
+  process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult>;
 }
