@@ -429,12 +429,6 @@ export class DifyProcessor extends BaseProcessor {
         // Store individual file summary
         if (review.summary) {
           fileSummaries.set(file.path, review.summary);
-
-          comments.push({
-            path: file.path,
-            body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
-          });
         }
 
         // Collect suppressed comments
