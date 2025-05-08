@@ -2,7 +2,7 @@ import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
-import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, ReviewCommentSchema, SummaryResponseSchema, type ReviewComment } from './deps.ts';
+import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 // Internal configuration type for DifyProcessor
