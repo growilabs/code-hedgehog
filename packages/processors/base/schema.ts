@@ -54,6 +54,7 @@ export const ReviewCommentSchema = z.object({
   message: z.string(), // Important review comment
   suggestion: z.string().optional(), // Optional improvement suggestion
   line_number: z.number().optional(), // Optional line number reference
+  severity: z.number().min(1).max(5), // Severity score between 1 and 5 (1: lowest, 5: highest)
 });
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
 
@@ -61,8 +62,7 @@ export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
  * Response format for review workflow
  */
 export const ReviewResponseSchema = z.object({
-  comments: z.array(ReviewCommentSchema), // Comments to be written in PR
-  suppressed_comments: z.array(ReviewCommentSchema), // Comments not to be written directly in PR
+  comments: z.array(ReviewCommentSchema), // All review comments with confidence scores
   summary: z.string().optional(), // Overall evaluation of changes
 });
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
@@ -91,4 +91,5 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_path_instructions: [], // Local extension
   path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
   skip_simple_changes: false,
+  severityThreshold: 3, // Default threshold for comment severity (1-5)
 };

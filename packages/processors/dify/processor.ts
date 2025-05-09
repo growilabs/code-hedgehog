@@ -1,8 +1,8 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from '../base/utils/formatting.ts';
+import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from '../base/utils/group.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-import { convertToCommentBase, groupCommentsByLocation, type GroupedComment } from '../base/utils/group.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
@@ -17,21 +17,48 @@ type InternalDifyConfig = ReviewConfig & {
   apiKeyReview: string;
 };
 
-
 export class DifyProcessor extends BaseProcessor {
   // Use a different name for Dify specific config to avoid conflict with private base config
   protected readonly difyConfig: InternalDifyConfig;
 
-  // Collection of suppressed comments grouped by file path
-  private suppressedComments: Record<string, ReviewComment[]> = {};
+  /**
+   * Get severity threshold from config or use default (3)
+   */
+  private getSeverityThreshold(config: ReviewConfig): number {
+    return config.severityThreshold ?? 3;
+  }
+
+  // Collection of low confidence comments grouped by file path
+  private lowConfidenceComments: Record<string, ReviewComment[]> = {};
 
   /**
    * Group comments by file path and line number
    */
   private groupComments(): GroupedComment[] {
     // Convert comments to base format and group them
-    const baseComments = convertToCommentBase(this.suppressedComments);
+    const baseComments = convertToCommentBase(this.lowConfidenceComments);
     return groupCommentsByLocation(baseComments);
+  }
+
+  /**
+   * Determine if a comment should be treated as low confidence
+   */
+  private isLowConfidence(comment: ReviewComment, config: ReviewConfig): boolean {
+    return comment.severity < this.getSeverityThreshold(config);
+  }
+
+  /**
+   * Process a comment and collect it if it's low confidence
+   */
+  private processComment(filePath: string, comment: ReviewComment, config: ReviewConfig): boolean {
+    if (this.isLowConfidence(comment, config)) {
+      if (!this.lowConfidenceComments[filePath]) {
+        this.lowConfidenceComments[filePath] = [];
+      }
+      this.lowConfidenceComments[filePath].push(comment);
+      return true;
+    }
+    return false;
   }
   private readonly tokenConfig = {
     margin: 100,
@@ -41,18 +68,11 @@ export class DifyProcessor extends BaseProcessor {
   /**
    * Collect suppressed comment for a file
    */
-  private collectSuppressedComment(filePath: string, comment: ReviewComment): void {
-    if (!this.suppressedComments[filePath]) {
-      this.suppressedComments[filePath] = [];
-    }
-    this.suppressedComments[filePath].push(comment);
-  }
-
   /**
-   * Get collected suppressed comments
+   * Get collected low confidence comments
    */
-  private getSuppressedComments(): Record<string, ReviewComment[]> {
-    return this.suppressedComments;
+  private getLowConfidenceComments(): Record<string, ReviewComment[]> {
+    return this.lowConfidenceComments;
   }
 
   /**
@@ -357,29 +377,24 @@ export class DifyProcessor extends BaseProcessor {
         });
         const review = ReviewResponseSchema.parse(response);
 
-        // Handle regular comments to be written as inline comments
+        // Process all comments, separating them by confidence
         if (review.comments) {
           for (const comment of review.comments) {
-            comments.push({
-              path: file.path,
-              body: this.formatComment(comment),
-              type: 'inline',
-              position: comment.line_number || 1,
-            });
+            if (!this.processComment(file.path, comment, config)) {
+              // Add high confidence comments as inline comments
+              comments.push({
+                path: file.path,
+                body: this.formatComment(comment),
+                type: 'inline',
+                position: comment.line_number || 1,
+              });
+            }
           }
         }
 
         // Store individual file summary
         if (review.summary) {
           fileSummaries.set(file.path, review.summary);
-        }
-
-        // Collect suppressed comments
-        if (review.suppressed_comments && review.suppressed_comments.length > 0) {
-          for (const comment of review.suppressed_comments) {
-            // comment is already of type ReviewComment as it comes from ReviewCommentSchema
-            this.collectSuppressedComment(file.path, comment);
-          }
         }
       } catch (error) {
         console.error(`Review error for ${file.path}:`, error);
@@ -402,8 +417,8 @@ export class DifyProcessor extends BaseProcessor {
 
     // Format low confidence comments section
     let lowConfidenceSection = '';
-    const suppressedComments = this.getSuppressedComments();
-    if (Object.keys(suppressedComments).length > 0) {
+    const lowConfidenceComments = this.getLowConfidenceComments();
+    if (Object.keys(lowConfidenceComments).length > 0) {
       // Get grouped and sorted comments
       const groupedComments = this.groupComments();
 
@@ -412,18 +427,22 @@ export class DifyProcessor extends BaseProcessor {
 
       const content = formatGroupedComments(groupedComments);
 
-      lowConfidenceSection = createCountedCollapsibleSection(
-        "Comments suppressed due to low confidence",
-        suppressedCommentCount,
-        content
-      );
+      lowConfidenceSection = createCountedCollapsibleSection('Comments suppressed due to low confidence', suppressedCommentCount, content);
     }
 
     // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {
+      // Build the PR body with sections
+      let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
+      
+      // Add low confidence section if exists
+      if (lowConfidenceSection) {
+        prBody += `\n\n${lowConfidenceSection}`;
+      }
+
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`,
+        body: prBody,
         type: 'pr',
       });
     }
