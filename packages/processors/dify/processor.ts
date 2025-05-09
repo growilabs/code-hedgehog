@@ -28,22 +28,22 @@ export class DifyProcessor extends BaseProcessor {
     return config.severityThreshold ?? 3;
   }
 
-  // Collection of low confidence comments grouped by file path
-  private lowConfidenceComments: Record<string, ReviewComment[]> = {};
+  // Collection of low severity comments grouped by file path
+  private lowSeverityComments: Record<string, ReviewComment[]> = {};
 
   /**
    * Group comments by file path and line number
    */
   private groupComments(): GroupedComment[] {
     // Convert comments to base format and group them
-    const baseComments = convertToCommentBase(this.lowConfidenceComments);
+    const baseComments = convertToCommentBase(this.lowSeverityComments);
     return groupCommentsByLocation(baseComments);
   }
 
   /**
-   * Determine if a comment should be treated as low confidence
+   * Determine if a comment should be treated as low severity
    */
-  private isLowConfidence(comment: ReviewComment, config: ReviewConfig): boolean {
+  private isLowSeverity(comment: ReviewComment, config: ReviewConfig): boolean {
     return comment.severity < this.getSeverityThreshold(config);
   }
 
@@ -51,11 +51,11 @@ export class DifyProcessor extends BaseProcessor {
    * Process a comment and collect it if it's low confidence
    */
   private processComment(filePath: string, comment: ReviewComment, config: ReviewConfig): boolean {
-    if (this.isLowConfidence(comment, config)) {
-      if (!this.lowConfidenceComments[filePath]) {
-        this.lowConfidenceComments[filePath] = [];
+    if (this.isLowSeverity(comment, config)) {
+      if (!this.lowSeverityComments[filePath]) {
+        this.lowSeverityComments[filePath] = [];
       }
-      this.lowConfidenceComments[filePath].push(comment);
+      this.lowSeverityComments[filePath].push(comment);
       return true;
     }
     return false;
@@ -69,10 +69,10 @@ export class DifyProcessor extends BaseProcessor {
    * Collect suppressed comment for a file
    */
   /**
-   * Get collected low confidence comments
+   * Get collected low severity comments
    */
-  private getLowConfidenceComments(): Record<string, ReviewComment[]> {
-    return this.lowConfidenceComments;
+  private getLowSeverityComments(): Record<string, ReviewComment[]> {
+    return this.lowSeverityComments;
   }
 
   /**
@@ -415,10 +415,10 @@ export class DifyProcessor extends BaseProcessor {
       fileSummaryTable += `\n| \`${path}\` | ${formattedSummary} |`;
     }
 
-    // Format low confidence comments section
-    let lowConfidenceSection = '';
-    const lowConfidenceComments = this.getLowConfidenceComments();
-    if (Object.keys(lowConfidenceComments).length > 0) {
+    // Format low severity comments section
+    let lowSeveritySection = '';
+    const lowSeverityComments = this.getLowSeverityComments();
+    if (Object.keys(lowSeverityComments).length > 0) {
       // Get grouped and sorted comments
       const groupedComments = this.groupComments();
 
@@ -427,7 +427,7 @@ export class DifyProcessor extends BaseProcessor {
 
       const content = formatGroupedComments(groupedComments);
 
-      lowConfidenceSection = createCountedCollapsibleSection('Comments suppressed due to low confidence', suppressedCommentCount, content);
+      lowSeveritySection = createCountedCollapsibleSection('Comments suppressed due to low severity', suppressedCommentCount, content);
     }
 
     // Add overall summary with file summaries table and additional notes to regular comments
@@ -436,8 +436,8 @@ export class DifyProcessor extends BaseProcessor {
       let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
       
       // Add low confidence section if exists
-      if (lowConfidenceSection) {
-        prBody += `\n\n${lowConfidenceSection}`;
+      if (lowSeveritySection) {
+        prBody += `\n\n${lowSeveritySection}`;
       }
 
       comments.push({
