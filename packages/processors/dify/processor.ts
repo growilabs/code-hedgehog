@@ -1,5 +1,6 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
+import { createCountedCollapsibleSection, formatGroupedComments } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { convertToCommentBase, groupCommentsByLocation, type GroupedComment } from '../base/utils/group.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
@@ -409,31 +410,20 @@ export class DifyProcessor extends BaseProcessor {
       // Count unique locations after grouping
       const suppressedCommentCount = groupedComments.length;
 
-      lowConfidenceSection = '\n\n<details>\n';
-      lowConfidenceSection += `<summary>Comments suppressed due to low confidence (${suppressedCommentCount})</summary>\n\n`;
+      const content = formatGroupedComments(groupedComments);
 
-      for (const group of groupedComments) {
-        // Add file path and line number header
-        lowConfidenceSection += `**${group.filePath}**${group.lineNumber ? `:${group.lineNumber}` : ''}\n`;
-
-        // Add all comments for this location
-        for (const comment of group.comments) {
-          lowConfidenceSection += `* ${comment.message}\n`;
-          if (comment.suggestion) {
-            lowConfidenceSection += `  - Suggestion: ${comment.suggestion}\n`;
-          }
-        }
-        lowConfidenceSection += '\n';
-      }
-
-      lowConfidenceSection += '</details>';
+      lowConfidenceSection = createCountedCollapsibleSection(
+        "Comments suppressed due to low confidence",
+        suppressedCommentCount,
+        content
+      );
     }
 
     // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}${lowConfidenceSection}`,
+        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}${fileSummaryTable}`,
         type: 'pr',
       });
     }
