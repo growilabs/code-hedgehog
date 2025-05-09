@@ -423,7 +423,7 @@ export class DifyProcessor extends BaseProcessor {
     if (overallSummary != null) {
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}${fileSummaryTable}`,
+        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`,
         type: 'pr',
       });
     }
