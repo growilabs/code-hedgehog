@@ -435,7 +435,7 @@ export class DifyProcessor extends BaseProcessor {
         if (review.suppressed_comments && review.suppressed_comments.length > 0) {
           for (const comment of review.suppressed_comments) {
             // comment is already of type ReviewComment as it comes from ReviewCommentSchema
-            this.collectSuppressedComment(file.path, comment as ReviewComment);
+            this.collectSuppressedComment(file.path, comment);
           }
         }
       } catch (error) {
