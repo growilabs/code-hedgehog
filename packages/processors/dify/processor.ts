@@ -1,8 +1,10 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
+import { createCountedCollapsibleSection, formatGroupedComments } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
+import { convertToCommentBase, groupCommentsByLocation, type GroupedComment } from '../base/utils/group.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
-import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
+import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 // Internal configuration type for DifyProcessor
@@ -15,16 +17,43 @@ type InternalDifyConfig = ReviewConfig & {
   apiKeyReview: string;
 };
 
-/**
- * Processor implementation for Dify AI Service
- */
+
 export class DifyProcessor extends BaseProcessor {
   // Use a different name for Dify specific config to avoid conflict with private base config
   protected readonly difyConfig: InternalDifyConfig;
+
+  // Collection of suppressed comments grouped by file path
+  private suppressedComments: Record<string, ReviewComment[]> = {};
+
+  /**
+   * Group comments by file path and line number
+   */
+  private groupComments(): GroupedComment[] {
+    // Convert comments to base format and group them
+    const baseComments = convertToCommentBase(this.suppressedComments);
+    return groupCommentsByLocation(baseComments);
+  }
   private readonly tokenConfig = {
     margin: 100,
     maxTokens: 4000, // Note: This seems low for modern models, consider increasing
   };
+
+  /**
+   * Collect suppressed comment for a file
+   */
+  private collectSuppressedComment(filePath: string, comment: ReviewComment): void {
+    if (!this.suppressedComments[filePath]) {
+      this.suppressedComments[filePath] = [];
+    }
+    this.suppressedComments[filePath].push(comment);
+  }
+
+  /**
+   * Get collected suppressed comments
+   */
+  private getSuppressedComments(): Record<string, ReviewComment[]> {
+    return this.suppressedComments;
+  }
 
   /**
    * Constructor for DifyProcessor
@@ -272,6 +301,8 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     const comments: IReviewComment[] = [];
+    // Map to collect review summaries for each file
+    const fileSummaries = new Map<string, string>();
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);
@@ -326,6 +357,7 @@ export class DifyProcessor extends BaseProcessor {
         });
         const review = ReviewResponseSchema.parse(response);
 
+        // Handle regular comments to be written as inline comments
         if (review.comments) {
           for (const comment of review.comments) {
             comments.push({
@@ -337,12 +369,17 @@ export class DifyProcessor extends BaseProcessor {
           }
         }
 
+        // Store individual file summary
         if (review.summary) {
-          comments.push({
-            path: file.path,
-            body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
-          });
+          fileSummaries.set(file.path, review.summary);
+        }
+
+        // Collect suppressed comments
+        if (review.suppressed_comments && review.suppressed_comments.length > 0) {
+          for (const comment of review.suppressed_comments) {
+            // comment is already of type ReviewComment as it comes from ReviewCommentSchema
+            this.collectSuppressedComment(file.path, comment);
+          }
         }
       } catch (error) {
         console.error(`Review error for ${file.path}:`, error);
@@ -355,11 +392,38 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // Add overall summary to regular comments
+    // Format collected file summaries into a table
+    let fileSummaryTable = '| File | Description |\n|------|-------------|';
+    for (const [path, summary] of fileSummaries) {
+      // Replace newlines with spaces for cleaner table display
+      const formattedSummary = summary.replace(/\n/g, ' ');
+      fileSummaryTable += `\n| \`${path}\` | ${formattedSummary} |`;
+    }
+
+    // Format low confidence comments section
+    let lowConfidenceSection = '';
+    const suppressedComments = this.getSuppressedComments();
+    if (Object.keys(suppressedComments).length > 0) {
+      // Get grouped and sorted comments
+      const groupedComments = this.groupComments();
+
+      // Count unique locations after grouping
+      const suppressedCommentCount = groupedComments.length;
+
+      const content = formatGroupedComments(groupedComments);
+
+      lowConfidenceSection = createCountedCollapsibleSection(
+        "Comments suppressed due to low confidence",
+        suppressedCommentCount,
+        content
+      );
+    }
+
+    // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}`,
+        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`,
         type: 'pr',
       });
     }

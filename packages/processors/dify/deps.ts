@@ -6,12 +6,14 @@ export {
   BaseProcessor,
   type SummarizeResult,
   type OverallSummary,
-  type ReviewResponse, // Add type export
-  type SummaryResponse, // Add type export
+  type ReviewResponse,
+  type SummaryResponse,
+  type ReviewComment,
   ImpactLevel,
-  SummaryResponseSchema, // Keep schema export
-  OverallSummarySchema, // Keep schema export
-  ReviewResponseSchema, // Keep schema export
+  SummaryResponseSchema,
+  OverallSummarySchema,
+  ReviewResponseSchema,
+  ReviewCommentSchema,
 } from '@code-hedgehog/base-processor';
 
 // External dependencies
