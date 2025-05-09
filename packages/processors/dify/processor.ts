@@ -1,6 +1,7 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
+import { convertToCommentBase, groupCommentsByLocation, type GroupedComment } from '../base/utils/group.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
@@ -15,17 +16,6 @@ type InternalDifyConfig = ReviewConfig & {
   apiKeyReview: string;
 };
 
-/**
- * Interface for grouped comments
- */
-interface GroupedComment {
-  filePath: string;
-  lineNumber: number | null;
-  comments: {
-    message: string;
-    suggestion?: string;
-  }[];
-}
 
 export class DifyProcessor extends BaseProcessor {
   // Use a different name for Dify specific config to avoid conflict with private base config
@@ -38,57 +28,9 @@ export class DifyProcessor extends BaseProcessor {
    * Group comments by file path and line number
    */
   private groupComments(): GroupedComment[] {
-    const grouped: GroupedComment[] = [];
-    const groupMap = new Map<string, GroupedComment>();
-
-    // Sort file paths
-    const sortedFilePaths = Object.keys(this.suppressedComments).sort();
-
-    for (const filePath of sortedFilePaths) {
-      const comments = this.suppressedComments[filePath];
-
-      // Sort comments by line number
-      const sortedComments = comments.sort((a, b) => {
-        const lineA = a.line_number || -1;
-        const lineB = b.line_number || -1;
-        return lineA - lineB;
-      });
-
-      for (const comment of sortedComments) {
-        const key = `${filePath}:${comment.line_number || 'null'}`;
-
-        const group = groupMap.get(key);
-        if (!group) {
-          groupMap.set(key, {
-            filePath,
-            lineNumber: comment.line_number || null,
-            comments: [
-              {
-                message: comment.message,
-                suggestion: comment.suggestion,
-              },
-            ],
-          });
-        } else {
-          group.comments.push({
-            message: comment.message,
-            suggestion: comment.suggestion,
-          });
-        }
-      }
-    }
-
-    // Convert map to sorted array
-    return Array.from(groupMap.values()).sort((a, b) => {
-      // First by file path
-      const pathCompare = a.filePath.localeCompare(b.filePath);
-      if (pathCompare !== 0) return pathCompare;
-
-      // Then by line number (null values first)
-      const lineA = a.lineNumber ?? -1;
-      const lineB = b.lineNumber ?? -1;
-      return lineA - lineB;
-    });
+    // Convert comments to base format and group them
+    const baseComments = convertToCommentBase(this.suppressedComments);
+    return groupCommentsByLocation(baseComments);
   }
   private readonly tokenConfig = {
     margin: 100,
