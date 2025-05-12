@@ -1,4 +1,4 @@
-import type { GroupedComment } from "./group.ts";
+import type { GroupedComment } from './group.ts';
 
 /**
  * Generate an HTML collapsible section
@@ -17,14 +17,18 @@ export function createCollapsibleSection(summary: string, content: string): stri
  * @returns Formatted Markdown string
  */
 export function formatGroupedComments(groups: GroupedComment[]): string {
-  return groups.map(group => {
-    const header = `**${group.filePath}**${group.lineNumber ? `:${group.lineNumber}` : ''}\n`;
-    const comments = group.comments.map(comment => {
-      const suggestion = comment.suggestion ? `  - Suggestion: ${comment.suggestion}\n` : '';
-      return `* ${comment.message}\n${suggestion}`;
-    }).join('');
-    return `${header}${comments}\n`;
-  }).join('');
+  return groups
+    .map((group) => {
+      const header = `**${group.filePath}**${group.lineNumber ? `:${group.lineNumber}` : ''}\n`;
+      const comments = group.comments
+        .map((comment) => {
+          const suggestion = comment.suggestion ? `  - Suggestion: ${comment.suggestion}\n` : '';
+          return `* ${comment.message}\n${suggestion}`;
+        })
+        .join('');
+      return `${header}${comments}\n`;
+    })
+    .join('');
 }
 
 /**
@@ -34,10 +38,6 @@ export function formatGroupedComments(groups: GroupedComment[]): string {
  * @param content Content to be collapsed
  * @returns HTML string
  */
-export function createCountedCollapsibleSection(
-  title: string,
-  count: number,
-  content: string,
-): string {
+export function createCountedCollapsibleSection(title: string, count: number, content: string): string {
   return createCollapsibleSection(`${title} (${count})`, content);
 }

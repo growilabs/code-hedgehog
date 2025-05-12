@@ -36,9 +36,7 @@ export type RawComment = {
 /**
  * Convert raw comments to a uniform format with file path and line number
  */
-export function convertToCommentBase(
-  fileComments: Record<string, RawComment[]>,
-): CommentBase[] {
+export function convertToCommentBase(fileComments: Record<string, RawComment[]>): CommentBase[] {
   const results: CommentBase[] = [];
   for (const [filePath, comments] of Object.entries(fileComments)) {
     for (const comment of comments) {
