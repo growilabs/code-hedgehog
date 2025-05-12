@@ -2,8 +2,8 @@ import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from '../base/utils/formatting.ts';
 import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from '../base/utils/group.ts';
-import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { sortByFilePathAndLine } from '../base/utils/sort.ts';
+import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
@@ -437,7 +437,6 @@ export class DifyProcessor extends BaseProcessor {
     if (overallSummary != null) {
       // Build the PR body with sections
       let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
-      
       // Add low confidence section if exists
       if (lowSeveritySection) {
         prBody += `\n\n${lowSeveritySection}`;
