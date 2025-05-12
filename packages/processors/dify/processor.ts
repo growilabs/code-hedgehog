@@ -3,6 +3,7 @@ import type { ReviewConfig } from '../base/types.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from '../base/utils/formatting.ts';
 import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from '../base/utils/group.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
+import { sortByFilePathAndLine } from '../base/utils/sort.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
@@ -37,7 +38,9 @@ export class DifyProcessor extends BaseProcessor {
   private groupComments(): GroupedComment[] {
     // Convert comments to base format and group them
     const baseComments = convertToCommentBase(this.lowSeverityComments);
-    return groupCommentsByLocation(baseComments);
+    const groupedComments = groupCommentsByLocation(baseComments);
+    // Sort by file path and line number (null treated as -1)
+    return sortByFilePathAndLine(groupedComments);
   }
 
   /**
