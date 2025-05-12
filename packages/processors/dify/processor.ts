@@ -1,8 +1,5 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
-import { createCountedCollapsibleSection, formatGroupedComments } from '../base/utils/formatting.ts';
-import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from '../base/utils/group.ts';
-import { sortByFilePathAndLine } from '../base/utils/sort.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
@@ -22,61 +19,10 @@ export class DifyProcessor extends BaseProcessor {
   // Use a different name for Dify specific config to avoid conflict with private base config
   protected readonly difyConfig: InternalDifyConfig;
 
-  /**
-   * Get severity threshold from config or use default (3)
-   */
-  private getSeverityThreshold(config: ReviewConfig): number {
-    return config.severityThreshold ?? 3;
-  }
-
-  // Collection of low severity comments grouped by file path
-  private lowSeverityComments: Record<string, ReviewComment[]> = {};
-
-  /**
-   * Group comments by file path and line number
-   */
-  private groupComments(): GroupedComment[] {
-    // Convert comments to base format and group them
-    const baseComments = convertToCommentBase(this.lowSeverityComments);
-    const groupedComments = groupCommentsByLocation(baseComments);
-    // Sort by file path and line number (null treated as -1)
-    return sortByFilePathAndLine(groupedComments);
-  }
-
-  /**
-   * Determine if a comment should be treated as low severity
-   */
-  private isLowSeverity(comment: ReviewComment, config: ReviewConfig): boolean {
-    return comment.severity < this.getSeverityThreshold(config);
-  }
-
-  /**
-   * Process a comment and collect it if it's low confidence
-   */
-  private processComment(filePath: string, comment: ReviewComment, config: ReviewConfig): boolean {
-    if (this.isLowSeverity(comment, config)) {
-      if (!this.lowSeverityComments[filePath]) {
-        this.lowSeverityComments[filePath] = [];
-      }
-      this.lowSeverityComments[filePath].push(comment);
-      return true;
-    }
-    return false;
-  }
   private readonly tokenConfig = {
     margin: 100,
     maxTokens: 4000, // Note: This seems low for modern models, consider increasing
   };
-
-  /**
-   * Collect suppressed comment for a file
-   */
-  /**
-   * Get collected low severity comments
-   */
-  private getLowSeverityComments(): Record<string, ReviewComment[]> {
-    return this.lowSeverityComments;
-  }
 
   /**
    * Constructor for DifyProcessor
@@ -419,19 +365,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     // Format low severity comments section
-    let lowSeveritySection = '';
-    const lowSeverityComments = this.getLowSeverityComments();
-    if (Object.keys(lowSeverityComments).length > 0) {
-      // Get grouped and sorted comments
-      const groupedComments = this.groupComments();
-
-      // Count unique locations after grouping
-      const suppressedCommentCount = groupedComments.length;
-
-      const content = formatGroupedComments(groupedComments);
-
-      lowSeveritySection = createCountedCollapsibleSection('Comments suppressed due to low severity', suppressedCommentCount, content);
-    }
+    const lowSeveritySection = this.formatLowSeveritySection();
 
     // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {

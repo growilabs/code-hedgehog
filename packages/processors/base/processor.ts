@@ -1,6 +1,9 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
-import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts';
+import type { ReviewConfig, TokenConfig } from './types.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+import { createCountedCollapsibleSection, formatGroupedComments } from './utils/formatting.ts';
+import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from './utils/group.ts';
+import { sortByFilePathAndLine } from './utils/sort.ts';
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
@@ -16,6 +19,73 @@ import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 export abstract class BaseProcessor implements IPullRequestProcessor {
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
   private config: ReviewConfig = DEFAULT_CONFIG;
+
+  // Collection of low severity comments grouped by file path
+  protected lowSeverityComments: Record<string, ReviewComment[]> = {};
+
+  /**
+   * Get severity threshold from config or use default (3)
+   */
+  protected getSeverityThreshold(config: ReviewConfig): number {
+    return config.severityThreshold ?? 3;
+  }
+
+  /**
+   * Determine if a comment should be treated as low severity
+   */
+  protected isLowSeverity(comment: ReviewComment, config: ReviewConfig): boolean {
+    return comment.severity < this.getSeverityThreshold(config);
+  }
+
+  /**
+   * Process a comment and collect it if it's low severity
+   * Returns true if comment was collected as low severity
+   */
+  protected processComment(filePath: string, comment: ReviewComment, config: ReviewConfig): boolean {
+    if (this.isLowSeverity(comment, config)) {
+      if (!this.lowSeverityComments[filePath]) {
+        this.lowSeverityComments[filePath] = [];
+      }
+      this.lowSeverityComments[filePath].push(comment);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get collected low severity comments
+   */
+  protected getLowSeverityComments(): Record<string, ReviewComment[]> {
+    return this.lowSeverityComments;
+  }
+
+  /**
+   * Group comments by file path and line number
+   */
+  protected groupComments(): GroupedComment[] {
+    // Convert comments to base format and group them
+    const baseComments = convertToCommentBase(this.lowSeverityComments);
+    const groupedComments = groupCommentsByLocation(baseComments);
+    // Sort by file path and line number (null treated as -1)
+    return sortByFilePathAndLine(groupedComments);
+  }
+
+  /**
+   * Format low severity comments section
+   */
+  protected formatLowSeveritySection(): string {
+    let lowSeveritySection = '';
+    if (Object.keys(this.lowSeverityComments).length > 0) {
+      // Get grouped and sorted comments
+      const groupedComments = this.groupComments();
+      // Count unique locations after grouping
+      const suppressedCommentCount = groupedComments.length;
+      const content = formatGroupedComments(groupedComments);
+      lowSeveritySection = createCountedCollapsibleSection('Comments suppressed due to low severity', suppressedCommentCount, content);
+    }
+    return lowSeveritySection;
+  }
+
 
   /**
    * Load configuration using the external module.
