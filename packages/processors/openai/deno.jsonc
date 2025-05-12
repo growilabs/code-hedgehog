@@ -2,7 +2,7 @@
   "imports": {
     "@code-hedgehog/core": "../../core/mod.ts",
     "@code-hedgehog/base-processor": "../base/mod.ts",
-    "@openai/openai": "jsr:@openai/openai@^4.92.1"
+    "@openai/openai": "jsr:@openai/openai@^4.100.0"
   },
   "tasks": {
     "test": "deno test -A",

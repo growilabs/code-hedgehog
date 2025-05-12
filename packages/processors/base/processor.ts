@@ -85,7 +85,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     }
     return lowSeveritySection;
   }
-  
+
   /**
    * Load configuration using the external module.
    * This method now acts as a wrapper to update the instance's config.
