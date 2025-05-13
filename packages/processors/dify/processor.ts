@@ -365,7 +365,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     // Format low severity comments section
-    const lowSeveritySection = this.formatLowSeveritySection();
+    const lowSeveritySection = this.formatLowSeveritySection(this.lowSeverityComments);
 
     // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {

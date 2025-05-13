@@ -55,9 +55,9 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   /**
    * Group comments by file path and line number
    */
-  protected groupComments(): GroupedComment[] {
+  protected groupComments(lowSeverityComments: Record<string, ReviewComment[]>): GroupedComment[] {
     // Convert comments to base format and group them
-    const baseComments = convertToCommentBase(this.lowSeverityComments);
+    const baseComments = convertToCommentBase(lowSeverityComments);
     const groupedComments = groupCommentsByLocation(baseComments);
     // Sort by file path and line number (null treated as -1)
     return sortByFilePathAndLine(groupedComments);
@@ -66,11 +66,11 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   /**
    * Format low severity comments section
    */
-  protected formatLowSeveritySection(): string {
+  protected formatLowSeveritySection(lowSeverityComments: Record<string, ReviewComment[]>): string {
     let lowSeveritySection = '';
-    if (Object.keys(this.lowSeverityComments).length > 0) {
+    if (Object.keys(lowSeverityComments).length > 0) {
       // Get grouped and sorted comments
-      const groupedComments = this.groupComments();
+      const groupedComments = this.groupComments(lowSeverityComments);
       // Count unique locations after grouping
       const suppressedCommentCount = groupedComments.length;
       const content = formatGroupedComments(groupedComments);
