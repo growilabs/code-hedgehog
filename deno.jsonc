@@ -16,7 +16,8 @@
     "./packages/processors/base",
     "./packages/processors/acme",
     "./packages/processors/dify",
-    "./packages/processors/openai"
+    "./packages/processors/openai",
+    "./packages/playground"
   ],
   "imports": {
     "@biomejs/biome": "npm:@biomejs/biome@^1.9.4",
