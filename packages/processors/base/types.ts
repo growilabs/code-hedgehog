@@ -34,6 +34,7 @@ export interface LocalReviewConfig {
   file_path_instructions?: PathInstruction[];
   path_filters?: string;
   skip_simple_changes?: boolean;
+  severityThreshold?: number; // Threshold for comment severity (1-5, default: 3)
 }
 
 // Combined review configuration using the imported alias

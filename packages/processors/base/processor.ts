@@ -1,6 +1,9 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts'; // Removed ReviewConfig, TokenConfig
-import type { ReviewConfig, TokenConfig } from './types.ts'; // Import directly from types.ts
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts';
+import type { ReviewConfig, TokenConfig } from './types.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
+import { createCountedCollapsibleSection, formatGroupedComments } from './utils/formatting.ts';
+import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from './utils/group.ts';
+import { sortByFilePathAndLine } from './utils/sort.ts';
 
 import { DEFAULT_CONFIG, matchesGlobPattern } from './deps.ts';
 import { getInstructionsForFile } from './internal/get-instructions-for-file.ts';
@@ -16,6 +19,57 @@ import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
 export abstract class BaseProcessor implements IPullRequestProcessor {
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
   private config: ReviewConfig = DEFAULT_CONFIG;
+
+  /**
+   * Get severity threshold from config or use default (3)
+   */
+  protected getSeverityThreshold(config: ReviewConfig): number {
+    return config.severityThreshold ?? 3;
+  }
+
+  /**
+   * Determine if a comment should be treated as low severity
+   */
+  protected isLowSeverity(comment: ReviewComment, config: ReviewConfig): boolean {
+    return comment.severity < this.getSeverityThreshold(config);
+  }
+
+  /**
+   * Group comments by file path and line number
+   */
+  protected groupComments(lowSeverityComments: Record<string, ReviewComment[]>): GroupedComment[] {
+    // Convert comments to base format and group them
+    const baseComments = convertToCommentBase(lowSeverityComments);
+    const groupedComments = groupCommentsByLocation(baseComments);
+    // Sort by file path and line number (null treated as -1)
+    return sortByFilePathAndLine(groupedComments);
+  }
+
+  /**
+   * Format low severity comments section from all review comments
+   */
+  protected formatLowSeveritySection(allComments: Record<string, ReviewComment[]>, config: ReviewConfig): string {
+    // Filter low severity comments
+    const lowSeverityComments: Record<string, ReviewComment[]> = {};
+    for (const [filePath, comments] of Object.entries(allComments)) {
+      const lowSevComments = comments.filter((comment) => this.isLowSeverity(comment, config));
+      if (lowSevComments.length > 0) {
+        lowSeverityComments[filePath] = lowSevComments;
+      }
+    }
+
+    // If no low severity comments, return empty string
+    if (Object.keys(lowSeverityComments).length === 0) {
+      return '';
+    }
+
+    // Get grouped and sorted comments
+    const groupedComments = this.groupComments(lowSeverityComments);
+    // Count unique locations after grouping
+    const suppressedCommentCount = groupedComments.length;
+    const content = formatGroupedComments(groupedComments);
+    return createCountedCollapsibleSection('Comments suppressed due to low severity', suppressedCommentCount, content);
+  }
 
   /**
    * Load configuration using the external module.
@@ -235,9 +289,9 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Format review comment with suggestion
    */
   protected formatComment(comment: ReviewComment): string {
-    let body = comment.message;
+    let body = `- ${comment.message}`;
     if (comment.suggestion) {
-      body += `\n\n**Suggestion:**\n${comment.suggestion}`;
+      body += `\n  - ${comment.suggestion}`;
     }
     return body;
   }

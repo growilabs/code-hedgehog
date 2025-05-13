@@ -2,7 +2,7 @@ import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
-import { BaseProcessor, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
+import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 // Internal configuration type for DifyProcessor
@@ -15,12 +15,10 @@ type InternalDifyConfig = ReviewConfig & {
   apiKeyReview: string;
 };
 
-/**
- * Processor implementation for Dify AI Service
- */
 export class DifyProcessor extends BaseProcessor {
   // Use a different name for Dify specific config to avoid conflict with private base config
   protected readonly difyConfig: InternalDifyConfig;
+
   private readonly tokenConfig = {
     margin: 100,
     maxTokens: 4000, // Note: This seems low for modern models, consider increasing
@@ -272,6 +270,10 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     const comments: IReviewComment[] = [];
+    // Map to collect review summaries for each file
+    const fileSummaries = new Map<string, string>();
+    // Record to collect all review comments by file
+    const reviewsByFile: Record<string, ReviewComment[]> = {};
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);
@@ -326,23 +328,29 @@ export class DifyProcessor extends BaseProcessor {
         });
         const review = ReviewResponseSchema.parse(response);
 
+        // Process all comments, separating them by confidence
         if (review.comments) {
           for (const comment of review.comments) {
-            comments.push({
-              path: file.path,
-              body: this.formatComment(comment),
-              type: 'inline',
-              position: comment.line_number || 1,
-            });
+            if (!this.isLowSeverity(comment, config)) {
+              // Add high confidence comments as inline comments
+              comments.push({
+                path: file.path,
+                body: this.formatComment(comment),
+                type: 'inline',
+                position: comment.line_number || 1,
+              });
+            }
+          }
+
+          // Add comments to the review collection
+          if (review.comments.length > 0) {
+            reviewsByFile[file.path] = review.comments;
           }
         }
 
+        // Store individual file summary
         if (review.summary) {
-          comments.push({
-            path: file.path,
-            body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
-          });
+          fileSummaries.set(file.path, review.summary);
         }
       } catch (error) {
         console.error(`Review error for ${file.path}:`, error);
@@ -355,11 +363,29 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // Add overall summary to regular comments
+    // Format collected file summaries into a table
+    let fileSummaryTable = '| File | Description |\n|------|-------------|';
+    for (const [path, summary] of fileSummaries) {
+      // Replace newlines with spaces for cleaner table display
+      const formattedSummary = summary.replace(/\n/g, ' ');
+      fileSummaryTable += `\n| \`${path}\` | ${formattedSummary} |`;
+    }
+
+    // Format low severity comments section
+    const lowSeveritySection = this.formatLowSeveritySection(reviewsByFile, config);
+
+    // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {
+      // Build the PR body with sections
+      let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
+      // Add low confidence section if exists
+      if (lowSeveritySection) {
+        prBody += `\n\n${lowSeveritySection}`;
+      }
+
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}`,
+        body: prBody,
         type: 'pr',
       });
     }
