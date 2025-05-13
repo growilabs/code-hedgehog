@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
+import { Select, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
 
 const App = () => {
-  const [count, setCount] = useState(0);
-
   return (
-    <>
-      <img src="/vite-deno.svg" alt="Vite with Deno" />
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button type="button" onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-      </div>
-    </>
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-4">CodeHedgehog</h1>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg">Select a repository</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a repository" />
+            </SelectTrigger>
+          </Select>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
