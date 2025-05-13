@@ -52,7 +52,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     // Filter low severity comments
     const lowSeverityComments: Record<string, ReviewComment[]> = {};
     for (const [filePath, comments] of Object.entries(allComments)) {
-      const lowSevComments = comments.filter(comment => this.isLowSeverity(comment, config));
+      const lowSevComments = comments.filter((comment) => this.isLowSeverity(comment, config));
       if (lowSevComments.length > 0) {
         lowSeverityComments[filePath] = lowSevComments;
       }
