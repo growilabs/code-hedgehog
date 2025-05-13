@@ -272,6 +272,8 @@ export class DifyProcessor extends BaseProcessor {
     const comments: IReviewComment[] = [];
     // Map to collect review summaries for each file
     const fileSummaries = new Map<string, string>();
+    // Record to collect all review comments by file
+    const reviewsByFile: Record<string, ReviewComment[]> = {};
 
     for (const file of files) {
       const summarizeResult = summarizeResults.get(file.path);
@@ -329,15 +331,20 @@ export class DifyProcessor extends BaseProcessor {
         // Process all comments, separating them by confidence
         if (review.comments) {
           for (const comment of review.comments) {
-            if (!this.processComment(file.path, comment, config)) {
+            if (!this.isLowSeverity(comment, config)) {
               // Add high confidence comments as inline comments
               comments.push({
                 path: file.path,
-                body: this.formatComment(comment),
+                body: comment.message,
                 type: 'inline',
                 position: comment.line_number || 1,
               });
             }
+          }
+
+          // Add comments to the review collection
+          if (review.comments.length > 0) {
+            reviewsByFile[file.path] = review.comments;
           }
         }
 
@@ -365,7 +372,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     // Format low severity comments section
-    const lowSeveritySection = this.formatLowSeveritySection(this.lowSeverityComments);
+    const lowSeveritySection = this.formatLowSeveritySection(reviewsByFile, config);
 
     // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {
