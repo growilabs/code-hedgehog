@@ -53,13 +53,6 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Get collected low severity comments
-   */
-  protected getLowSeverityComments(): Record<string, ReviewComment[]> {
-    return this.lowSeverityComments;
-  }
-
-  /**
    * Group comments by file path and line number
    */
   protected groupComments(): GroupedComment[] {
