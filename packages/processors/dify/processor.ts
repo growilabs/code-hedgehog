@@ -335,7 +335,7 @@ export class DifyProcessor extends BaseProcessor {
               // Add high confidence comments as inline comments
               comments.push({
                 path: file.path,
-                body: comment.message,
+                body: this.formatComment(comment),
                 type: 'inline',
                 position: comment.line_number || 1,
               });

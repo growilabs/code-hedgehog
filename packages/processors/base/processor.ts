@@ -289,11 +289,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Format review comment with suggestion
    */
   protected formatComment(comment: ReviewComment): string {
-    let body = comment.path;
-    if (comment.line_number) {
-      body += `:${comment.line_number}`;
-    }
-    body += `\n- ${comment.message}`;
+    let body = `- ${comment.message}`;
     if (comment.suggestion) {
       body += `\n  - ${comment.suggestion}`;
     }
