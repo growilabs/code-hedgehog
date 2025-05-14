@@ -243,8 +243,8 @@ export class OpenaiProcessor extends BaseProcessor {
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
-    // Map to collect file summaries
     const fileSummaries = new Map<string, string>();
+    const reviewsByFile: Record<string, ReviewComment[]> = {};
     // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
     const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema as unknown as any, 'review_response');
 
@@ -301,14 +301,11 @@ export class OpenaiProcessor extends BaseProcessor {
 
         const review = ReviewResponseSchema.parse(JSON.parse(content));
 
-        // Create inline comments
-        for (const comment of review.comments) {
-          comments.push({
-            path: file.path,
-            position: comment.line_number ?? 1,
-            body: this.formatComment(comment),
-            type: 'inline',
-          });
+        // Process comments and separate by severity
+        if (review.comments) {
+          const { inlineComments, reviewsByFile: fileReviews } = this.processComments(file.path, review.comments, config);
+          comments.push(...inlineComments);
+          Object.assign(reviewsByFile, fileReviews);
         }
 
         // Store file summary
@@ -327,14 +324,9 @@ export class OpenaiProcessor extends BaseProcessor {
     }
 
     // Add overall summary to regular comments
-    // Add overall summary to regular comments with file summaries table
     if (overallSummary != null) {
       const fileSummaryTable = formatFileSummaryTable(fileSummaries);
-      comments.push({
-        path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`,
-        type: 'pr',
-      });
+      comments.push(this.formatPRBody(overallSummary, fileSummaryTable, reviewsByFile, config));
     }
 
     return { comments };

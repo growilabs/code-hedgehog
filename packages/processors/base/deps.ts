@@ -9,6 +9,7 @@ export type {
   IPullRequestInfo,
   IPullRequestProcessedResult,
   IPullRequestProcessor,
+  IReviewComment,
 } from '@code-hedgehog/core';
 
 // Local schema types and constants re-exported
