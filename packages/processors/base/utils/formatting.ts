@@ -32,6 +32,23 @@ export function formatGroupedComments(groups: GroupedComment[]): string {
 }
 
 /**
+ * Format file summaries into a markdown table
+ * @param fileSummaries Map of file paths to their summaries
+ * @returns Formatted markdown table string
+ */
+export function formatFileSummaryTable(
+  fileSummaries: Map<string, string>
+): string {
+  let table = '| File | Description |\n|------|-------------|';
+  for (const [path, summary] of fileSummaries) {
+    // Replace newlines with spaces for cleaner table display
+    const formattedSummary = summary.replace(/\n/g, ' ');
+    table += `\n| \`${path}\` | ${formattedSummary} |`;
+  }
+  return table;
+}
+
+/**
  * Generate a collapsible section with item count
  * @param title Section title
  * @param count Number of items

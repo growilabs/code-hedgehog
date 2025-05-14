@@ -3,6 +3,7 @@ import { ImpactLevel } from '../base/schema.ts';
 // Import the base config type
 import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
+import { formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { CommentType } from './deps.ts';
 import type { z } from './deps.ts'; // Import zod for type assertion
@@ -242,6 +243,8 @@ export class OpenaiProcessor extends BaseProcessor {
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
+    // Map to collect file summaries
+    const fileSummaries = new Map<string, string>();
     // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
     const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema as unknown as any, 'review_response');
 
@@ -308,13 +311,9 @@ export class OpenaiProcessor extends BaseProcessor {
           });
         }
 
-        // Add summary comment
+        // Store file summary
         if (review.summary) {
-          comments.push({
-            path: file.path,
-            body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
-          });
+          fileSummaries.set(file.path, review.summary);
         }
       } catch (error) {
         console.error(`Error reviewing ${file.path}:`, error);
@@ -328,10 +327,12 @@ export class OpenaiProcessor extends BaseProcessor {
     }
 
     // Add overall summary to regular comments
+    // Add overall summary to regular comments with file summaries table
     if (overallSummary != null) {
+      const fileSummaryTable = formatFileSummaryTable(fileSummaries);
       comments.push({
         path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}`,
+        body: `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`,
         type: 'pr',
       });
     }

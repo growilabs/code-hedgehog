@@ -1,5 +1,6 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
+import { formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
@@ -363,13 +364,8 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // Format collected file summaries into a table
-    let fileSummaryTable = '| File | Description |\n|------|-------------|';
-    for (const [path, summary] of fileSummaries) {
-      // Replace newlines with spaces for cleaner table display
-      const formattedSummary = summary.replace(/\n/g, ' ');
-      fileSummaryTable += `\n| \`${path}\` | ${formattedSummary} |`;
-    }
+    // Format collected file summaries into a table using common utility
+    const fileSummaryTable = formatFileSummaryTable(fileSummaries);
 
     // Format low severity comments section
     const lowSeveritySection = this.formatLowSeveritySection(reviewsByFile, config);
