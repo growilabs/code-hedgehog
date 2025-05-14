@@ -269,13 +269,30 @@ Provide a thorough review focusing on:
 - Design and architectural impacts
 - Maintainability and readability
 
+## Comment Severity Guidelines
+
+Please assign a severity level (1-5) to each review comment based on the following criteria:
+
+- **5 Blocker**: Critical issues that must block release. Security vulnerabilities, data loss risks, system crashes, or other fatal problems requiring immediate attention.
+
+- **4 Critical**: Serious problems affecting the entire system. Severe performance bottlenecks, memory leaks, lack of error handling, or other issues requiring urgent attention.
+
+- **3 Major**: Significant issues affecting specific functionality. Feature malfunctions in certain use cases, edge case handling errors, or important business logic mistakes.
+
+- **2 Minor**: Small functional problems or UI inconsistencies. Improper error message display, minor UI inconsistencies, or processes with room for optimization.
+
+- **1 Trivial**: Coding style issues or minor improvements. Variable name improvements, adding or updating comments, removing unused code, or small code structure improvements.
+
+# Respond JSON format
+
 Respond in JSON format with:
 {
   "comments": [
     {
-      "message": string,      // Review comment
+      "message": string,      // Important review comment
       "suggestion"?: string,  // Optional improvement suggestion
-      "line_number"?: number  // Optional line number reference
+      "line_number"?: number, // Optional line number reference
+      "severity": number      // Severity level (1-5)
     }
   ],
   "summary": string          // Overall evaluation of changes

@@ -1,5 +1,6 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts';
 import type { ReviewConfig, TokenConfig } from './types.ts';
+import { SeverityLevel } from './schema.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from './utils/formatting.ts';
 import { type GroupedComment, convertToCommentBase, groupCommentsByLocation } from './utils/group.ts';
@@ -31,7 +32,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Determine if a comment should be treated as low severity
    */
   protected isLowSeverity(comment: ReviewComment, config: ReviewConfig): boolean {
-    return comment.severity < this.getSeverityThreshold(config);
+    return Number(comment.severity) < this.getSeverityThreshold(config);
   }
 
   /**
