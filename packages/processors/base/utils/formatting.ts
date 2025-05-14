@@ -36,9 +36,7 @@ export function formatGroupedComments(groups: GroupedComment[]): string {
  * @param fileSummaries Map of file paths to their summaries
  * @returns Formatted markdown table string
  */
-export function formatFileSummaryTable(
-  fileSummaries: Map<string, string>
-): string {
+export function formatFileSummaryTable(fileSummaries: Map<string, string>): string {
   let table = '| File | Description |\n|------|-------------|';
   for (const [path, summary] of fileSummaries) {
     // Replace newlines with spaces for cleaner table display

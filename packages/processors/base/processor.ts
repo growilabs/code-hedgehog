@@ -317,7 +317,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   protected processComments(
     file: string,
     comments: ReviewComment[],
-    config: ReviewConfig
+    config: ReviewConfig,
   ): {
     inlineComments: IReviewComment[];
     reviewsByFile: Record<string, ReviewComment[]>;
@@ -327,7 +327,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
 
     if (comments.length > 0) {
       reviewsByFile[file] = comments;
-      
+
       for (const comment of comments) {
         if (!this.isLowSeverity(comment, config)) {
           inlineComments.push({
@@ -350,10 +350,10 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     overallSummary: OverallSummary,
     fileSummaryTable: string,
     reviewsByFile: Record<string, ReviewComment[]>,
-    config: ReviewConfig
+    config: ReviewConfig,
   ): IReviewComment {
     let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
-    
+
     const lowSeveritySection = this.formatLowSeveritySection(reviewsByFile, config);
     if (lowSeveritySection) {
       prBody += `\n\n${lowSeveritySection}`;
