@@ -1,6 +1,8 @@
 import OwnerSelector from '@/components/OwnerSelector.tsx';
+import RepoSelector from '@/components/RepoSelector.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
-import { VCSProvider } from './context/VCSContext.tsx';
+import { useContext } from 'react';
+import { VCSContext, VCSProvider } from './context/VCSContext.tsx';
 
 const App = () => {
   return (
@@ -12,14 +14,30 @@ const App = () => {
             <CardTitle className="text-lg">組織・リポジトリを選択</CardTitle>
           </CardHeader>
           <CardContent>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">組織を選択</p>
-              <OwnerSelector />
-            </div>
+            <OwnerRepoSelector />
           </CardContent>
         </Card>
       </div>
     </VCSProvider>
+  );
+};
+
+const OwnerRepoSelector = () => {
+  const { selectedOwner } = useContext(VCSContext);
+
+  return (
+    <>
+      <div>
+        <p className="text-sm text-muted-foreground mb-2">組織を選択</p>
+        <OwnerSelector />
+      </div>
+      {selectedOwner !== '' && (
+        <div className="mt-4">
+          <p className="text-sm text-muted-foreground mb-2">リポジトリを選択:</p>
+          <RepoSelector />
+        </div>
+      )}
+    </>
   );
 };
 
