@@ -1,5 +1,4 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, IReviewComment } from './deps.ts';
-import { SeverityLevel } from './schema.ts';
 import type { ReviewConfig, TokenConfig } from './types.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from './utils/formatting.ts';
