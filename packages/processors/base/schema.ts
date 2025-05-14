@@ -12,6 +12,17 @@ export enum ImpactLevel {
 }
 
 /**
+ * Severity level for review comments
+ */
+export enum SeverityLevel {
+  Trivial = 1,
+  Minor = 2,
+  Major = 3,
+  Critical = 4,
+  Blocker = 5,
+}
+
+/**
  * Response format for triage workflow
  */
 export const SummaryResponseSchema = z.object({
@@ -54,7 +65,7 @@ export const ReviewCommentSchema = z.object({
   message: z.string(), // Important review comment
   suggestion: z.string().optional(), // Optional improvement suggestion
   line_number: z.number().optional(), // Optional line number reference
-  severity: z.number().min(1).max(5), // Severity score between 1 and 5 (1: lowest, 5: highest)
+  severity: z.nativeEnum(SeverityLevel), // Severity level (Trivial to Blocker)
 });
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
 

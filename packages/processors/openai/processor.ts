@@ -3,6 +3,7 @@ import { ImpactLevel } from '../base/schema.ts';
 // Import the base config type
 import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
 import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
+import { formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import { CommentType } from './deps.ts';
 import type { z } from './deps.ts'; // Import zod for type assertion
@@ -242,6 +243,8 @@ export class OpenaiProcessor extends BaseProcessor {
     overallSummary?: OverallSummary,
   ): Promise<IPullRequestProcessedResult> {
     const comments: IReviewComment[] = [];
+    const fileSummaries = new Map<string, string>();
+    const reviewsByFile: Record<string, ReviewComment[]> = {};
     // biome-ignore lint/suspicious/noExplicitAny: zodResponseFormat's type inference is complex
     const reviewResponseFormat = zodResponseFormat(ReviewResponseSchema as unknown as any, 'review_response');
 
@@ -298,23 +301,16 @@ export class OpenaiProcessor extends BaseProcessor {
 
         const review = ReviewResponseSchema.parse(JSON.parse(content));
 
-        // Create inline comments
-        for (const comment of review.comments) {
-          comments.push({
-            path: file.path,
-            position: comment.line_number ?? 1,
-            body: this.formatComment(comment),
-            type: 'inline',
-          });
+        // Process comments and separate by severity
+        if (review.comments) {
+          const { inlineComments, reviewsByFile: fileReviews } = this.processComments(file.path, review.comments, config);
+          comments.push(...inlineComments);
+          Object.assign(reviewsByFile, fileReviews);
         }
 
-        // Add summary comment
+        // Store file summary
         if (review.summary) {
-          comments.push({
-            path: file.path,
-            body: `## Review Summary\n\n${review.summary}`,
-            type: 'file',
-          });
+          fileSummaries.set(file.path, review.summary);
         }
       } catch (error) {
         console.error(`Error reviewing ${file.path}:`, error);
@@ -329,11 +325,8 @@ export class OpenaiProcessor extends BaseProcessor {
 
     // Add overall summary to regular comments
     if (overallSummary != null) {
-      comments.push({
-        path: 'PR',
-        body: `## Overall Summary\n\n${overallSummary.description}`,
-        type: 'pr',
-      });
+      const fileSummaryTable = formatFileSummaryTable(fileSummaries);
+      comments.push(this.formatPRBody(overallSummary, fileSummaryTable, reviewsByFile, config));
     }
 
     return { comments };

@@ -1,5 +1,6 @@
 import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
+import { formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentSchema, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
@@ -270,9 +271,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     const comments: IReviewComment[] = [];
-    // Map to collect review summaries for each file
     const fileSummaries = new Map<string, string>();
-    // Record to collect all review comments by file
     const reviewsByFile: Record<string, ReviewComment[]> = {};
 
     for (const file of files) {
@@ -330,22 +329,9 @@ export class DifyProcessor extends BaseProcessor {
 
         // Process all comments, separating them by confidence
         if (review.comments) {
-          for (const comment of review.comments) {
-            if (!this.isLowSeverity(comment, config)) {
-              // Add high confidence comments as inline comments
-              comments.push({
-                path: file.path,
-                body: this.formatComment(comment),
-                type: 'inline',
-                position: comment.line_number || 1,
-              });
-            }
-          }
-
-          // Add comments to the review collection
-          if (review.comments.length > 0) {
-            reviewsByFile[file.path] = review.comments;
-          }
+          const { inlineComments, reviewsByFile: fileReviews } = this.processComments(file.path, review.comments, config);
+          comments.push(...inlineComments);
+          Object.assign(reviewsByFile, fileReviews);
         }
 
         // Store individual file summary
@@ -363,31 +349,15 @@ export class DifyProcessor extends BaseProcessor {
       }
     }
 
-    // Format collected file summaries into a table
-    let fileSummaryTable = '| File | Description |\n|------|-------------|';
-    for (const [path, summary] of fileSummaries) {
-      // Replace newlines with spaces for cleaner table display
-      const formattedSummary = summary.replace(/\n/g, ' ');
-      fileSummaryTable += `\n| \`${path}\` | ${formattedSummary} |`;
-    }
+    // Format collected file summaries into a table using common utility
+    const fileSummaryTable = formatFileSummaryTable(fileSummaries);
 
     // Format low severity comments section
     const lowSeveritySection = this.formatLowSeveritySection(reviewsByFile, config);
 
     // Add overall summary with file summaries table and additional notes to regular comments
     if (overallSummary != null) {
-      // Build the PR body with sections
-      let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
-      // Add low confidence section if exists
-      if (lowSeveritySection) {
-        prBody += `\n\n${lowSeveritySection}`;
-      }
-
-      comments.push({
-        path: 'PR',
-        body: prBody,
-        type: 'pr',
-      });
+      comments.push(this.formatPRBody(overallSummary, fileSummaryTable, reviewsByFile, config));
     }
 
     return {

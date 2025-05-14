@@ -1,4 +1,4 @@
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor } from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, IReviewComment } from './deps.ts';
 import type { ReviewConfig, TokenConfig } from './types.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from './utils/formatting.ts';
@@ -31,7 +31,7 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Determine if a comment should be treated as low severity
    */
   protected isLowSeverity(comment: ReviewComment, config: ReviewConfig): boolean {
-    return comment.severity < this.getSeverityThreshold(config);
+    return Number(comment.severity) < this.getSeverityThreshold(config);
   }
 
   /**
@@ -309,5 +309,60 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
       return `${index}: ${line}`;
     });
     return numberedLines.join('\n');
+  }
+
+  /**
+   * Process comments and separate them by severity
+   */
+  protected processComments(
+    file: string,
+    comments: ReviewComment[],
+    config: ReviewConfig,
+  ): {
+    inlineComments: IReviewComment[];
+    reviewsByFile: Record<string, ReviewComment[]>;
+  } {
+    const inlineComments: IReviewComment[] = [];
+    const reviewsByFile: Record<string, ReviewComment[]> = {};
+
+    if (comments.length > 0) {
+      reviewsByFile[file] = comments;
+
+      for (const comment of comments) {
+        if (!this.isLowSeverity(comment, config)) {
+          inlineComments.push({
+            path: file,
+            body: this.formatComment(comment),
+            type: 'inline',
+            position: comment.line_number || 1,
+          });
+        }
+      }
+    }
+
+    return { inlineComments, reviewsByFile };
+  }
+
+  /**
+   * Format PR body with summary, file summaries, and low severity comments
+   */
+  protected formatPRBody(
+    overallSummary: OverallSummary,
+    fileSummaryTable: string,
+    reviewsByFile: Record<string, ReviewComment[]>,
+    config: ReviewConfig,
+  ): IReviewComment {
+    let prBody = `## Overall Summary\n\n${overallSummary.description}\n\n## Reviewed Changes\n\n${fileSummaryTable}`;
+
+    const lowSeveritySection = this.formatLowSeveritySection(reviewsByFile, config);
+    if (lowSeveritySection) {
+      prBody += `\n\n${lowSeveritySection}`;
+    }
+
+    return {
+      path: 'PR',
+      body: prBody,
+      type: 'pr',
+    };
   }
 }
