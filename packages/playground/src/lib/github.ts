@@ -46,15 +46,23 @@ export type PullRequest = {
   };
 };
 
-export const getPullRequests = async (org: string, repo: string): Promise<PullRequest[]> => {
+export const getPullRequestsWithMaxPage = async (org: string, repo: string, page: number): Promise<{ pullRequests: PullRequest[]; maxPage: number }> => {
   const octokit = createOctokit();
   const response = await octokit.rest.pulls.list({
     owner: org,
     repo,
     per_page: 10,
+    page,
   });
 
-  return response.data.map((pr) => ({
+  let maxPage = 1;
+  const link = response.headers.link;
+  const match = link?.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
+  if (match != null) {
+    maxPage = Number(match[1]);
+  }
+
+  const pullRequests = response.data.map((pr) => ({
     id: pr.id,
     number: pr.number,
     title: pr.title,
@@ -66,4 +74,6 @@ export const getPullRequests = async (org: string, repo: string): Promise<PullRe
       avatar_url: pr.user?.avatar_url,
     },
   }));
+
+  return { pullRequests, maxPage };
 };

@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
-import { type PullRequest, getPullRequests } from '@/lib/github.ts';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination.tsx';
+import { type PullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
 import { useAtomValue } from 'jotai';
 import { Calendar, Check, CircleAlert, Clock, GitPullRequest, Loader, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -17,6 +18,8 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     (async () => {
@@ -26,15 +29,52 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
       setError('');
 
       try {
-        const fetchedPullRequests = await getPullRequests(selectedOwner, selectedRepo);
+        const { pullRequests: fetchedPullRequests, maxPage } = await getPullRequestsWithMaxPage(selectedOwner, selectedRepo, currentPage);
         setPullRequests(fetchedPullRequests);
+        setTotalPages(maxPage);
       } catch (err) {
         setError('プルリクエストの読み込みに失敗しました。後でもう一度お試しください。');
       } finally {
         setLoading(false);
       }
     })();
-  }, [selectedOwner, selectedRepo]);
+  }, [selectedOwner, selectedRepo, currentPage]);
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPage = (pageNumber: number) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 7;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return pageNumbers;
+  };
 
   if (loading) {
     return (
@@ -65,40 +105,69 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
   }
 
   return (
-    <div className="space-y-3">
-      {pullRequests.map((pr) => (
-        <div key={pr.id}>
-          <Card className="hover:bg-muted/20 transition-colors py-0">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className={`mt-1 flex-shrink-0 ${pr.state === 'open' ? 'text-green-500' : 'text-purple-500'}`}>
-                  <GitPullRequest size={20} />
-                </div>
-                <div className="flex-grow min-w-0">
-                  <h3 className="text-base font-medium mb-1 truncate">
-                    {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
-                  </h3>
-                  <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                    <Badge variant={pr.state === 'open' ? 'success' : 'pending'} className="flex items-center gap-1">
-                      {pr.state === 'open' ? <Check className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
-                      {pr.state}
-                    </Badge>
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      <span>{pr.user.login}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>作成日: {formatDate(pr.created_at)}</span>
+    <>
+      <div className="space-y-3">
+        {pullRequests.map((pr) => (
+          <div key={pr.id}>
+            <Card className="hover:bg-muted/20 transition-colors py-0">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className={`mt-1 flex-shrink-0 ${pr.state === 'open' ? 'text-green-500' : 'text-purple-500'}`}>
+                    <GitPullRequest size={20} />
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <h3 className="text-base font-medium mb-1 truncate">
+                      {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
+                    </h3>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                      <Badge variant={pr.state === 'open' ? 'success' : 'pending'} className="flex items-center gap-1">
+                        {pr.state === 'open' ? <Check className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
+                        {pr.state}
+                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        <span>{pr.user.login}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>作成日: {formatDate(pr.created_at)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious onClick={goToPreviousPage} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} />
+              </PaginationItem>
+
+              {getPageNumbers().map((pageNumber) => (
+                <PaginationItem key={pageNumber}>
+                  <PaginationLink onClick={() => goToPage(pageNumber)} isActive={pageNumber === currentPage}>
+                    {pageNumber}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+
+              <PaginationItem>
+                <PaginationNext onClick={goToNextPage} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+          <div className="text-center text-sm text-muted-foreground mt-2">
+            {currentPage} / {totalPages}ページ
+          </div>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 });
 
