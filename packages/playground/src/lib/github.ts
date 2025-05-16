@@ -19,14 +19,16 @@ export type Repository = {
  */
 export const getRepositories = async (org: string): Promise<Repository[]> => {
   const octokit = createOctokit();
-  const response = await octokit.rest.repos.listForOrg({
-    org,
-    per_page: MAX_PER_PAGE,
-  });
+  const repositories: Repository[] = [];
 
-  return response.data.map((repo) => ({
-    id: repo.id,
-    name: repo.name,
-    full_name: repo.full_name,
-  }));
+  for await (const { data } of octokit.paginate.iterator(octokit.rest.repos.listForOrg, { org, per_page: MAX_PER_PAGE })) {
+    repositories.push(
+      ...data.map((repo) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+      })),
+    );
+  }
+  return repositories;
 };
