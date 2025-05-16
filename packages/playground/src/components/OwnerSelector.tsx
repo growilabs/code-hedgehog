@@ -1,13 +1,15 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
-import { useAtom } from 'jotai';
-import { selectedOwnerAtom } from '../atoms/vcsAtoms.ts';
+import { useAtom, useSetAtom } from 'jotai';
+import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 
 const OwnerSelector = () => {
   const [selectedOwner, setSelectedOwner] = useAtom(selectedOwnerAtom);
+  const setSelectedRepo = useSetAtom(selectedRepoAtom);
   const owners = import.meta.env.VITE_OWNERS?.split(',') ?? [];
 
   const handleOwnerChange = (value: string) => {
     setSelectedOwner(value);
+    setSelectedRepo('');
   };
 
   return (
