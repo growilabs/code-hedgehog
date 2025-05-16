@@ -1,14 +1,14 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
 import { useAtom, useAtomValue } from 'jotai';
-import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+import { type Repository, getRepositories } from '../lib/github.ts';
 
 const RepoSelector = () => {
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const [selectedRepo, setSelectedRepo] = useAtom(selectedRepoAtom);
 
-  const [repos, setRepos] = useState<string[]>([]);
+  const [repos, setRepos] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -23,10 +23,10 @@ const RepoSelector = () => {
       setError('');
 
       try {
-        // TODO: Github API を叩いてリポジトリ一覧を取得する
-        // setRepos(fetchedRepos);
+        const repositories = await getRepositories(selectedOwner);
+        setRepos(repositories);
       } catch (err) {
-        // setError('リポジトリの読み込みに失敗しました。後でもう一度お試しください。');
+        setError('リポジトリの読み込みに失敗しました。後でもう一度お試しください。');
       } finally {
         setLoading(false);
       }
@@ -47,21 +47,12 @@ const RepoSelector = () => {
     <div className="relative">
       <Select disabled={loading} value={selectedRepo} onValueChange={handleRepoChange}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="リポジトリを選択">
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-                <span>リポジトリを読み込み中...</span>
-              </div>
-            ) : (
-              selectedRepo
-            )}
-          </SelectValue>
+          <SelectValue placeholder={loading ? 'リポジトリを読み込み中...' : 'リポジトリを選択'}>{selectedRepo}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {repos.map((repo) => (
-            <SelectItem key={repo} value={repo}>
-              {repo}
+            <SelectItem key={repo.id} value={repo.name}>
+              {repo.name}
             </SelectItem>
           ))}
         </SelectContent>
