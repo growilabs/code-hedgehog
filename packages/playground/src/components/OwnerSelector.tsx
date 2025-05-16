@@ -1,9 +1,9 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
-import { useContext } from 'react';
-import { VCSContext } from '../context/VCSContext.tsx';
+import { useAtom } from 'jotai';
+import { selectedOwnerAtom } from '../atoms/vcsAtoms.ts';
 
 const OwnerSelector = () => {
-  const { selectedOwner, setSelectedOwner } = useContext(VCSContext);
+  const [selectedOwner, setSelectedOwner] = useAtom(selectedOwnerAtom);
   const owners = import.meta.env.VITE_OWNERS?.split(',') ?? [];
 
   const handleOwnerChange = (value: string) => {

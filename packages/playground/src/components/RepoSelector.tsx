@@ -1,10 +1,12 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
+import { useAtom, useAtomValue } from 'jotai';
 import { LoaderCircle } from 'lucide-react';
-import { useContext, useEffect, useState } from 'react';
-import { VCSContext } from '../context/VCSContext.tsx';
+import { useEffect, useState } from 'react';
+import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 
 const RepoSelector = () => {
-  const { selectedOwner, selectedRepo, setSelectedRepo } = useContext(VCSContext);
+  const selectedOwner = useAtomValue(selectedOwnerAtom);
+  const [selectedRepo, setSelectedRepo] = useAtom(selectedRepoAtom);
 
   const [repos, setRepos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);

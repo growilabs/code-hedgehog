@@ -1,12 +1,12 @@
 import OwnerSelector from '@/components/OwnerSelector.tsx';
 import RepoSelector from '@/components/RepoSelector.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
-import { useContext } from 'react';
-import { VCSContext, VCSProvider } from './context/VCSContext.tsx';
+import { useAtomValue } from 'jotai';
+import { selectedOwnerAtom } from './atoms/vcsAtoms.ts';
 
 const App = () => {
   return (
-    <VCSProvider>
+    <>
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-4">CodeHedgehog</h1>
         <Card className="mb-6">
@@ -18,12 +18,12 @@ const App = () => {
           </CardContent>
         </Card>
       </div>
-    </VCSProvider>
+    </>
   );
 };
 
 const OwnerRepoSelector = () => {
-  const { selectedOwner } = useContext(VCSContext);
+  const selectedOwner = useAtomValue(selectedOwnerAtom);
 
   return (
     <>
