@@ -3,6 +3,7 @@ import type { Endpoints } from '@octokit/types';
 
 export type Repository = Endpoints['GET /orgs/{org}/repos']['response']['data'][number];
 export type PullRequest = Endpoints['GET /repos/{owner}/{repo}/pulls']['response']['data'][number];
+export type PullRequestDetail = Endpoints['GET /repos/{owner}/{repo}/pulls/{pull_number}']['response']['data'];
 
 const MAX_PER_PAGE = 100;
 
@@ -47,4 +48,11 @@ export const getPullRequestsWithMaxPage = async (org: string, repo: string, page
   }
 
   return { pullRequests: response.data, maxPage };
+};
+
+export const getPullRequest = async (owner: string, repo: string, pull_number: number): Promise<PullRequestDetail> => {
+  const octokit = createOctokit();
+  const response = await octokit.rest.pulls.get({ owner, repo, pull_number });
+
+  return response.data;
 };
