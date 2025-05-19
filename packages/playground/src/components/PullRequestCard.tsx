@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.t
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination.tsx';
 import { type PullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
 import { useAtomValue } from 'jotai';
-import { Calendar, Check, CircleAlert, Clock, GitPullRequest, Loader, User } from 'lucide-react';
+import { Calendar, Check, CircleAlert, Clock, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
@@ -107,57 +107,70 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
   return (
     <>
       <div className="space-y-3">
-        {pullRequests.map((pr) => (
-          <div key={pr.id}>
-            <Card className="hover:bg-muted/20 transition-colors py-0">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className={`mt-1 flex-shrink-0 ${pr.state === 'open' ? 'text-green-500' : 'text-purple-500'}`}>
-                    <GitPullRequest size={20} />
-                  </div>
-                  <div className="flex-grow min-w-0">
-                    <h3 className="text-base font-medium mb-1 truncate">
-                      {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
-                    </h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                      <Badge variant={pr.state === 'open' ? 'success' : 'pending'} className="flex items-center gap-1">
-                        {pr.state === 'open' ? <Check className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
-                        {pr.state}
-                      </Badge>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span>{pr.user.login}</span>
+        {pullRequests.map((pr) => {
+          const state = pr.state === 'open' ? 'open' : pr.merged_at != null ? 'merged' : 'closed';
+
+          return (
+            <div key={pr.id}>
+              <Card className="hover:bg-muted/20 transition-colors py-0">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    {state === 'open' ? (
+                      <div className="mt-1 flex-shrink-0 text-green-500">
+                        <GitPullRequest size={20} />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>作成日: {formatDate(pr.created_at)}</span>
+                    ) : state === 'merged' ? (
+                      <div className="mt-1 flex-shrink-0 text-purple-500">
+                        <GitMerge size={20} />
+                      </div>
+                    ) : (
+                      <div className="mt-1 flex-shrink-0 text-red-500">
+                        <GitPullRequestClosed size={20} />
+                      </div>
+                    )}
+                    <div className="flex-grow min-w-0">
+                      <h3 className="text-base font-medium mb-1 truncate">
+                        {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
+                      </h3>
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                        <Badge variant={state} className="flex items-center gap-1">
+                          {state}
+                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{pr.user?.login}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>作成日: {formatDate(pr.created_at)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ))}
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })}
       </div>
 
       {totalPages > 1 && (
         <div className="mt-6">
           <Pagination>
             <PaginationContent>
-              <PaginationItem>
+              <PaginationItem className="cursor-pointer">
                 <PaginationPrevious onClick={goToPreviousPage} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} />
               </PaginationItem>
 
               {getPageNumbers().map((pageNumber) => (
-                <PaginationItem key={pageNumber}>
+                <PaginationItem key={pageNumber} className="cursor-pointer">
                   <PaginationLink onClick={() => goToPage(pageNumber)} isActive={pageNumber === currentPage}>
                     {pageNumber}
                   </PaginationLink>
                 </PaginationItem>
               ))}
 
-              <PaginationItem>
+              <PaginationItem className="cursor-pointer">
                 <PaginationNext onClick={goToNextPage} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} />
               </PaginationItem>
             </PaginationContent>

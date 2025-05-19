@@ -34,6 +34,7 @@ export const getPullRequestsWithMaxPage = async (org: string, repo: string, page
   const response = await octokit.rest.pulls.list({
     owner: org,
     repo,
+    state: 'all',
     per_page: 10,
     page,
   });

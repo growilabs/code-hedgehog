@@ -36,7 +36,7 @@ const OwnerRepoSelector = () => {
       </div>
       {selectedOwner !== '' && (
         <div className="mt-4">
-          <p className="text-sm text-muted-foreground mb-2">リポジトリを選択:</p>
+          <p className="text-sm text-muted-foreground mb-2">リポジトリを選択</p>
           <RepoSelector />
         </div>
       )}
