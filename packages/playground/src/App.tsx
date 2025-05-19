@@ -1,27 +1,39 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { useAtomValue } from 'jotai';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { selectedOwnerAtom } from './atoms/vcsAtoms.ts';
 import OwnerSelector from './components/OwnerSelector.tsx';
 import PullRequestCard from './components/PullRequestCard.tsx';
+import PullRequestDetail from './components/PullRequestDetail.tsx';
 import RepoSelector from './components/RepoSelector.tsx';
 
 const App = () => {
   return (
-    <>
+    <BrowserRouter>
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-4">CodeHedgehog</h1>
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">組織・リポジトリを選択</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <OwnerRepoSelector />
-          </CardContent>
-        </Card>
-        <PullRequestCard />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle className="text-lg">組織・リポジトリを選択</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <OwnerRepoSelector />
+                  </CardContent>
+                </Card>
+                <PullRequestCard />
+              </>
+            }
+          />
+          <Route path="/pulls/:number" element={<PullRequestDetail />} />
+        </Routes>
       </div>
-    </>
+    </BrowserRouter>
   );
 };
 
