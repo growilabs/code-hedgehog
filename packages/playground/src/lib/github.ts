@@ -1,4 +1,8 @@
 import { Octokit } from '@octokit/rest';
+import type { Endpoints } from '@octokit/types';
+
+export type Repository = Endpoints['GET /orgs/{org}/repos']['response']['data'][number];
+export type PullRequest = Endpoints['GET /repos/{owner}/{repo}/pulls']['response']['data'][number];
 
 const MAX_PER_PAGE = 100;
 
@@ -6,12 +10,6 @@ const createOctokit = (): Octokit => {
   return new Octokit({
     auth: import.meta.env.VITE_GITHUB_TOKEN,
   });
-};
-
-export type Repository = {
-  id: number;
-  name: string;
-  full_name: string;
 };
 
 /**
@@ -22,30 +20,15 @@ export const getRepositories = async (org: string): Promise<Repository[]> => {
   const repositories: Repository[] = [];
 
   for await (const { data } of octokit.paginate.iterator(octokit.rest.repos.listForOrg, { org, per_page: MAX_PER_PAGE })) {
-    repositories.push(
-      ...data.map((repo) => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
-      })),
-    );
+    repositories.push(...data);
   }
   return repositories;
 };
 
-export type PullRequest = {
-  id: number;
-  number: number;
-  title: string;
-  state: string;
-  created_at: string;
-  updated_at: string;
-  user: {
-    login: string | undefined;
-    avatar_url: string | undefined;
-  };
-};
-
+/**
+ * Fetches the list of pull requests by page
+ * @returns An object containing the list of pull requests and the maximum number of pages
+ */
 export const getPullRequestsWithMaxPage = async (org: string, repo: string, page: number): Promise<{ pullRequests: PullRequest[]; maxPage: number }> => {
   const octokit = createOctokit();
   const response = await octokit.rest.pulls.list({
@@ -62,18 +45,5 @@ export const getPullRequestsWithMaxPage = async (org: string, repo: string, page
     maxPage = Number(match[1]);
   }
 
-  const pullRequests = response.data.map((pr) => ({
-    id: pr.id,
-    number: pr.number,
-    title: pr.title,
-    state: pr.state,
-    created_at: pr.created_at,
-    updated_at: pr.updated_at,
-    user: {
-      login: pr.user?.login,
-      avatar_url: pr.user?.avatar_url,
-    },
-  }));
-
-  return { pullRequests, maxPage };
+  return { pullRequests: response.data, maxPage };
 };

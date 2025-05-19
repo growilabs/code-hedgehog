@@ -29,6 +29,7 @@
     "npm:@octokit/plugin-paginate-rest@^9.2.2": "9.2.2_@octokit+core@5.2.1",
     "npm:@octokit/plugin-rest-endpoint-methods@^10.4.1": "10.4.1_@octokit+core@5.2.1",
     "npm:@octokit/rest@^21.1.1": "21.1.1_@octokit+core@6.1.5",
+    "npm:@octokit/types@14": "14.0.0",
     "npm:@radix-ui/react-select@^2.2.4": "2.2.4_@types+react@19.1.3_@types+react-dom@19.1.3__@types+react@19.1.3_react@19.1.0_react-dom@19.1.0__react@19.1.0",
     "npm:@radix-ui/react-slot@*": "1.2.2_@types+react@19.1.3_react@19.1.0",
     "npm:@radix-ui/react-slot@^1.2.2": "1.2.2_@types+react@19.1.3_react@19.1.0",
@@ -1721,6 +1722,7 @@
         "dependencies": [
           "npm:@deno/vite-plugin@^1.0.4",
           "npm:@octokit/rest@^21.1.1",
+          "npm:@octokit/types@14",
           "npm:@radix-ui/react-select@^2.2.4",
           "npm:@radix-ui/react-slot@^1.2.2",
           "npm:@tailwindcss/vite@^4.1.6",
