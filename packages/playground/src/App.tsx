@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.t
 import { useAtomValue } from 'jotai';
 
 import { selectedOwnerAtom } from './atoms/vcsAtoms.ts';
+import AccessTokenCard from './components/AccessTokenCard.tsx';
 import OwnerSelector from './components/OwnerSelector.tsx';
 import PullRequestCard from './components/PullRequestCard.tsx';
 import RepoSelector from './components/RepoSelector.tsx';
@@ -11,7 +12,8 @@ const App = () => {
     <>
       <div className="max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-4">CodeHedgehog</h1>
-        <Card className="mb-6">
+        <AccessTokenCard />
+        <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg">組織・リポジトリを選択</CardTitle>
           </CardHeader>
