@@ -1,10 +1,11 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
 import { useAtom, useAtomValue } from 'jotai';
 import { useEffect, useRef, useState } from 'react';
-import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type Repository, getRepositories } from '../lib/github.ts';
 
 const RepoSelector = () => {
+  const accessToken = useAtomValue(githubTokenAtom);
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const [selectedRepo, setSelectedRepo] = useAtom(selectedRepoAtom);
 
@@ -25,7 +26,7 @@ const RepoSelector = () => {
       setError('');
 
       try {
-        const repositories = await getRepositories(selectedOwner);
+        const repositories = await getRepositories(accessToken, selectedOwner);
         setRepos(repositories);
         setTimeout(() => selectTriggerRef.current?.click(), 10);
       } catch (err) {
@@ -36,7 +37,7 @@ const RepoSelector = () => {
     };
 
     fetchRepos();
-  }, [selectedOwner]);
+  }, [accessToken, selectedOwner]);
 
   const handleRepoChange = (value: string) => {
     setSelectedRepo(value);
