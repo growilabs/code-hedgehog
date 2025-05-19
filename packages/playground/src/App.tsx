@@ -1,8 +1,10 @@
-import OwnerSelector from '@/components/OwnerSelector.tsx';
-import RepoSelector from '@/components/RepoSelector.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { useAtomValue } from 'jotai';
+
 import { selectedOwnerAtom } from './atoms/vcsAtoms.ts';
+import OwnerSelector from './components/OwnerSelector.tsx';
+import PullRequestCard from './components/PullRequestCard.tsx';
+import RepoSelector from './components/RepoSelector.tsx';
 
 const App = () => {
   return (
@@ -17,6 +19,7 @@ const App = () => {
             <OwnerRepoSelector />
           </CardContent>
         </Card>
+        <PullRequestCard />
       </div>
     </>
   );
@@ -33,7 +36,7 @@ const OwnerRepoSelector = () => {
       </div>
       {selectedOwner !== '' && (
         <div className="mt-4">
-          <p className="text-sm text-muted-foreground mb-2">リポジトリを選択:</p>
+          <p className="text-sm text-muted-foreground mb-2">リポジトリを選択</p>
           <RepoSelector />
         </div>
       )}

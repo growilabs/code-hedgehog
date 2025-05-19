@@ -1,12 +1,14 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
 import { useAtom, useAtomValue } from 'jotai';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type Repository, getRepositories } from '../lib/github.ts';
 
 const RepoSelector = () => {
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const [selectedRepo, setSelectedRepo] = useAtom(selectedRepoAtom);
+
+  const selectTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const [repos, setRepos] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,7 @@ const RepoSelector = () => {
       try {
         const repositories = await getRepositories(selectedOwner);
         setRepos(repositories);
+        setTimeout(() => selectTriggerRef.current?.click(), 10);
       } catch (err) {
         setError('リポジトリの読み込みに失敗しました。後でもう一度お試しください。');
       } finally {
@@ -46,7 +49,7 @@ const RepoSelector = () => {
   return (
     <div className="relative">
       <Select disabled={loading} value={selectedRepo} onValueChange={handleRepoChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" ref={selectTriggerRef}>
           <SelectValue placeholder={loading ? 'リポジトリを読み込み中...' : 'リポジトリを選択'}>{selectedRepo}</SelectValue>
         </SelectTrigger>
         <SelectContent>

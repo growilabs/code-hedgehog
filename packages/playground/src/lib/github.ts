@@ -1,4 +1,8 @@
 import { Octokit } from '@octokit/rest';
+import type { Endpoints } from '@octokit/types';
+
+export type Repository = Endpoints['GET /orgs/{org}/repos']['response']['data'][number];
+export type PullRequest = Endpoints['GET /repos/{owner}/{repo}/pulls']['response']['data'][number];
 
 const MAX_PER_PAGE = 100;
 
@@ -6,12 +10,6 @@ const createOctokit = (): Octokit => {
   return new Octokit({
     auth: import.meta.env.VITE_GITHUB_TOKEN,
   });
-};
-
-export type Repository = {
-  id: number;
-  name: string;
-  full_name: string;
 };
 
 /**
@@ -22,13 +20,31 @@ export const getRepositories = async (org: string): Promise<Repository[]> => {
   const repositories: Repository[] = [];
 
   for await (const { data } of octokit.paginate.iterator(octokit.rest.repos.listForOrg, { org, per_page: MAX_PER_PAGE })) {
-    repositories.push(
-      ...data.map((repo) => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
-      })),
-    );
+    repositories.push(...data);
   }
   return repositories;
+};
+
+/**
+ * Fetches the list of pull requests by page
+ * @returns An object containing the list of pull requests and the maximum number of pages
+ */
+export const getPullRequestsWithMaxPage = async (org: string, repo: string, page: number): Promise<{ pullRequests: PullRequest[]; maxPage: number }> => {
+  const octokit = createOctokit();
+  const response = await octokit.rest.pulls.list({
+    owner: org,
+    repo,
+    state: 'all',
+    per_page: 10,
+    page,
+  });
+
+  let maxPage = 1;
+  const link = response.headers.link;
+  const match = link?.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
+  if (match != null) {
+    maxPage = Number(match[1]);
+  }
+
+  return { pullRequests: response.data, maxPage };
 };
