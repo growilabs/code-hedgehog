@@ -7,7 +7,7 @@ import { Calendar, Check, CircleAlert, Clock, GitMerge, GitPullRequest, GitPullR
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { formatDate } from '../lib/utils.ts';
 
 type PullRequestListProps = {
@@ -16,6 +16,8 @@ type PullRequestListProps = {
 };
 
 const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequestListProps) => {
+  const accessToken = useAtomValue(githubTokenAtom);
+
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +32,7 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
       setError('');
 
       try {
-        const { pullRequests: fetchedPullRequests, maxPage } = await getPullRequestsWithMaxPage(selectedOwner, selectedRepo, currentPage);
+        const { pullRequests: fetchedPullRequests, maxPage } = await getPullRequestsWithMaxPage(accessToken, selectedOwner, selectedRepo, currentPage);
         setPullRequests(fetchedPullRequests);
         setTotalPages(maxPage);
       } catch (err) {
@@ -39,7 +41,7 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
         setLoading(false);
       }
     })();
-  }, [selectedOwner, selectedRepo, currentPage]);
+  }, [accessToken, selectedOwner, selectedRepo, currentPage]);
 
   const goToPreviousPage = () => {
     if (currentPage > 1) {
@@ -194,7 +196,7 @@ const PullRequestCard = () => {
   if (selectedOwner === '' || selectedRepo === '') return null;
 
   return (
-    <Card>
+    <Card className="mt-6">
       <CardHeader>
         <CardTitle className="text-lg">{selectedRepo} のプルリクエスト</CardTitle>
       </CardHeader>

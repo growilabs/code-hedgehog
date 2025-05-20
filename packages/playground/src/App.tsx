@@ -3,6 +3,7 @@ import { useAtomValue } from 'jotai';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { selectedOwnerAtom } from './atoms/vcsAtoms.ts';
+import AccessTokenCard from './components/AccessTokenCard.tsx';
 import OwnerSelector from './components/OwnerSelector.tsx';
 import PullRequestCard from './components/PullRequestCard.tsx';
 import PullRequestDetail from './components/PullRequestDetail.tsx';
@@ -18,7 +19,8 @@ const App = () => {
             path="/"
             element={
               <>
-                <Card className="mb-6">
+                <AccessTokenCard />
+                <Card className="mt-6">
                   <CardHeader>
                     <CardTitle className="text-lg">組織・リポジトリを選択</CardTitle>
                   </CardHeader>
