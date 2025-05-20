@@ -5,6 +5,7 @@ import { type PullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
 import { useAtomValue } from 'jotai';
 import { Calendar, Check, CircleAlert, Clock, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { formatDate } from '../lib/utils.ts';
@@ -132,7 +133,9 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
                     )}
                     <div className="flex-grow min-w-0">
                       <h3 className="text-base font-medium mb-1 truncate">
-                        {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
+                        <Link to={`/pulls/${pr.number}`} className="hover:underline">
+                          {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
+                        </Link>
                       </h3>
                       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
                         <Badge variant={state} className="flex items-center gap-1">
