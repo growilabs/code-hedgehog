@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator.tsx';
 import { useAtomValue } from 'jotai';
 import { ArrowLeft, Calendar, CircleAlert, CirclePlay, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
@@ -134,6 +134,10 @@ const PullRequestDetail = () => {
       }
     })();
   }, [selectedOwner, selectedRepo, number]);
+
+  if (selectedOwner === '' || selectedRepo === '') {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <Card>

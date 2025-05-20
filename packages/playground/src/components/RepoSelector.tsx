@@ -28,7 +28,6 @@ const RepoSelector = () => {
       try {
         const repositories = await getRepositories(accessToken, selectedOwner);
         setRepos(repositories);
-        setTimeout(() => selectTriggerRef.current?.click(), 10);
       } catch (err) {
         setError('リポジトリの読み込みに失敗しました。後でもう一度お試しください。');
       } finally {
@@ -47,11 +46,20 @@ const RepoSelector = () => {
     return null;
   }
 
+  if (loading && selectedRepo === '') {
+    return (
+      <div className="flex">
+        <p>リポジトリを読み込み中...</p>
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent border-primary mt-1 ml-2" />
+      </div>
+    );
+  }
+
   return (
-    <div className="relative">
+    <>
       <Select disabled={loading} value={selectedRepo} onValueChange={handleRepoChange}>
         <SelectTrigger className="w-full" ref={selectTriggerRef}>
-          <SelectValue placeholder={loading ? 'リポジトリを読み込み中...' : 'リポジトリを選択'}>{selectedRepo}</SelectValue>
+          <SelectValue placeholder="リポジトリを選択">{selectedRepo}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {repos.map((repo) => (
@@ -63,7 +71,7 @@ const RepoSelector = () => {
       </Select>
 
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-    </div>
+    </>
   );
 };
 
