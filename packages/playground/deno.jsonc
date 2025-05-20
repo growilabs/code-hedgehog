@@ -1,6 +1,8 @@
 {
   "tasks": {
-    "dev": "deno run -A --node-modules-dir npm:vite",
+    "dev": "deno run -A --node-modules-dir npm:concurrently -k -n backend,client -c blue,green \"deno task dev:backend\" \"deno task dev:frontend\"",
+    "dev:frontend": "deno run -A --node-modules-dir npm:vite",
+    "dev:backend": "deno run -A server.ts",
     "build": "deno run -A --node-modules-dir npm:vite build",
     "preview": "deno run -A --node-modules-dir npm:vite preview",
     "serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/"
@@ -20,11 +22,14 @@
     "@radix-ui/react-separator": "npm:@radix-ui/react-separator@^1.1.6",
     "@radix-ui/react-slot": "npm:@radix-ui/react-slot@^1.2.2",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.6",
+    "@types/express": "npm:@types/express@^5.0.2",
     "@types/react": "npm:@types/react@^19.0.10",
     "@types/react-dom": "npm:@types/react-dom@^19.0.4",
     "@vitejs/plugin-react-swc": "npm:@vitejs/plugin-react-swc@^3.8.0",
     "class-variance-authority": "npm:class-variance-authority@^0.7.1",
     "clsx": "npm:clsx@^2.1.1",
+    "concurrently": "npm:concurrently@^9.1.2",
+    "express": "npm:express@^5.1.0",
     "jotai": "npm:jotai@^2.12.4",
     "lucide-react": "npm:lucide-react@^0.510.0",
     "react": "npm:react@^19.0.0",
