@@ -7,7 +7,7 @@ import { ArrowLeft, Calendar, CircleAlert, CirclePlay, GitMerge, GitPullRequest,
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 
-import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
 import { formatDate } from '../lib/utils.ts';
 
@@ -111,6 +111,7 @@ const PullRequestContent = ({ pullRequest }: PullRequestContentProps) => {
 
 const PullRequestDetail = () => {
   const { number } = useParams<{ number: string }>();
+  const accessToken = useAtomValue(githubTokenAtom);
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const selectedRepo = useAtomValue(selectedRepoAtom);
   const [pullRequest, setPullRequest] = useState<PullRequestDetailType | null>(null);
@@ -125,7 +126,7 @@ const PullRequestDetail = () => {
       setError('');
 
       try {
-        const pullRequest = await getPullRequest(selectedOwner, selectedRepo, Number(number));
+        const pullRequest = await getPullRequest(accessToken, selectedOwner, selectedRepo, Number(number));
         setPullRequest(pullRequest);
       } catch {
         setError('プルリクエスト詳細の取得に失敗しました');
@@ -133,7 +134,7 @@ const PullRequestDetail = () => {
         setLoading(false);
       }
     })();
-  }, [selectedOwner, selectedRepo, number]);
+  }, [accessToken, selectedOwner, selectedRepo, number]);
 
   if (selectedOwner === '' || selectedRepo === '') {
     return <Navigate to="/" replace />;

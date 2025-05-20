@@ -53,8 +53,11 @@ export const getPullRequestsWithMaxPage = async (
   return { pullRequests: response.data, maxPage };
 };
 
-export const getPullRequest = async (owner: string, repo: string, pull_number: number): Promise<PullRequestDetail> => {
-  const octokit = createOctokit();
+/**
+ * Fetches the details of a specific pull request
+ */
+export const getPullRequest = async (accessToken: string, owner: string, repo: string, pull_number: number): Promise<PullRequestDetail> => {
+  const octokit = createOctokit(accessToken);
   const response = await octokit.rest.pulls.get({ owner, repo, pull_number });
 
   return response.data;
