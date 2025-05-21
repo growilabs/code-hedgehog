@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Card, CardContent } from '@/components/ui/card.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
+import axios from 'axios';
 import { useAtomValue } from 'jotai';
 import { ArrowLeft, Calendar, CircleAlert, CirclePlay, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -13,9 +14,13 @@ import { formatDate } from '../lib/utils.ts';
 
 type PullRequestContentProps = {
   pullRequest: PullRequestDetailType;
+  token: string;
+  owner: string;
+  repo: string;
+  number: string;
 };
 
-const PullRequestContent = ({ pullRequest }: PullRequestContentProps) => {
+const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullRequestContentProps) => {
   const [reviewExecuted, setReviewExecuted] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +31,9 @@ const PullRequestContent = ({ pullRequest }: PullRequestContentProps) => {
     setReviewLoading(true);
 
     try {
-      // TODO: レビューを実施する
+      const { data } = await axios.post('/api/run-processor', { token, owner, repo, number });
+      // TODO: レビュー結果を画面に表示する
+      console.log('Review response:', data);
       setReviewExecuted(true);
     } catch (err) {
       console.error('Error executing review:', err);
@@ -148,7 +155,7 @@ const PullRequestDetail = () => {
             <Loader className="h-8 w-8 text-primary animate-spin mb-4" />
             <p className="text-muted-foreground">プルリクエストの詳細を読み込み中...</p>
           </div>
-        ) : error !== '' || pullRequest == null ? (
+        ) : error !== '' || pullRequest == null || number == null ? (
           <div className="text-center py-8">
             <CircleAlert className="h-8 w-8 text-destructive mx-auto mb-4" />
             <p className="text-destructive mb-2">{error || 'プルリクエストが見つかりません'}</p>
@@ -158,7 +165,7 @@ const PullRequestDetail = () => {
             </Link>
           </div>
         ) : (
-          <PullRequestContent pullRequest={pullRequest} />
+          <PullRequestContent pullRequest={pullRequest} token={accessToken} owner={selectedOwner} repo={selectedRepo} number={number} />
         )}
       </CardContent>
     </Card>
