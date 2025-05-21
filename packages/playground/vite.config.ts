@@ -6,4 +6,9 @@ import { defineConfig } from 'vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [deno(), react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8000',
+    },
+  },
 });
