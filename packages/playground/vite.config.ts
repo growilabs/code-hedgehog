@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [deno(), react(), tailwindcss()],
   server: {
     proxy: {
-      '/api': 'http://localhost:3001',
+      '/api': 'http://localhost:8000',
     },
   },
 });

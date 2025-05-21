@@ -7,7 +7,7 @@ WORKDIR /app
 COPY deno.jsonc .
 COPY vite.config.ts .
 COPY index.html .
-COPY tsconfig.json .
+COPY server.ts .
 COPY src ./src
 COPY public ./public
 # If you have other specific files or directories needed for the build, copy them here.
@@ -26,12 +26,15 @@ FROM denoland/deno:2.3.2
 
 WORKDIR /app
 
-# Copy only the built artifacts from the builder stage
+# Copy built artifacts from the builder stage
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/deno.jsonc ./
+COPY --from=builder /app/server.ts ./
 
 # Expose the port the app runs on
 EXPOSE 8000
 
+ENV DENO_ENV=production
+
 # Define the command to run the application
-# Using jsr:@std/http/file-server to serve static files from dist/
-CMD ["deno", "run", "--allow-net", "--allow-read", "jsr:@std/http@1/file-server", "dist/"]
+CMD ["deno", "run", "--allow-net", "--allow-read", "--allow-env", "server.ts"]

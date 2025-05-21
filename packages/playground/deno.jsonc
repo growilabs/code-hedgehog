@@ -4,8 +4,7 @@
     "dev:frontend": "deno run -A --node-modules-dir npm:vite",
     "dev:backend": "deno run -A server.ts",
     "build": "deno run -A --node-modules-dir npm:vite build",
-    "preview": "deno run -A --node-modules-dir npm:vite preview",
-    "serve": "deno run --allow-net --allow-read jsr:@std/http@1/file-server dist/"
+    "start": "DENO_ENV=production deno run --allow-read --allow-net --allow-env server.ts"
   },
   "compilerOptions": {
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
