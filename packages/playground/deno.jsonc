@@ -3,8 +3,7 @@
     "dev": "deno run -A --node-modules-dir npm:concurrently -k -n backend,client -c blue,green \"deno task dev:backend\" \"deno task dev:frontend\"",
     "dev:frontend": "deno run -A --node-modules-dir npm:vite",
     "dev:backend": "deno run -A --env server.ts",
-    "build:frontend": "deno run -A --node-modules-dir npm:vite build",
-    "build:backend": "deno run -A --node-modules-dir npm:esbuild server.ts --bundle --outfile=server.js --platform=node",
+    "build": "deno run -A --node-modules-dir npm:vite build",
     "start": "DENO_ENV=production deno run --allow-read --allow-net --allow-env --env server.ts"
   },
   "compilerOptions": {
@@ -30,7 +29,6 @@
     "class-variance-authority": "npm:class-variance-authority@^0.7.1",
     "clsx": "npm:clsx@^2.1.1",
     "concurrently": "npm:concurrently@^9.1.2",
-    "esbuild": "npm:esbuild@^0.25.4",
     "express": "npm:express@^5.1.0",
     "jotai": "npm:jotai@^2.12.4",
     "lucide-react": "npm:lucide-react@^0.510.0",
