@@ -29,7 +29,7 @@
     "class-variance-authority": "npm:class-variance-authority@^0.7.1",
     "clsx": "npm:clsx@^2.1.1",
     "concurrently": "npm:concurrently@^9.1.2",
-    "express": "npm:express@^5.1.0",
+    "hono": "npm:hono@^4.7.10",
     "jotai": "npm:jotai@^2.12.4",
     "lucide-react": "npm:lucide-react@^0.510.0",
     "react": "npm:react@^19.0.0",
