@@ -65,7 +65,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/main'  # ← この行をコメントアウト
+    # if: github.ref == 'refs/heads/main'  # テスト用にコメントアウト
     permissions:
       contents: read
     
@@ -101,30 +101,39 @@ jobs:
       - name: Check existing deployment
         run: |
           echo "🔍 Checking for existing deployment..."
-          kubectl get deployment code-hedgehog-deployment -n code-hedgehog || {
-            echo "❌ Deployment 'code-hedgehog-deployment' does not exist"
+          kubectl get deployment code-hedgehog -n code-hedgehog || {
+            echo "❌ Deployment 'code-hedgehog' does not exist"
             echo "Available deployments in code-hedgehog namespace:"
             kubectl get deployments -n code-hedgehog || echo "No deployments found"
           }
           
       - name: Update deployment image (if deployment exists)
         run: |
-          if kubectl get deployment code-hedgehog-deployment -n code-hedgehog >/dev/null 2>&1; then
+          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
             echo "✅ Deployment exists, updating image..."
-            kubectl set image deployment/code-hedgehog-deployment \
-              code-hedgehog-container=ghcr.io/growilabs/code-hedgehog:${{ github.sha }} \
+            echo "Current image:"
+            kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.containers[0].image}'
+            echo ""
+            
+            echo "Updating to new image: ghcr.io/growilabs/code-hedgehog:${{ github.sha }}"
+            kubectl set image deployment/code-hedgehog \
+              code-hedgehog=ghcr.io/growilabs/code-hedgehog:${{ github.sha }} \
               -n code-hedgehog
+              
+            echo "Image update command executed successfully"
           else
             echo "⚠️ Deployment does not exist, skipping image update"
-            echo "Please create the deployment first or check the deployment name"
+            echo "Please create the deployment first using the manifest file"
           fi
             
       - name: Verify deployment (if deployment exists)
         run: |
-          if kubectl get deployment code-hedgehog-deployment -n code-hedgehog >/dev/null 2>&1; then
+          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
             echo "⏳ Waiting for rollout to complete..."
-            kubectl rollout status deployment/code-hedgehog-deployment \
+            kubectl rollout status deployment/code-hedgehog \
               -n code-hedgehog --timeout=300s
+              
+            echo "✅ Rollout completed successfully"
           else
             echo "⚠️ Skipping rollout verification (deployment does not exist)"
           fi
@@ -136,6 +145,14 @@ jobs:
           kubectl get deployments -n code-hedgehog || echo "No deployments found"
           kubectl get pods -n code-hedgehog || echo "No pods found"
           
-          if kubectl get deployment code-hedgehog-deployment -n code-hedgehog >/dev/null 2>&1; then
-            kubectl describe deployment/code-hedgehog-deployment -n code-hedgehog
+          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
+            echo "=== Deployment Details ==="
+            kubectl describe deployment/code-hedgehog -n code-hedgehog
+            
+            echo "=== Pod Status ==="
+            kubectl get pods -n code-hedgehog -l app=code-hedgehog
+            
+            echo "=== Current Image ==="
+            kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.containers[0].image}'
+            echo ""
           fi
