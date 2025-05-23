@@ -9,15 +9,15 @@ const isProduction = Deno.env.get('DENO_ENV') === 'production';
 
 app.post('/api/run-processor', async (c) => {
   try {
-    const { token, owner, repo, number } = await c.req.json();
+    const { githubToken, owner, repo, number } = await c.req.json();
 
-    if (typeof token !== 'string') throw new Error('token is invalid');
+    if (typeof githubToken !== 'string') throw new Error('githubToken is invalid');
     if (typeof owner !== 'string') throw new Error('owner is invalid');
     if (typeof repo !== 'string') throw new Error('repo is invalid');
     if (typeof number !== 'string') throw new Error('number is invalid');
 
     // Use in @code-hedgehog/action
-    Deno.env.set('GITHUB_TOKEN', token);
+    Deno.env.set('GITHUB_TOKEN', githubToken);
     Deno.env.set('GITHUB_REPOSITORY', `${owner}/${repo}`);
     Deno.env.set('GITHUB_PR_NUMBER', number);
 
