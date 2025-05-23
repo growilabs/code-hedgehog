@@ -135,7 +135,7 @@ export class GitHubVCS extends BaseVCS {
       const { data: commits } = await this.getCommits();
 
       if (commits.length === 0) {
-        core.warning(`No commits found in PR #${this.context.pullNumber}`);
+        core.info(`No commits found in PR #${this.context.pullNumber}`);
         return;
       }
 
@@ -147,11 +147,15 @@ export class GitHubVCS extends BaseVCS {
       });
 
       if (commitsBeforeLastComment.length === 0) {
-        core.debug('No commits found before the latest comment.');
+        core.info('No commits found before the latest PR comment');
         return;
       }
 
       const baseSha = commitsBeforeLastComment[commitsBeforeLastComment.length - 1].sha;
+
+      if (baseSha === headSha) {
+        core.info('No new commits found since the last PR comment');
+      }
 
       return { baseSha, headSha };
     } catch (error) {
