@@ -14,9 +14,10 @@ jobs:
     permissions:
       contents: read
       packages: write
-    # outputs: # Temporarily commented out as it's not used yet
-      # image_tag: ${{ steps.meta.outputs.version }}
-      # image_name: ghcr.io/growilabs/code-hedgehog
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      image_name: ghcr.io/growilabs/code-hedgehog
+      
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,3 +43,58 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short
+            type=ref,event=branch
+          labels: |
+            org.opencontainers.image.title=Code Hedgehog Playground
+            org.opencontainers.image.description=Code Hedgehog Playground Application
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./packages/playground
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Kubernetesデプロイジョブ（mainブランチのみ）
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+          
+      - name: Test cluster connection
+        run: |
+          kubectl cluster-info
+          kubectl get ns code-hedgehog || echo "Namespace code-hedgehog does not exist"
+          
+      - name: Update deployment image
+        run: |
+          kubectl set image deployment/code-hedgehog-deployment \
+            code-hedgehog-container=ghcr.io/growilabs/code-hedgehog:${{ github.sha }} \
+            -n code-hedgehog
+            
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/code-hedgehog-deployment \
+            -n code-hedgehog --timeout=300s
+            
+      - name: Get deployment status
+        if: always()
+        run: |
+          kubectl get pods -n code-hedgehog -l app=code-hedgehog
+          kubectl describe deployment/code-hedgehog-deployment -n code-hedgehog
