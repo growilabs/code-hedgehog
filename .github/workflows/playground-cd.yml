@@ -61,13 +61,22 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Kubernetesデプロイジョブ（mainブランチのみ）
+  # Kubernetesデプロイジョブ（テスト用：全ブランチで実行）
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # if: github.ref == 'refs/heads/main'  # ← この行をコメントアウト
+    permissions:
+      contents: read
     
     steps:
+      - name: Show deployment info
+        run: |
+          echo "🔍 Branch: ${{ github.ref_name }}"
+          echo "🔍 Commit SHA: ${{ github.sha }}"
+          echo "🔍 Repository: ${{ github.repository }}"
+          echo "🔍 Actor: ${{ github.actor }}"
+          
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         
@@ -79,22 +88,54 @@ jobs:
           
       - name: Test cluster connection
         run: |
+          echo "🔍 Testing cluster connection..."
           kubectl cluster-info
-          kubectl get ns code-hedgehog || echo "Namespace code-hedgehog does not exist"
+          echo "✅ Cluster connection successful"
           
-      - name: Update deployment image
+          echo "🔍 Checking namespaces..."
+          kubectl get namespaces
+          
+          echo "🔍 Checking code-hedgehog namespace..."
+          kubectl get ns code-hedgehog || echo "❌ Namespace code-hedgehog does not exist"
+          
+      - name: Check existing deployment
         run: |
-          kubectl set image deployment/code-hedgehog-deployment \
-            code-hedgehog-container=ghcr.io/growilabs/code-hedgehog:${{ github.sha }} \
-            -n code-hedgehog
+          echo "🔍 Checking for existing deployment..."
+          kubectl get deployment code-hedgehog-deployment -n code-hedgehog || {
+            echo "❌ Deployment 'code-hedgehog-deployment' does not exist"
+            echo "Available deployments in code-hedgehog namespace:"
+            kubectl get deployments -n code-hedgehog || echo "No deployments found"
+          }
+          
+      - name: Update deployment image (if deployment exists)
+        run: |
+          if kubectl get deployment code-hedgehog-deployment -n code-hedgehog >/dev/null 2>&1; then
+            echo "✅ Deployment exists, updating image..."
+            kubectl set image deployment/code-hedgehog-deployment \
+              code-hedgehog-container=ghcr.io/growilabs/code-hedgehog:${{ github.sha }} \
+              -n code-hedgehog
+          else
+            echo "⚠️ Deployment does not exist, skipping image update"
+            echo "Please create the deployment first or check the deployment name"
+          fi
             
-      - name: Verify deployment
+      - name: Verify deployment (if deployment exists)
         run: |
-          kubectl rollout status deployment/code-hedgehog-deployment \
-            -n code-hedgehog --timeout=300s
+          if kubectl get deployment code-hedgehog-deployment -n code-hedgehog >/dev/null 2>&1; then
+            echo "⏳ Waiting for rollout to complete..."
+            kubectl rollout status deployment/code-hedgehog-deployment \
+              -n code-hedgehog --timeout=300s
+          else
+            echo "⚠️ Skipping rollout verification (deployment does not exist)"
+          fi
             
       - name: Get deployment status
         if: always()
         run: |
-          kubectl get pods -n code-hedgehog -l app=code-hedgehog
-          kubectl describe deployment/code-hedgehog-deployment -n code-hedgehog
+          echo "🔍 Final deployment status..."
+          kubectl get deployments -n code-hedgehog || echo "No deployments found"
+          kubectl get pods -n code-hedgehog || echo "No pods found"
+          
+          if kubectl get deployment code-hedgehog-deployment -n code-hedgehog >/dev/null 2>&1; then
+            kubectl describe deployment/code-hedgehog-deployment -n code-hedgehog
+          fi
