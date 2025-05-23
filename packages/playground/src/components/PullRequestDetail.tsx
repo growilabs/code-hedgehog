@@ -150,9 +150,11 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
               {comments.map((comment) => (
                 <Card key={comment.body} className="bg-muted/50 py-0">
                   <CardContent className="p-4">
-                    <div className="mb-3">{comment.body}</div>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                      {comment.body}
+                    </ReactMarkdown>
 
-                    <div className="flex items-center text-xs text-muted-foreground bg-muted p-2 rounded">
+                    <div className="flex items-center text-xs text-muted-foreground bg-muted p-2 rounded mt-3">
                       <FileCode className="h-3.5 w-3.5 mr-1" />
                       <span className="mr-2">{comment.path}:</span>
                       <span>行 {comment.position ?? '-'}</span>
@@ -177,8 +179,20 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
           <Card className="w-full max-w-md bg-muted/40">
             <CardContent className="flex flex-col items-center">
               <CirclePlay className="h-12 w-12 text-primary" />
-              <h2 className="text-xl font-semibold mt-4">レビュー準備完了</h2>
-              <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading}>
+              {token === '' ? (
+                <>
+                  <h2 className="text-xl font-semibold mt-4">レビュー実行不可</h2>
+                  <p className="text-muted-foreground text-sm text-center mt-2">実行するには GitHub のアクセストークンを設定する必要があります。</p>
+                </>
+              ) : reviewLoading ? (
+                <>
+                  <h2 className="text-xl font-semibold mt-4">レビュー実行中</h2>
+                  <p className="text-muted-foreground text-sm text-center mt-2">実行完了まで3分ほどかかります。</p>
+                </>
+              ) : (
+                <h2 className="text-xl font-semibold mt-4">レビュー実行可能</h2>
+              )}
+              <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading || token === ''}>
                 {reviewLoading ? (
                   <>
                     <Loader className="h-4 w-4 mr-2 animate-spin" />
