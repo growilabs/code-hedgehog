@@ -2,14 +2,18 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Card, CardContent } from '@/components/ui/card.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
+import { hc } from 'hono/client';
 import { useAtomValue } from 'jotai';
 import { ArrowLeft, Calendar, CircleAlert, CirclePlay, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 
+import type { AppType } from '../../server.ts';
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
 import { formatDate } from '../lib/utils.ts';
+
+const client = hc<AppType>('/');
 
 type PullRequestContentProps = {
   pullRequest: PullRequestDetailType;
@@ -30,14 +34,21 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
     setReviewLoading(true);
 
     try {
-      const response = await fetch('/api/run-processor', {
-        method: 'post',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ githubToken, owner, repo, number }),
+      const res = await client.api['run-processor'].$post({
+        json: { githubToken, owner, repo, number },
       });
-      // TODO: レビュー結果を画面に表示する
-      console.log('Review response:', response);
-      setReviewExecuted(true);
+
+      if (res.ok) {
+        const { comments } = await res.json();
+        // TODO: レビュー結果を画面に表示する
+        console.log('Review response:', comments);
+
+        setReviewExecuted(true);
+      } else {
+        const error = await res.json();
+        console.error('Error executing review:', error);
+        setError('レビューの実行に失敗しました。もう一度お試しください。');
+      }
     } catch (err) {
       console.error('Error executing review:', err);
       setError('レビューの実行に失敗しました。もう一度お試しください。');
