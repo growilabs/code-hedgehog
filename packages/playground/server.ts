@@ -1,16 +1,15 @@
-import express from 'express';
+import { Hono } from 'hono';
+import { serveStatic } from 'hono/deno';
 import { ActionRunner } from '../action/src/runner.ts';
 
-const app = express();
+const app = new Hono();
 const PORT = 8000;
 
 const isProduction = Deno.env.get('DENO_ENV') === 'production';
 
-app.use(express.json());
-
-app.post('/api/run-processor', async (req, res) => {
+app.post('/api/run-processor', async (c) => {
   try {
-    const { token, owner, repo, number } = req.body;
+    const { token, owner, repo, number } = await c.req.json();
 
     if (typeof token !== 'string') throw new Error('token is invalid');
     if (typeof owner !== 'string') throw new Error('owner is invalid');
@@ -30,16 +29,14 @@ app.post('/api/run-processor', async (req, res) => {
     const runner = new ActionRunner(config);
     const comments = await runner.run();
 
-    res.json({ comments });
+    c.json({ comments });
   } catch (error) {
-    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
+    c.json({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });
 
 if (isProduction) {
-  app.use(express.static('dist'));
+  app.use('/*', serveStatic({ root: './dist' }));
 }
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+Deno.serve({ port: PORT, hostname: '127.0.0.1' }, app.fetch);
