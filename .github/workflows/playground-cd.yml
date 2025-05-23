@@ -3,7 +3,7 @@ name: CD - Code Hedgehog Playground
 on:
   push:
     branches:
-      - '**' # Trigger on all branches
+      - 'main'
     paths:
       - 'packages/playground/**'
       - '.github/workflows/playground-cd.yml'
@@ -72,7 +72,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/main'  # テスト用にコメントアウト
+    if: github.ref == 'refs/heads/main'  # テスト用にコメントアウト
     permissions:
       contents: read
     
