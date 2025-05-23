@@ -10,15 +10,15 @@ app.use(express.json());
 
 app.post('/api/run-processor', async (req, res) => {
   try {
-    const { token, owner, repo, number } = req.body;
+    const { githubToken, owner, repo, number } = req.body;
 
-    if (typeof token !== 'string') throw new Error('token is invalid');
+    if (typeof githubToken !== 'string') throw new Error('githubToken is invalid');
     if (typeof owner !== 'string') throw new Error('owner is invalid');
     if (typeof repo !== 'string') throw new Error('repo is invalid');
     if (typeof number !== 'string') throw new Error('number is invalid');
 
     // Use in @code-hedgehog/action
-    Deno.env.set('GITHUB_TOKEN', token);
+    Deno.env.set('GITHUB_TOKEN', githubToken);
     Deno.env.set('GITHUB_REPOSITORY', `${owner}/${repo}`);
     Deno.env.set('GITHUB_PR_NUMBER', number);
 

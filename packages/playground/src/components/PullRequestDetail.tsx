@@ -2,7 +2,6 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Card, CardContent } from '@/components/ui/card.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
-import axios from 'axios';
 import { useAtomValue } from 'jotai';
 import { ArrowLeft, Calendar, CircleAlert, CirclePlay, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -14,13 +13,13 @@ import { formatDate } from '../lib/utils.ts';
 
 type PullRequestContentProps = {
   pullRequest: PullRequestDetailType;
-  token: string;
+  githubToken: string;
   owner: string;
   repo: string;
   number: string;
 };
 
-const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullRequestContentProps) => {
+const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: PullRequestContentProps) => {
   const [reviewExecuted, setReviewExecuted] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,9 +30,13 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
     setReviewLoading(true);
 
     try {
-      const { data } = await axios.post('/api/run-processor', { token, owner, repo, number });
+      const response = await fetch('/api/run-processor', {
+        method: 'post',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ githubToken, owner, repo, number }),
+      });
       // TODO: レビュー結果を画面に表示する
-      console.log('Review response:', data);
+      console.log('Review response:', response);
       setReviewExecuted(true);
     } catch (err) {
       console.error('Error executing review:', err);
@@ -118,7 +121,7 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
 
 const PullRequestDetail = () => {
   const { number } = useParams<{ number: string }>();
-  const accessToken = useAtomValue(githubTokenAtom);
+  const githubToken = useAtomValue(githubTokenAtom);
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const selectedRepo = useAtomValue(selectedRepoAtom);
   const [pullRequest, setPullRequest] = useState<PullRequestDetailType | null>(null);
@@ -133,7 +136,7 @@ const PullRequestDetail = () => {
       setError('');
 
       try {
-        const pullRequest = await getPullRequest(accessToken, selectedOwner, selectedRepo, Number(number));
+        const pullRequest = await getPullRequest(githubToken, selectedOwner, selectedRepo, Number(number));
         setPullRequest(pullRequest);
       } catch {
         setError('プルリクエスト詳細の取得に失敗しました');
@@ -141,7 +144,7 @@ const PullRequestDetail = () => {
         setLoading(false);
       }
     })();
-  }, [accessToken, selectedOwner, selectedRepo, number]);
+  }, [githubToken, selectedOwner, selectedRepo, number]);
 
   if (selectedOwner === '' || selectedRepo === '') {
     return <Navigate to="/" replace />;
@@ -165,7 +168,7 @@ const PullRequestDetail = () => {
             </Link>
           </div>
         ) : (
-          <PullRequestContent pullRequest={pullRequest} token={accessToken} owner={selectedOwner} repo={selectedRepo} number={number} />
+          <PullRequestContent pullRequest={pullRequest} githubToken={githubToken} owner={selectedOwner} repo={selectedRepo} number={number} />
         )}
       </CardContent>
     </Card>
