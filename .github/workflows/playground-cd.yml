@@ -42,9 +42,8 @@ jobs:
         with:
           images: ghcr.io/growilabs/code-hedgehog
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short
-            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
           labels: |
             org.opencontainers.image.title=Code Hedgehog Playground
             org.opencontainers.image.description=Code Hedgehog Playground Application
@@ -67,7 +66,7 @@ jobs:
         id: extract-tag
         run: |
           TAGS="${{ steps.meta.outputs.tags }}"
-          PRIMARY_TAG=$(echo "$TAGS" | head -n1)
+          PRIMARY_TAG=$(echo "$TAGS" | grep 'sha-' | head -n1)
           echo "primary_tag=$PRIMARY_TAG" >> $GITHUB_OUTPUT
 
   deploy:
