@@ -86,9 +86,10 @@ jobs:
           
       - name: Setup kubeconfig
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          KUBECONFIG=$(mktemp)
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$KUBECONFIG"
+          chmod 600 "$KUBECONFIG"
+          export KUBECONFIG
           
       - name: Test cluster connection
         run: |
@@ -104,18 +105,14 @@ jobs:
         run: |
           NEW_IMAGE="${{ needs.build-and-push.outputs.primary_tag }}"
           echo "🚀 Updating deployment with image: $NEW_IMAGE"
-          
-          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
-            # 既存のimagePullSecretsを削除（匿名アクセス用）
-            kubectl patch deployment code-hedgehog -n code-hedgehog --type=json \
-              -p='[{"op": "remove", "path": "/spec/template/spec/imagePullSecrets"}]' || echo "No imagePullSecrets found"
             
+          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
             # イメージを更新
             kubectl set image deployment/code-hedgehog \
               code-hedgehog="$NEW_IMAGE" \
               -n code-hedgehog
-              
-            echo "✅ Image updated to: $NEW_IMAGE (using anonymous pull)"
+                
+            echo "✅ Image updated to: $NEW_IMAGE"
           else
             echo "❌ Deployment not found. Please create deployment first."
             exit 1
@@ -133,12 +130,20 @@ jobs:
           echo "📊 Deployment Status"
           kubectl get deployment code-hedgehog -n code-hedgehog -o wide
           kubectl get pods -n code-hedgehog -l app=code-hedgehog
-          
+            
           READY_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
           DESIRED_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
-          
+            
           if [ "$READY_REPLICAS" = "$DESIRED_REPLICAS" ] && [ "$READY_REPLICAS" != "0" ]; then
             echo "🎉 Deployment successful!"
+            exit 0
           else
             echo "⚠️ Deployment may have issues"
+            kubectl describe deployment code-hedgehog -n code-hedgehog
+            kubectl describe pods -n code-hedgehog
+            exit 1
           fi
+        
+      - name: Cleanup kubeconfig
+        if: always()
+        run: rm -f "$KUBECONFIG"
