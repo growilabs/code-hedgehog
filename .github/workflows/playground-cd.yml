@@ -66,25 +66,10 @@ jobs:
       - name: Extract primary tag for deployment
         id: extract-tag
         run: |
-          # メタデータから生成されたタグを取得
           TAGS="${{ steps.meta.outputs.tags }}"
-          echo "Generated tags:"
-          echo "$TAGS"
-          
-          # 最初のタグを主要タグとして使用
           PRIMARY_TAG=$(echo "$TAGS" | head -n1)
-          echo "Primary tag selected: $PRIMARY_TAG"
-          
-          # GitHub Actionsの出力として設定
           echo "primary_tag=$PRIMARY_TAG" >> $GITHUB_OUTPUT
-          
-          # 短縮SHAタグを明示的に生成（フォールバック用）
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          SHA_TAG="ghcr.io/growilabs/code-hedgehog:sha-${SHORT_SHA}"
-          echo "SHA tag: $SHA_TAG"
-          echo "sha_tag=$SHA_TAG" >> $GITHUB_OUTPUT
 
-  # Kubernetesデプロイジョブ（テスト用：全ブランチで実行）
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -95,24 +80,10 @@ jobs:
     steps:
       - name: Show deployment info
         run: |
-          echo "🔍 Deployment Information"
-          echo "========================="
+          echo "🚀 Deploying image: ${{ needs.build-and-push.outputs.primary_tag }}"
           echo "Branch: ${{ github.ref_name }}"
-          echo "Commit SHA: ${{ github.sha }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Actor: ${{ github.actor }}"
-          echo ""
-          echo "🏷️ Image Information"
-          echo "===================="
-          echo "Available tags:"
-          echo "${{ needs.build-and-push.outputs.image_tags }}"
-          echo ""
-          echo "Primary tag: ${{ needs.build-and-push.outputs.primary_tag }}"
-          echo "Digest: ${{ needs.build-and-push.outputs.image_digest }}"
+          echo "Commit: ${{ github.sha }}"
           
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        
       - name: Setup kubeconfig
         run: |
           mkdir -p $HOME/.kube
@@ -121,211 +92,53 @@ jobs:
           
       - name: Test cluster connection
         run: |
-          echo "🔍 Testing cluster connection..."
           kubectl cluster-info
-          echo "✅ Cluster connection successful"
-          
-          echo ""
-          echo "🔍 Checking namespaces..."
           kubectl get namespaces
           
-          echo ""
-          echo "🔍 Checking code-hedgehog namespace..."
-          if kubectl get ns code-hedgehog >/dev/null 2>&1; then
-            echo "✅ code-hedgehog namespace exists"
-          else
-            echo "❌ Namespace code-hedgehog does not exist"
-            echo "Creating namespace..."
+          # 名前空間の確認・作成
+          if ! kubectl get ns code-hedgehog >/dev/null 2>&1; then
             kubectl create namespace code-hedgehog
-          fi
-          
-      - name: Create or update image pull secret
-        run: |
-          echo "🔐 Managing image pull secrets..."
-          
-          # 既存のSecretを削除（エラーを無視）
-          kubectl delete secret ghcr-secret -n code-hedgehog --ignore-not-found=true
-          
-          # 新しいSecretを作成
-          kubectl create secret docker-registry ghcr-secret \
-            --docker-server=ghcr.io \
-            --docker-username=${{ github.actor }} \
-            --docker-password=${{ secrets.GITHUB_TOKEN }} \
-            --namespace=code-hedgehog
-            
-          echo "✅ Image pull secret created successfully"
-          
-      - name: Check existing deployment
-        run: |
-          echo "🔍 Checking for existing deployment..."
-          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
-            echo "✅ Deployment 'code-hedgehog' exists"
-            echo ""
-            echo "Current deployment details:"
-            kubectl get deployment code-hedgehog -n code-hedgehog -o wide
-            echo ""
-            echo "Current image:"
-            kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.containers[0].image}'
-            echo ""
-          else
-            echo "❌ Deployment 'code-hedgehog' does not exist"
-            echo ""
-            echo "Available deployments in code-hedgehog namespace:"
-            kubectl get deployments -n code-hedgehog || echo "No deployments found"
           fi
           
       - name: Update deployment image
         run: |
+          NEW_IMAGE="${{ needs.build-and-push.outputs.primary_tag }}"
+          echo "🚀 Updating deployment with image: $NEW_IMAGE"
+          
           if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
-            echo "🚀 Updating deployment image..."
-            
-            # build-and-pushジョブからの主要タグを使用
-            NEW_IMAGE="${{ needs.build-and-push.outputs.primary_tag }}"
-            
-            echo "Current image:"
-            CURRENT_IMAGE=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.containers[0].image}')
-            echo "$CURRENT_IMAGE"
-            echo ""
-            echo "New image: $NEW_IMAGE"
-            
-            # imagePullSecretsが設定されているか確認
-            PULL_SECRETS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.imagePullSecrets[*].name}' 2>/dev/null || echo "")
-            
-            if [[ "$PULL_SECRETS" != *"ghcr-secret"* ]]; then
-              echo "🔐 Adding imagePullSecrets to deployment..."
-              kubectl patch deployment code-hedgehog -n code-hedgehog \
-                -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-secret"}]}}}}'
-              echo "✅ imagePullSecrets added"
-            else
-              echo "✅ imagePullSecrets already configured"
-            fi
+            # 既存のimagePullSecretsを削除（匿名アクセス用）
+            kubectl patch deployment code-hedgehog -n code-hedgehog --type=json \
+              -p='[{"op": "remove", "path": "/spec/template/spec/imagePullSecrets"}]' || echo "No imagePullSecrets found"
             
             # イメージを更新
-            echo "🔄 Updating container image..."
             kubectl set image deployment/code-hedgehog \
               code-hedgehog="$NEW_IMAGE" \
               -n code-hedgehog
               
-            echo "✅ Image update command executed successfully"
-            
-            # 更新後のイメージを確認
-            echo ""
-            echo "Updated image:"
-            kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.containers[0].image}'
-            echo ""
-            
+            echo "✅ Image updated to: $NEW_IMAGE (using anonymous pull)"
           else
-            echo "⚠️ Deployment does not exist, skipping image update"
-            echo "Please create the deployment first using the manifest file"
+            echo "❌ Deployment not found. Please create deployment first."
             exit 1
           fi
             
       - name: Wait for rollout completion
         run: |
-          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
-            echo "⏳ Waiting for rollout to complete..."
-            
-            # ロールアウトの状態を監視
-            if kubectl rollout status deployment/code-hedgehog \
-              -n code-hedgehog --timeout=300s; then
-              echo "✅ Rollout completed successfully"
-            else
-              echo "❌ Rollout failed or timed out"
-              exit 1
-            fi
-          else
-            echo "⚠️ Skipping rollout verification (deployment does not exist)"
-          fi
-            
-      - name: Verify deployment health
+          echo "⏳ Waiting for rollout to complete..."
+          kubectl rollout status deployment/code-hedgehog -n code-hedgehog --timeout=300s
+          echo "✅ Rollout completed"
+
+      - name: Verify deployment
+        if: always()
         run: |
-          echo "🏥 Verifying deployment health..."
-          
-          # デプロイメントの状態確認
-          echo "Deployment status:"
+          echo "📊 Deployment Status"
           kubectl get deployment code-hedgehog -n code-hedgehog -o wide
-          echo ""
+          kubectl get pods -n code-hedgehog -l app=code-hedgehog
           
-          # Podの状態確認
-          echo "Pod status:"
-          kubectl get pods -n code-hedgehog -l app=code-hedgehog -o wide
-          echo ""
+          READY_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+          DESIRED_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
           
-          # ReplicaSetの状態確認
-          echo "ReplicaSet status:"
-          kubectl get rs -n code-hedgehog -l app=code-hedgehog
-          echo ""
-          
-          # 最新のイメージが使用されているか確認
-          DEPLOYED_IMAGE=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.template.spec.containers[0].image}')
-          EXPECTED_IMAGE="${{ needs.build-and-push.outputs.primary_tag }}"
-          
-          echo "Image verification:"
-          echo "Expected: $EXPECTED_IMAGE"
-          echo "Deployed: $DEPLOYED_IMAGE"
-          
-          if [ "$DEPLOYED_IMAGE" = "$EXPECTED_IMAGE" ]; then
-            echo "✅ Image verification successful"
+          if [ "$READY_REPLICAS" = "$DESIRED_REPLICAS" ] && [ "$READY_REPLICAS" != "0" ]; then
+            echo "🎉 Deployment successful!"
           else
-            echo "❌ Image mismatch detected"
-            exit 1
-          fi
-          
-      - name: Get deployment status and logs
-        if: always()
-        run: |
-          echo "📊 Final deployment status..."
-          echo "============================="
-          
-          # 名前空間内のすべてのリソース
-          echo "All resources in code-hedgehog namespace:"
-          kubectl get all -n code-hedgehog
-          echo ""
-          
-          # デプロイメントの詳細
-          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
-            echo "Deployment details:"
-            kubectl describe deployment code-hedgehog -n code-hedgehog
-            echo ""
-          fi
-          
-          # Pod の詳細とログ
-          echo "Pod details and logs:"
-          for pod in $(kubectl get pods -n code-hedgehog -l app=code-hedgehog -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
-            echo "=== Pod: $pod ==="
-            kubectl describe pod $pod -n code-hedgehog
-            echo ""
-            echo "Recent logs:"
-            kubectl logs $pod -n code-hedgehog --tail=20 || echo "Could not retrieve logs"
-            echo ""
-          done
-          
-          # 最近のイベント
-          echo "Recent events in code-hedgehog namespace:"
-          kubectl get events -n code-hedgehog --sort-by='.lastTimestamp' | tail -10
-          
-      - name: Deployment summary
-        if: always()
-        run: |
-          echo "📋 Deployment Summary"
-          echo "===================="
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Image: ${{ needs.build-and-push.outputs.primary_tag }}"
-          echo "Namespace: code-hedgehog"
-          echo "Deployment Status: $(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.status.conditions[?(@.type=="Available")].status}' 2>/dev/null || echo "Unknown")"
-          echo "Ready Replicas: $(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")/$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "Unknown")"
-          
-          # デプロイメントが成功したかの最終確認
-          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
-            READY_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-            DESIRED_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
-            
-            if [ "$READY_REPLICAS" = "$DESIRED_REPLICAS" ] && [ "$READY_REPLICAS" != "0" ]; then
-              echo "🎉 Deployment completed successfully!"
-            else
-              echo "⚠️ Deployment may not be fully ready"
-            fi
-          else
-            echo "❌ Deployment not found"
+            echo "⚠️ Deployment may have issues"
           fi
