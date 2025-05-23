@@ -121,3 +121,50 @@
     @apply bg-background text-foreground;
   }
 }
+
+.markdown-container {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #333;
+  padding: 20px;
+}
+
+.markdown-container h2 {
+  font-weight: bold;
+}
+
+.markdown-container > p {
+  margin-bottom: 8px;
+}
+
+.markdown-container table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown-container th,
+.markdown-container td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.markdown-container th {
+  background-color: #f6f8fa;
+}
+
+.markdown-container details {
+  margin-top: 16px;
+  padding-left: 8px;
+  background-color: #f6f8fa;
+  border-radius: 4px;
+}
+
+.markdown-container details ul {
+  margin-bottom: 8px;
+}
+
+.markdown-container summary {
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
