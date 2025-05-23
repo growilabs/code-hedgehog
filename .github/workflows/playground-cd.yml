@@ -86,16 +86,18 @@ jobs:
           
       - name: Setup kubeconfig
         run: |
-          KUBECONFIG=$(mktemp)
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$KUBECONFIG"
-          chmod 600 "$KUBECONFIG"
-          export KUBECONFIG
-          
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+            
       - name: Test cluster connection
         run: |
+          # kubeconfigのパスを明示的に指定
+          export KUBECONFIG=$HOME/.kube/config
+            
           kubectl cluster-info
           kubectl get namespaces
-          
+            
           # 名前空間の確認・作成
           if ! kubectl get ns code-hedgehog >/dev/null 2>&1; then
             kubectl create namespace code-hedgehog
