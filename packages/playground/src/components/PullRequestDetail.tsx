@@ -13,9 +13,13 @@ import { formatDate } from '../lib/utils.ts';
 
 type PullRequestContentProps = {
   pullRequest: PullRequestDetailType;
+  githubToken: string;
+  owner: string;
+  repo: string;
+  number: string;
 };
 
-const PullRequestContent = ({ pullRequest }: PullRequestContentProps) => {
+const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: PullRequestContentProps) => {
   const [reviewExecuted, setReviewExecuted] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +30,13 @@ const PullRequestContent = ({ pullRequest }: PullRequestContentProps) => {
     setReviewLoading(true);
 
     try {
-      // TODO: レビューを実施する
+      const response = await fetch('/api/run-processor', {
+        method: 'post',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ githubToken, owner, repo, number }),
+      });
+      // TODO: レビュー結果を画面に表示する
+      console.log('Review response:', response);
       setReviewExecuted(true);
     } catch (err) {
       console.error('Error executing review:', err);
@@ -111,7 +121,7 @@ const PullRequestContent = ({ pullRequest }: PullRequestContentProps) => {
 
 const PullRequestDetail = () => {
   const { number } = useParams<{ number: string }>();
-  const accessToken = useAtomValue(githubTokenAtom);
+  const githubToken = useAtomValue(githubTokenAtom);
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const selectedRepo = useAtomValue(selectedRepoAtom);
   const [pullRequest, setPullRequest] = useState<PullRequestDetailType | null>(null);
@@ -126,7 +136,7 @@ const PullRequestDetail = () => {
       setError('');
 
       try {
-        const pullRequest = await getPullRequest(accessToken, selectedOwner, selectedRepo, Number(number));
+        const pullRequest = await getPullRequest(githubToken, selectedOwner, selectedRepo, Number(number));
         setPullRequest(pullRequest);
       } catch {
         setError('プルリクエスト詳細の取得に失敗しました');
@@ -134,7 +144,7 @@ const PullRequestDetail = () => {
         setLoading(false);
       }
     })();
-  }, [accessToken, selectedOwner, selectedRepo, number]);
+  }, [githubToken, selectedOwner, selectedRepo, number]);
 
   if (selectedOwner === '' || selectedRepo === '') {
     return <Navigate to="/" replace />;
@@ -148,7 +158,7 @@ const PullRequestDetail = () => {
             <Loader className="h-8 w-8 text-primary animate-spin mb-4" />
             <p className="text-muted-foreground">プルリクエストの詳細を読み込み中...</p>
           </div>
-        ) : error !== '' || pullRequest == null ? (
+        ) : error !== '' || pullRequest == null || number == null ? (
           <div className="text-center py-8">
             <CircleAlert className="h-8 w-8 text-destructive mx-auto mb-4" />
             <p className="text-destructive mb-2">{error || 'プルリクエストが見つかりません'}</p>
@@ -158,7 +168,7 @@ const PullRequestDetail = () => {
             </Link>
           </div>
         ) : (
-          <PullRequestContent pullRequest={pullRequest} />
+          <PullRequestContent pullRequest={pullRequest} githubToken={githubToken} owner={selectedOwner} repo={selectedRepo} number={number} />
         )}
       </CardContent>
     </Card>

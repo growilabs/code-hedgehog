@@ -2,9 +2,9 @@
   "tasks": {
     "dev": "deno run -A --node-modules-dir npm:concurrently -k -n backend,client -c blue,green \"deno task dev:backend\" \"deno task dev:frontend\"",
     "dev:frontend": "deno run -A --node-modules-dir npm:vite",
-    "dev:backend": "deno run -A server.ts",
+    "dev:backend": "deno run -A --env server.ts",
     "build": "deno run -A --node-modules-dir npm:vite build",
-    "start": "DENO_ENV=production deno run --allow-read --allow-net --allow-env server.ts"
+    "start": "DENO_ENV=production deno run --allow-read --allow-net --allow-env --env server.ts"
   },
   "compilerOptions": {
     "lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns"],

@@ -44,6 +44,7 @@
     "npm:clsx@^2.1.1": "2.1.1",
     "npm:concurrently@*": "9.1.2",
     "npm:concurrently@^9.1.2": "9.1.2",
+    "npm:esbuild@*": "0.25.1",
     "npm:esbuild@~0.25.1": "0.25.1",
     "npm:express@^5.1.0": "5.1.0",
     "npm:gpt-tokenizer@*": "2.9.0",
