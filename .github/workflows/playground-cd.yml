@@ -1,12 +1,12 @@
-name: CD - Code Hedgehog
+name: CD - Code Hedgehog Playground
 
 on:
   push:
     branches:
-      - main
+      - '**' # Trigger on all branches
     paths:
       - 'packages/playground/**'
-      - '.github/workflows/cd.yml'
+      - '.github/workflows/playground-cd.yml'
 
 jobs:
   build-and-push:
@@ -14,7 +14,9 @@ jobs:
     permissions:
       contents: read
       packages: write
-
+    # outputs: # Temporarily commented out as it's not used yet
+      # image_tag: ${{ steps.meta.outputs.version }}
+      # image_name: ghcr.io/growilabs/code-hedgehog
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,24 +33,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/growilabs/code-hedgehog
           tags: |
-            type=raw,value=latest
+            type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=short
-            type=ref,event=branch
-      
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./packages/playground
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
