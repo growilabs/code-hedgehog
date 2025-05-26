@@ -72,7 +72,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'  # テスト用にコメントアウト
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
     
