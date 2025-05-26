@@ -2,7 +2,8 @@ import express from 'express';
 import { ActionRunner } from '../action/src/runner.ts';
 
 const app = express();
-const PORT = 8000;
+const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
+const HOST = Deno.env.get('HOST') || '0.0.0.0'; // 環境変数で制御
 
 const isProduction = Deno.env.get('DENO_ENV') === 'production';
 
@@ -40,6 +41,6 @@ if (isProduction) {
   app.use(express.static('dist'));
 }
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running at http://${HOST}:${PORT}`);
 });
