@@ -5,7 +5,8 @@ import { z } from 'zod';
 import { ActionRunner } from '../action/src/runner.ts';
 
 const app = new Hono();
-const PORT = 8000;
+const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
+const HOST = Deno.env.get('HOST') || '0.0.0.0'; // 環境変数で制御
 
 const isProduction = Deno.env.get('DENO_ENV') === 'production';
 
@@ -55,4 +56,4 @@ if (isProduction) {
   app.use('/*', serveStatic({ root: './dist' }));
 }
 
-Deno.serve({ port: PORT, hostname: '127.0.0.1' }, app.fetch);
+Deno.serve({ port: PORT, hostname: HOST }, app.fetch);

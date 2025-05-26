@@ -1,0 +1,150 @@
+name: CD - Code Hedgehog Playground
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'packages/playground/**'
+      - '.github/workflows/playground-cd.yml'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tags: ${{ steps.meta.outputs.tags }}
+      image_digest: ${{ steps.build.outputs.digest }}
+      primary_tag: ${{ steps.extract-tag.outputs.primary_tag }}
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/growilabs/code-hedgehog
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Code Hedgehog Playground
+            org.opencontainers.image.description=Code Hedgehog Playground Application
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./packages/playground
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract primary tag for deployment
+        id: extract-tag
+        run: |
+          TAGS="${{ steps.meta.outputs.tags }}"
+          PRIMARY_TAG=$(echo "$TAGS" | grep 'sha-' | head -n1)
+          echo "primary_tag=$PRIMARY_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Show deployment info
+        run: |
+          echo "🚀 Deploying image: ${{ needs.build-and-push.outputs.primary_tag }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+            
+      - name: Test cluster connection
+        run: |
+          # kubeconfigのパスを明示的に指定
+          export KUBECONFIG=$HOME/.kube/config
+            
+          kubectl cluster-info
+          kubectl get namespaces
+            
+          # 名前空間の確認・作成
+          if ! kubectl get ns code-hedgehog >/dev/null 2>&1; then
+            kubectl create namespace code-hedgehog
+          fi
+          
+      - name: Update deployment image
+        run: |
+          NEW_IMAGE="${{ needs.build-and-push.outputs.primary_tag }}"
+          echo "🚀 Updating deployment with image: $NEW_IMAGE"
+            
+          if kubectl get deployment code-hedgehog -n code-hedgehog >/dev/null 2>&1; then
+            # イメージを更新
+            kubectl set image deployment/code-hedgehog \
+              code-hedgehog="$NEW_IMAGE" \
+              -n code-hedgehog
+                
+            echo "✅ Image updated to: $NEW_IMAGE"
+          else
+            echo "❌ Deployment not found. Please create deployment first."
+            exit 1
+          fi
+            
+      - name: Wait for rollout completion
+        run: |
+          echo "⏳ Waiting for rollout to complete..."
+          kubectl rollout status deployment/code-hedgehog -n code-hedgehog --timeout=300s
+          echo "✅ Rollout completed"
+
+      - name: Verify deployment
+        if: always()
+        run: |
+          echo "📊 Deployment Status"
+          kubectl get deployment code-hedgehog -n code-hedgehog -o wide
+          kubectl get pods -n code-hedgehog -l app=code-hedgehog
+            
+          READY_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+          DESIRED_REPLICAS=$(kubectl get deployment code-hedgehog -n code-hedgehog -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
+            
+          if [ "$READY_REPLICAS" = "$DESIRED_REPLICAS" ] && [ "$READY_REPLICAS" != "0" ]; then
+            echo "🎉 Deployment successful!"
+            exit 0
+          else
+            echo "⚠️ Deployment may have issues"
+            kubectl describe deployment code-hedgehog -n code-hedgehog
+            kubectl describe pods -n code-hedgehog
+            exit 1
+          fi
+        
+      - name: Cleanup kubeconfig
+        if: always()
+        run: rm -f "$KUBECONFIG"
