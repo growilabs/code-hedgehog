@@ -11,11 +11,10 @@ COPY packages/playground/server.ts .
 COPY packages/playground/src ./src
 COPY packages/playground/public ./public
 
+# Copy .env file for build-time environment variables
+COPY packages/playground/.env* ./
+
 # Build the application
-# Ensure that deno.jsonc has the necessary tasks or scripts for vite.
-# If "deno run -A --node-modules-dir npm:vite build" is the correct command,
-# it implies vite is listed as a dependency or installed globally in the image.
-# For a cleaner build, consider caching dependencies if possible.
 RUN deno run -A --node-modules-dir npm:vite build
 
 # Runtime stage
