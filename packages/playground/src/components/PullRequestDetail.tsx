@@ -2,7 +2,6 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Card, CardContent } from '@/components/ui/card.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
-import axios from 'axios';
 import { useAtomValue } from 'jotai';
 import {
   ArrowLeft,
@@ -37,13 +36,13 @@ type Comment = {
 
 type PullRequestContentProps = {
   pullRequest: PullRequestDetailType;
-  token: string;
+  githubToken: string;
   owner: string;
   repo: string;
   number: string;
 };
 
-const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullRequestContentProps) => {
+const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: PullRequestContentProps) => {
   const [reviewExecuted, setReviewExecuted] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [overviewComment, setOverviewComment] = useState<Comment>();
@@ -56,7 +55,12 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
     setReviewLoading(true);
 
     try {
-      const { data } = await axios.post('/api/run-processor', { token, owner, repo, number });
+      const response = await fetch('/api/run-processor', {
+        method: 'post',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ githubToken, owner, repo, number }),
+      });
+      const data = await response.json();
 
       const inlineComments: Comment[] = [];
       for (const comment of data.comments) {
@@ -179,7 +183,7 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
           <Card className="w-full max-w-md bg-muted/40">
             <CardContent className="flex flex-col items-center">
               <CirclePlay className="h-12 w-12 text-primary" />
-              {token === '' ? (
+              {githubToken === '' ? (
                 <>
                   <h2 className="text-xl font-semibold mt-4">レビュー実行不可</h2>
                   <p className="text-muted-foreground text-sm text-center mt-2">実行するには GitHub のアクセストークンを設定する必要があります。</p>
@@ -192,7 +196,7 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
               ) : (
                 <h2 className="text-xl font-semibold mt-4">レビュー実行可能</h2>
               )}
-              <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading || token === ''}>
+              <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading || githubToken === ''}>
                 {reviewLoading ? (
                   <>
                     <Loader className="h-4 w-4 mr-2 animate-spin" />
@@ -215,7 +219,7 @@ const PullRequestContent = ({ pullRequest, token, owner, repo, number }: PullReq
 
 const PullRequestDetail = () => {
   const { number } = useParams<{ number: string }>();
-  const accessToken = useAtomValue(githubTokenAtom);
+  const githubToken = useAtomValue(githubTokenAtom);
   const selectedOwner = useAtomValue(selectedOwnerAtom);
   const selectedRepo = useAtomValue(selectedRepoAtom);
   const [pullRequest, setPullRequest] = useState<PullRequestDetailType | null>(null);
@@ -230,7 +234,7 @@ const PullRequestDetail = () => {
       setError('');
 
       try {
-        const pullRequest = await getPullRequest(accessToken, selectedOwner, selectedRepo, Number(number));
+        const pullRequest = await getPullRequest(githubToken, selectedOwner, selectedRepo, Number(number));
         setPullRequest(pullRequest);
       } catch {
         setError('プルリクエスト詳細の取得に失敗しました');
@@ -238,7 +242,7 @@ const PullRequestDetail = () => {
         setLoading(false);
       }
     })();
-  }, [accessToken, selectedOwner, selectedRepo, number]);
+  }, [githubToken, selectedOwner, selectedRepo, number]);
 
   if (selectedOwner === '' || selectedRepo === '') {
     return <Navigate to="/" replace />;
@@ -262,7 +266,7 @@ const PullRequestDetail = () => {
             </Link>
           </div>
         ) : (
-          <PullRequestContent pullRequest={pullRequest} token={accessToken} owner={selectedOwner} repo={selectedRepo} number={number} />
+          <PullRequestContent pullRequest={pullRequest} githubToken={githubToken} owner={selectedOwner} repo={selectedRepo} number={number} />
         )}
       </CardContent>
     </Card>
