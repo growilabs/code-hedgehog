@@ -1,3 +1,4 @@
+import type { ReviewConfig } from '@code-hedgehog/processor-base';
 import type { IFileChange } from '../types/mod.ts';
 
 export interface IFileFilter {
@@ -27,8 +28,9 @@ export interface IFileFilter {
 export interface IFileManager {
   /**
    * Collects and filters changed files from PR
+   * @param reviewConfig .coderabbitai.yaml file configurations
    * @param batchSize Number of files to process in each batch
    * @returns AsyncIterator of filtered file changes
    */
-  collectChangedFiles(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
+  collectChangedFiles(reviewConfig: ReviewConfig, batchSize?: number): AsyncIterableIterator<IFileChange[]>;
 }
