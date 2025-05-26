@@ -28,7 +28,7 @@
     "class-variance-authority": "npm:class-variance-authority@^0.7.1",
     "clsx": "npm:clsx@^2.1.1",
     "concurrently": "npm:concurrently@^9.1.2",
-    "express": "npm:express@^5.1.0",
+    "hono": "npm:hono@^4.7.10",
     "jotai": "npm:jotai@^2.12.4",
     "lucide-react": "npm:lucide-react@^0.510.0",
     "react": "npm:react@^19.0.0",
@@ -40,6 +40,7 @@
     "tailwind-merge": "npm:tailwind-merge@^3.3.0",
     "tailwindcss": "npm:tailwindcss@^4.1.6",
     "tw-animate-css": "npm:tw-animate-css@^1.2.9",
-    "vite": "npm:vite@^6.1.1"
+    "vite": "npm:vite@^6.1.1",
+    "zod": "npm:zod@^3.25.28"
   }
 }

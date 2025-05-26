@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { Button } from '@/components/ui/button.tsx';
 import { Card, CardContent } from '@/components/ui/card.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
+import { hc } from 'hono/client';
 import { useAtomValue } from 'jotai';
 import {
   ArrowLeft,
@@ -23,9 +24,12 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 
+import type { AppType } from '../../server.ts';
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
 import { formatDate } from '../lib/utils.ts';
+
+const client = hc<AppType>('/');
 
 type Comment = {
   path: string;
@@ -55,23 +59,28 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
     setReviewLoading(true);
 
     try {
-      const response = await fetch('/api/run-processor', {
-        method: 'post',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ githubToken, owner, repo, number }),
+      const res = await client.api['run-processor'].$post({
+        json: { githubToken, owner, repo, number },
       });
-      const data = await response.json();
 
-      const inlineComments: Comment[] = [];
-      for (const comment of data.comments) {
-        if (comment.type === 'inline') {
-          inlineComments.push(comment);
-        } else if (comment.type === 'pr') {
-          setOverviewComment(comment);
+      if (res.ok) {
+        const { comments } = await res.json();
+
+        const inlineComments: Comment[] = [];
+        for (const comment of comments) {
+          if (comment.type === 'inline') {
+            inlineComments.push(comment);
+          } else if (comment.type === 'pr') {
+            setOverviewComment(comment);
+          }
         }
+        setComments(inlineComments);
+        setReviewExecuted(true);
+      } else {
+        const error = await res.json();
+        console.error('Error executing review:', error);
+        setError('レビューの実行に失敗しました。もう一度お試しください。');
       }
-      setComments(inlineComments);
-      setReviewExecuted(true);
     } catch (err) {
       console.error('Error executing review:', err);
       setError('レビューの実行に失敗しました。もう一度お試しください。');
