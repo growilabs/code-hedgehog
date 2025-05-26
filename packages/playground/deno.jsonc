@@ -2,9 +2,9 @@
   "tasks": {
     "dev": "deno run -A --node-modules-dir npm:concurrently -k -n backend,client -c blue,green \"deno task dev:backend\" \"deno task dev:frontend\"",
     "dev:frontend": "deno run -A --node-modules-dir npm:vite",
-    "dev:backend": "deno run -A server.ts",
+    "dev:backend": "deno run -A --env server.ts",
     "build": "deno run -A --node-modules-dir npm:vite build",
-    "start": "DENO_ENV=production deno run --allow-read --allow-net --allow-env server.ts"
+    "start": "DENO_ENV=production deno run --allow-read --allow-net --allow-env --env server.ts"
   },
   "compilerOptions": {
     "lib": ["ES2020", "DOM", "DOM.Iterable", "deno.ns"],
@@ -33,7 +33,10 @@
     "lucide-react": "npm:lucide-react@^0.510.0",
     "react": "npm:react@^19.0.0",
     "react-dom": "npm:react-dom@^19.0.0",
+    "react-markdown": "npm:react-markdown@^10.1.0",
     "react-router-dom": "npm:react-router-dom@^7.6.0",
+    "rehype-raw": "npm:rehype-raw@^7.0.0",
+    "remark-gfm": "npm:remark-gfm@^4.0.1",
     "tailwind-merge": "npm:tailwind-merge@^3.3.0",
     "tailwindcss": "npm:tailwindcss@^4.1.6",
     "tw-animate-css": "npm:tw-animate-css@^1.2.9",

@@ -1,18 +1,15 @@
 # Build stage
 FROM denoland/deno:2.3.2 AS builder
 
-WORKDIR /app
+WORKDIR /app/packages/playground
 
 # Copy only necessary files for building
-COPY deno.jsonc .
-COPY vite.config.ts .
-COPY index.html .
-COPY server.ts .
-COPY src ./src
-COPY public ./public
-# If you have other specific files or directories needed for the build, copy them here.
-# For example, if you have a components.json or other configuration files.
-# COPY components.json .
+COPY packages/playground/deno.jsonc .
+COPY packages/playground/vite.config.ts .
+COPY packages/playground/index.html .
+COPY packages/playground/server.ts .
+COPY packages/playground/src ./src
+COPY packages/playground/public ./public
 
 # Build the application
 # Ensure that deno.jsonc has the necessary tasks or scripts for vite.
@@ -26,10 +23,17 @@ FROM denoland/deno:2.3.2
 
 WORKDIR /app
 
+COPY deno.jsonc .
+COPY packages/action /app/packages/action
+COPY packages/core /app/packages/core
+COPY packages/processors /app/packages/processors
+
+WORKDIR /app/packages/playground
+
 # Copy built artifacts from the builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/deno.jsonc ./
-COPY --from=builder /app/server.ts ./
+COPY --from=builder /app/packages/playground/dist ./dist
+COPY --from=builder /app/packages/playground/deno.jsonc ./
+COPY --from=builder /app/packages/playground/server.ts ./
 
 # Expose the port the app runs on
 EXPOSE 8000
