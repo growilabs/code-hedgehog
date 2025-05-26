@@ -4,9 +4,25 @@ import { Card, CardContent } from '@/components/ui/card.tsx';
 import { Separator } from '@/components/ui/separator.tsx';
 import { hc } from 'hono/client';
 import { useAtomValue } from 'jotai';
-import { ArrowLeft, Calendar, CircleAlert, CirclePlay, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  CircleAlert,
+  CirclePlay,
+  ExternalLink,
+  FileCode,
+  GitMerge,
+  GitPullRequest,
+  GitPullRequestClosed,
+  Loader,
+  MessageSquare,
+  User,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Link, Navigate, useParams } from 'react-router-dom';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 
 import type { AppType } from '../../server.ts';
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
@@ -14,6 +30,13 @@ import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from 
 import { formatDate } from '../lib/utils.ts';
 
 const client = hc<AppType>('/');
+
+type Comment = {
+  path: string;
+  position?: number;
+  body: string;
+  type: 'inline' | 'file' | 'pr';
+};
 
 type PullRequestContentProps = {
   pullRequest: PullRequestDetailType;
@@ -26,6 +49,8 @@ type PullRequestContentProps = {
 const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: PullRequestContentProps) => {
   const [reviewExecuted, setReviewExecuted] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [overviewComment, setOverviewComment] = useState<Comment>();
+  const [comments, setComments] = useState<Comment[]>([]);
   const [error, setError] = useState('');
 
   const state = pullRequest.state === 'open' ? 'open' : pullRequest.merged_at != null ? 'merged' : 'closed';
@@ -40,9 +65,16 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
 
       if (res.ok) {
         const { comments } = await res.json();
-        // TODO: レビュー結果を画面に表示する
-        console.log('Review response:', comments);
 
+        const inlineComments: Comment[] = [];
+        for (const comment of comments) {
+          if (comment.type === 'inline') {
+            inlineComments.push(comment);
+          } else if (comment.type === 'pr') {
+            setOverviewComment(comment);
+          }
+        }
+        setComments(inlineComments);
         setReviewExecuted(true);
       } else {
         const error = await res.json();
@@ -101,15 +133,79 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
       <Separator className="my-6" />
 
       {reviewExecuted ? (
-        // TODO: コメント一覧を表示する
-        <div>TBD</div>
+        <div>
+          {overviewComment != null && (
+            <>
+              <h2 className="text-lg font-medium">全体概要</h2>
+              <Card className="bg-muted/50 mt-4 py-0">
+                <CardContent className="markdown-container">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                    {overviewComment.body}
+                  </ReactMarkdown>
+                </CardContent>
+              </Card>
+            </>
+          )}
+          <h2 className="text-lg font-medium mt-6 flex items-center">
+            <MessageSquare className="h-5 w-5 mr-2" />
+            コメント ({comments.length})
+          </h2>
+
+          {comments.length === 0 ? (
+            <Card className="bg-muted/50 mt-4">
+              <CardContent className="flex flex-col items-center justify-center">
+                <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground">指摘がありませんでした。</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4 mt-4">
+              {comments.map((comment) => (
+                <Card key={comment.body} className="bg-muted/50 py-0">
+                  <CardContent className="p-4">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                      {comment.body}
+                    </ReactMarkdown>
+
+                    <div className="flex items-center text-xs text-muted-foreground bg-muted p-2 rounded mt-3">
+                      <FileCode className="h-3.5 w-3.5 mr-1" />
+                      <span className="mr-2">{comment.path}:</span>
+                      <span>行 {comment.position ?? '-'}</span>
+                      <a
+                        href={`https://github.com/${owner}/${repo}/pull/${number}/files`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto flex items-center text-primary hover:text-primary/80"
+                      >
+                        GitHubで表示
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-8">
           <Card className="w-full max-w-md bg-muted/40">
             <CardContent className="flex flex-col items-center">
               <CirclePlay className="h-12 w-12 text-primary" />
-              <h2 className="text-xl font-semibold mt-4">レビュー準備完了</h2>
-              <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading}>
+              {githubToken === '' ? (
+                <>
+                  <h2 className="text-xl font-semibold mt-4">レビュー実行不可</h2>
+                  <p className="text-muted-foreground text-sm text-center mt-2">実行するには GitHub のアクセストークンを設定する必要があります。</p>
+                </>
+              ) : reviewLoading ? (
+                <>
+                  <h2 className="text-xl font-semibold mt-4">レビュー実行中</h2>
+                  <p className="text-muted-foreground text-sm text-center mt-2">実行完了まで3分ほどかかります。</p>
+                </>
+              ) : (
+                <h2 className="text-xl font-semibold mt-4">レビュー実行可能</h2>
+              )}
+              <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading || githubToken === ''}>
                 {reviewLoading ? (
                   <>
                     <Loader className="h-4 w-4 mr-2 animate-spin" />
