@@ -188,3 +188,11 @@
   margin: 4px 0;
   list-style-type: disc;
 }
+
+pre {
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 4px 8px;
+  overflow-x: scroll;
+  margin-top: 8px;
+}
