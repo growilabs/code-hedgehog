@@ -9,41 +9,38 @@ const OwnerSelector = () => {
   const [owners, setOwners] = useState<string[]>([]);
 
   useEffect(() => {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
+    let isMounted = true; // コンポーネントがマウントされているかを追跡
 
     const fetchOwners = async () => {
       try {
-        const response = await fetch('/api/config/owners', { signal });
+        const response = await fetch('/api/config/owners');
+
         if (!response.ok) {
-          // Check if the request was aborted, which might result in status 0 or an AbortError
-          if (signal.aborted) {
-            console.log('Fetch owners request was aborted before completion.');
-            return;
-          }
-          throw new Error(`Failed to fetch owners: ${response.statusText} (status: ${response.status})`);
+          throw new Error(`HTTP error: ${response.status}`);
         }
+
         const data = await response.json();
-        if (!signal.aborted) {
-          // Ensure component is still mounted
+
+        // コンポーネントがまだマウントされている場合のみ状態を更新
+        if (isMounted) {
           setOwners(data.owners || []);
         }
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.log('Fetch owners request was aborted by cleanup or navigation.');
-        } else {
-          console.error('Error fetching owners:', error);
-          // Fallback to VITE_OWNERS for local dev if API fails or not available
-          // and if the error was not an abort.
-          const viteOwners = import.meta.env.VITE_OWNERS?.split(',') ?? [];
-          setOwners(viteOwners);
+        console.error('Failed to fetch owners:', error);
+
+        // エラー時はフォールバック値を使用（コンポーネントがマウントされている場合のみ）
+        if (isMounted) {
+          const fallbackOwners = import.meta.env.VITE_OWNERS?.split(',') || [];
+          setOwners(fallbackOwners);
         }
       }
     };
+
     fetchOwners();
 
+    // クリーンアップ関数：コンポーネントのアンマウント時に実行
     return () => {
-      abortController.abort();
+      isMounted = false;
     };
   }, []);
 
