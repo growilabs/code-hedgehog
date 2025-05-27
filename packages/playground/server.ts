@@ -4,23 +4,15 @@ import { validator } from 'hono/validator';
 import { z } from 'zod';
 import { ActionRunner } from '../action/src/runner.ts';
 
-const app = new Hono();
+const app = new Hono(); // メインアプリ
 const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
-const HOST = Deno.env.get('HOST') || '0.0.0.0'; // 環境変数で制御
+const HOST = Deno.env.get('HOST') || '0.0.0.0';
 
 const isProduction = Deno.env.get('DENO_ENV') === 'production';
 
-// Vite environmentにおいて、`VITE_` プレフィックス付きの環境変数はビルド時にフロントエンドコードへ静的に埋め込まれます。
-// 実行環境ごと（例: 開発、ステージング、本番）に異なる値を動的に設定したい場合、この方法では対応できません
-// （ビルド後のイメージでは値が固定されてしまうため）。
-// そのため、ここではサーバーサイド (server.ts) で実行時環境変数 (`OWNERS`) を読み込み、
-// それをAPI経由でフロントエンドに提供する方式を採用しています。
-// これにより、Kubernetes manifestなどで実行時に値を注入し、フロントエンドで動的に利用することが可能になります。
 const getOwnersHandler = (c: Context) => {
   try {
-    // 問題切り分けのため、一時的に固定レスポンスを返す
-    console.log('/api/config/owners called, sending fixed response');
-
+    // console.log('/api/config/owners called, sending fixed response'); // デバッグ用
     const ownersEnv = Deno.env.get('OWNERS');
     if (!ownersEnv) {
       console.warn('OWNERS environment variable is not set.');
@@ -34,8 +26,6 @@ const getOwnersHandler = (c: Context) => {
   }
 };
 
-app.get('/api/config/owners', getOwnersHandler);
-
 const runProcessorSchema = z.object({
   githubToken: z.string(),
   owner: z.string(),
@@ -43,8 +33,15 @@ const runProcessorSchema = z.object({
   number: z.string(),
 });
 
-const route = app.post(
-  '/api/run-processor',
+// /api ルートグループ
+const apiApp = new Hono();
+
+// /api/config/owners ルート (直接 apiApp に定義)
+apiApp.get('/config/owners', getOwnersHandler);
+
+// /api/run-processor ルート
+apiApp.post(
+  '/run-processor',
   validator('json', (value, c) => {
     const parsed = runProcessorSchema.safeParse(value);
     if (!parsed.success) {
@@ -55,20 +52,16 @@ const route = app.post(
   async (c) => {
     try {
       const { githubToken, owner, repo, number } = await c.req.valid('json');
-
-      // Use in @code-hedgehog/action
       Deno.env.set('GITHUB_TOKEN', githubToken);
       Deno.env.set('GITHUB_REPOSITORY', `${owner}/${repo}`);
       Deno.env.set('GITHUB_PR_NUMBER', number);
-
-      const config = {
+      const configVal = {
+        // Renamed from config to avoid conflict with configApp
         processor: Deno.env.get('CODE_HEDGEHOG_PROCESSOR') || 'dify',
         filter: { exclude: ['**/dist/**', 'deno.lock'], maxChanges: 300 },
       };
-
-      const runner = new ActionRunner(config);
+      const runner = new ActionRunner(configVal);
       const comments = await runner.run();
-
       return c.json({ comments });
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -76,7 +69,9 @@ const route = app.post(
   },
 );
 
-export type AppType = typeof route;
+app.route('/api', apiApp); // /api プレフィックスで apiApp をメインアプリにマウント
+
+export type AppType = typeof app; // AppType はメインアプリ全体の型
 
 if (isProduction) {
   app.use('/*', serveStatic({ root: './dist' }));
