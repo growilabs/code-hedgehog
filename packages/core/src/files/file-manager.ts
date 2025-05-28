@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import type { ReviewConfig } from '@code-hedgehog/processor-base';
 import { minimatch } from 'minimatch';
 
 import type { IFileChange, IVersionControlSystem } from '../types/mod.ts';
@@ -11,11 +12,11 @@ export class FileManager implements IFileManager {
     private readonly filter: IFileFilter = {},
   ) {}
 
-  async *collectChangedFiles(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
+  async *collectChangedFiles(reviewConfig: ReviewConfig, batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
       let currentBatch: IFileChange[] = [];
 
-      for await (const files of this.vcsClient.getPullRequestChangesStream(batchSize)) {
+      for await (const files of this.vcsClient.getPullRequestChangesStream(reviewConfig, batchSize)) {
         const filteredFiles = files.filter((file: IFileChange) => this.shouldProcessFile(file));
 
         currentBatch.push(...filteredFiles);

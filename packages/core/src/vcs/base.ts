@@ -1,3 +1,4 @@
+import type { ReviewConfig } from '@code-hedgehog/processor-base';
 import type { IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig, IVersionControlSystem, VCSType } from '../types/mod.ts';
 
 /**
@@ -15,7 +16,7 @@ export abstract class BaseVCS implements IVersionControlSystem {
   }
 
   abstract getPullRequestInfo(): Promise<IPullRequestInfo>;
-  abstract getPullRequestChangesStream(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
+  abstract getPullRequestChangesStream(reviewConfig: ReviewConfig, batchSize?: number): AsyncIterableIterator<IFileChange[]>;
   abstract createReviewBatch(comments: IReviewComment[], dryRun?: boolean): Promise<void>;
 
   /**

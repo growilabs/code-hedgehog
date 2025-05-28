@@ -1,3 +1,4 @@
+import { DEFAULT_CONFIG } from '@code-hedgehog/processor-base';
 import { assertEquals, assertRejects } from '@std/assert';
 
 import type { IFileChange } from '../types/file.ts';
@@ -42,7 +43,7 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
     });
 
     const result: IFileChange[] = [];
-    for await (const batch of manager.collectChangedFiles()) {
+    for await (const batch of manager.collectChangedFiles(DEFAULT_CONFIG, undefined)) {
       result.push(...batch);
     }
 
@@ -60,7 +61,7 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
     });
 
     const result: IFileChange[] = [];
-    for await (const batch of manager.collectChangedFiles()) {
+    for await (const batch of manager.collectChangedFiles(DEFAULT_CONFIG, undefined)) {
       result.push(...batch);
     }
 
@@ -82,7 +83,7 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
     });
 
     const result: IFileChange[] = [];
-    for await (const batch of manager.collectChangedFiles()) {
+    for await (const batch of manager.collectChangedFiles(DEFAULT_CONFIG, undefined)) {
       result.push(...batch);
     }
 
@@ -101,7 +102,7 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
     const batchSize = 10;
     const batches: IFileChange[][] = [];
 
-    for await (const batch of manager.collectChangedFiles(batchSize)) {
+    for await (const batch of manager.collectChangedFiles(DEFAULT_CONFIG, batchSize)) {
       batches.push(batch);
     }
 
@@ -121,7 +122,7 @@ Deno.test('FileManager.collectChangedFiles', async (t) => {
 
     await assertRejects(
       async () => {
-        for await (const _ of manager.collectChangedFiles()) {
+        for await (const _ of manager.collectChangedFiles(DEFAULT_CONFIG, undefined)) {
           // consume iterator
         }
       },

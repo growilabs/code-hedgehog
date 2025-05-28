@@ -19,6 +19,7 @@ const BaseConfigSchema = z
     file_path_instructions: z.array(PathInstructionSchema).optional(),
     path_filters: z.string().optional(),
     skip_simple_changes: z.boolean().optional(),
+    review_diff_since_last_review: z.boolean().optional(),
     // path_instructions is required in ReviewConfig, but might be missing in YAML
     path_instructions: z.array(PathInstructionSchema).optional(),
   })
@@ -85,6 +86,7 @@ export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise
     file_path_instructions: parsedYaml.file_path_instructions ?? DEFAULT_CONFIG.file_path_instructions,
     path_filters: parsedYaml.path_filters ?? DEFAULT_CONFIG.path_filters,
     skip_simple_changes: parsedYaml.skip_simple_changes ?? DEFAULT_CONFIG.skip_simple_changes,
+    review_diff_since_last_review: parsedYaml.review_diff_since_last_review ?? DEFAULT_CONFIG.review_diff_since_last_review,
     // path_instructions is required in ReviewConfig, ensure it defaults correctly
     path_instructions: parsedYaml.path_instructions ?? DEFAULT_CONFIG.path_instructions,
   };
