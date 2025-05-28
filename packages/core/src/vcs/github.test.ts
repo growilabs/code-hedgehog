@@ -1,3 +1,4 @@
+import { DEFAULT_CONFIG } from '@code-hedgehog/processor-base';
 import { assertEquals } from '@std/assert';
 import { describe, it } from '@std/testing/bdd';
 import { spy } from '@std/testing/mock';
@@ -43,7 +44,7 @@ describe('GitHubVCS', () => {
     const vcs = new GitHubVCS(config, () => mockOctokit);
     const changes: IFileChange[] = [];
 
-    for await (const batch of vcs.getPullRequestChangesStream(2)) {
+    for await (const batch of vcs.getPullRequestChangesStream(DEFAULT_CONFIG, 2)) {
       changes.push(...batch);
     }
 

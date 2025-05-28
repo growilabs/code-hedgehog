@@ -29,3 +29,6 @@ path_filters: |
 
 # シンプルな変更のスキップ設定
 skip_simple_changes: true
+
+# 最後の AI レビュー以降の差分のみをレビュー対象とするか
+review_diff_since_last_review: false
