@@ -41,7 +41,7 @@ const OwnerSelector = () => {
     <div className="relative">
       <Select value={selectedOwner} onValueChange={handleOwnerChange}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="組織を選択">{selectedOwner || '組織を選択'}</SelectValue>
+          <SelectValue placeholder="組織を選択">{selectedOwner}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {owners.map((owner) => (
