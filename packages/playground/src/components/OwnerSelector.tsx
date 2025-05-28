@@ -21,9 +21,7 @@ const OwnerSelector = () => {
         }
         const data = await response.json();
 
-        if (data && Array.isArray(data.owners)) {
-          setOwners(data.owners);
-        }
+        setOwners(data.owners);
       } catch (error) {
         console.error('Failed to fetch owners:', error);
       }
