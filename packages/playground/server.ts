@@ -4,7 +4,7 @@ import { validator } from 'hono/validator';
 import { z } from 'zod';
 import { ActionRunner } from '../action/src/runner.ts';
 
-const app = new Hono(); // メインアプリ
+const app = new Hono();
 const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
 const HOST = Deno.env.get('HOST') || '0.0.0.0';
 
@@ -36,7 +36,7 @@ const runProcessorSchema = z.object({
 // /api ルートグループ
 const apiApp = new Hono();
 
-// /api/config/owners ルート (直接 apiApp に定義)
+// /api/config/owners ルート
 apiApp.get('/config/owners', getOwnersHandler);
 
 // /api/run-processor ルート

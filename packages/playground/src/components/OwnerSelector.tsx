@@ -13,8 +13,6 @@ const OwnerSelector = () => {
   const [owners, setOwners] = useState<string[]>([]);
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchOwners = async () => {
       try {
         const response = await client.api.config.owners.$get(); // client を apiClient に変更
@@ -23,25 +21,15 @@ const OwnerSelector = () => {
         }
         const data = await response.json();
 
-        if (isMounted && data && Array.isArray(data.owners)) {
+        if (data && Array.isArray(data.owners)) {
           setOwners(data.owners);
-        } else if (isMounted) {
-          setOwners([]);
         }
       } catch (error) {
         console.error('Failed to fetch owners:', error);
-        if (isMounted) {
-          const fallbackOwners = import.meta.env.VITE_OWNERS?.split(',') || [];
-          setOwners(fallbackOwners);
-        }
       }
     };
 
     fetchOwners();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const handleOwnerChange = (value: string) => {
