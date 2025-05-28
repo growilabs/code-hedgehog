@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
+import { Input } from '@/components/ui/input.tsx';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination.tsx';
-import { type PullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
+import { type DisplayablePullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
 import { useAtomValue } from 'jotai';
-import { Calendar, Check, CircleAlert, Clock, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, User } from 'lucide-react';
+import { Calendar, Check, CircleAlert, Clock, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, Search as SearchIcon, User } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -18,11 +19,13 @@ type PullRequestListProps = {
 const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequestListProps) => {
   const accessToken = useAtomValue(githubTokenAtom);
 
-  const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+  const [pullRequests, setPullRequests] = useState<DisplayablePullRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filterKeywordInput, setFilterKeywordInput] = useState(''); // For the input field
+  const [activeFilterKeyword, setActiveFilterKeyword] = useState(''); // For the API call
 
   useEffect(() => {
     (async () => {
@@ -32,7 +35,14 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
       setError('');
 
       try {
-        const { pullRequests: fetchedPullRequests, maxPage } = await getPullRequestsWithMaxPage(accessToken, selectedOwner, selectedRepo, currentPage);
+        // Use activeFilterKeyword for the API call
+        const { pullRequests: fetchedPullRequests, maxPage } = await getPullRequestsWithMaxPage(
+          accessToken,
+          selectedOwner,
+          selectedRepo,
+          currentPage,
+          activeFilterKeyword,
+        );
         setPullRequests(fetchedPullRequests);
         setTotalPages(maxPage);
       } catch (err) {
@@ -41,7 +51,7 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
         setLoading(false);
       }
     })();
-  }, [accessToken, selectedOwner, selectedRepo, currentPage]);
+  }, [accessToken, selectedOwner, selectedRepo, currentPage, activeFilterKeyword]); // Add activeFilterKeyword to dependency array
 
   const goToPreviousPage = () => {
     if (currentPage > 1) {
@@ -79,39 +89,81 @@ const PullRequestList = React.memo(({ selectedOwner, selectedRepo }: PullRequest
     return pageNumbers;
   };
 
+  const handleFilterSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setCurrentPage(1); // Reset to first page on new filter
+    setActiveFilterKeyword(filterKeywordInput);
+  };
+
+  const filterInput = (
+    <form onSubmit={handleFilterSubmit} className="mb-4">
+      <div className="relative">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="キーワードでフィルタリングしてEnter..."
+          value={filterKeywordInput}
+          onChange={(e) => setFilterKeywordInput(e.target.value)}
+          className="w-full pl-10"
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        キーワードのみの場合、タイトル・本文・コメントから検索します。 GitHubのUIと同様に修飾子も利用可能です (例: <code>author:ユーザー名</code>,{' '}
+        <code>label:バグ</code>, <code>is:merged</code>)。
+      </p>
+    </form>
+  );
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-8">
-        <Loader className="h-8 w-8 text-primary animate-spin mb-4" />
-        <p className="text-muted-foreground">プルリクエストを読み込み中...</p>
-      </div>
+      <>
+        {filterInput}
+        <div className="flex flex-col items-center justify-center py-8">
+          <Loader className="h-8 w-8 text-primary animate-spin mb-4" />
+          <p className="text-muted-foreground">プルリクエストを読み込み中...</p>
+        </div>
+      </>
     );
   }
 
   if (error !== '') {
     return (
-      <div className="text-center py-8">
-        <CircleAlert className="h-8 w-8 text-destructive mx-auto mb-4" />
-        <p className="text-destructive mb-2">{error}</p>
-        <p className="text-muted-foreground">別のリポジトリを選択するか、後でもう一度お試しください。</p>
-      </div>
+      <>
+        {filterInput}
+        <div className="text-center py-8">
+          <CircleAlert className="h-8 w-8 text-destructive mx-auto mb-4" />
+          <p className="text-destructive mb-2">{error}</p>
+          <p className="text-muted-foreground">別のリポジトリを選択するか、後でもう一度お試しください。</p>
+        </div>
+      </>
     );
   }
 
   if (pullRequests.length === 0) {
     return (
-      <div className="text-center py-8">
-        <GitPullRequest className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">このリポジトリにはプルリクエストが見つかりませんでした</p>
-      </div>
+      <>
+        {filterInput}
+        <div className="text-center py-8">
+          <GitPullRequest className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            {activeFilterKeyword
+              ? `「${activeFilterKeyword}」に一致するプルリクエストは見つかりませんでした`
+              : 'このリポジトリにはプルリクエストが見つかりませんでした'}
+          </p>
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      {filterInput}
       <div className="space-y-3">
         {pullRequests.map((pr) => {
-          const state = pr.state === 'open' ? 'open' : pr.merged_at != null ? 'merged' : 'closed';
+          // The 'state' from DisplayablePullRequest is already 'open', 'closed', or 'merged' (if from list, not search)
+          // If from search, 'merged' is not directly available, so it will be 'closed'.
+          // The Badge component should handle these states.
+          const state = pr.merged_at ? 'merged' : pr.state; // Use merged_at if available
 
           return (
             <div key={pr.id}>
