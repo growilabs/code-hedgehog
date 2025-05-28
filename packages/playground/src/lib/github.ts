@@ -4,8 +4,6 @@ import type { Endpoints } from '@octokit/types';
 export type Repository = Endpoints['GET /orgs/{org}/repos']['response']['data'][number];
 export type PullRequestFromList = Endpoints['GET /repos/{owner}/{repo}/pulls']['response']['data'][number];
 export type PullRequestDetail = Endpoints['GET /repos/{owner}/{repo}/pulls/{pull_number}']['response']['data'];
-// Define type for items returned by search API for pull requests
-// This type is based on the GET /search/issues endpoint, which is used for searching PRs as well.
 export type SearchedPullRequestItem = Endpoints['GET /search/issues']['response']['data']['items'][number];
 
 export interface DisplayablePullRequest {
@@ -14,29 +12,102 @@ export interface DisplayablePullRequest {
   title: string;
   user: {
     login: string;
-    avatar_url?: string; // Optional, but good to have for UI
-    html_url?: string; // Optional
+    avatar_url?: string;
+    html_url?: string;
   } | null;
   state: 'open' | 'closed' | 'merged';
   created_at: string;
-  updated_at: string; // Added as it's common and useful
+  updated_at: string;
   html_url: string;
-  merged_at: string | null | undefined; // Keep this for accurate merged state
-  closed_at: string | null | undefined; // Keep this for accurate closed state
-  repository_url?: string; // from search results
+  merged_at: string | null | undefined;
+  closed_at: string | null | undefined;
+  repository_url?: string;
+}
+
+interface PaginationResult<T> {
+  pullRequests: T[];
+  maxPage: number;
 }
 
 const MAX_PER_PAGE = 100;
+const DEFAULT_PER_PAGE = 10;
 
-const createOctokit = (accessToken: string): Octokit => {
-  return new Octokit({ auth: accessToken });
+// Octokitインスタンスの再利用のためのキャッシュ
+const octokitCache = new Map<string, Octokit>();
+
+const getOctokit = (accessToken: string): Octokit => {
+  const cached = octokitCache.get(accessToken);
+  if (cached) {
+    return cached;
+  }
+
+  const newOctokit = new Octokit({ auth: accessToken });
+  octokitCache.set(accessToken, newOctokit);
+  return newOctokit;
 };
 
+// 共通のページング処理関数
+const extractMaxPageFromHeaders = (linkHeader?: string | null): number => {
+  if (!linkHeader) return 1;
+  const match = linkHeader.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
+  return match ? Number(match[1]) : 1;
+};
+
+// PR状態の判定を統一
+const determinePRState = (pr: { merged_at?: string | null; state: string }): 'open' | 'closed' | 'merged' => {
+  if (pr.merged_at) return 'merged';
+  return pr.state === 'open' ? 'open' : 'closed';
+};
+
+// SearchedPullRequestItemからDisplayablePullRequestへの変換
+const mapSearchedPRToDisplayable = (item: SearchedPullRequestItem): DisplayablePullRequest => ({
+  id: item.id,
+  number: item.number,
+  title: item.title,
+  user: item.user
+    ? {
+        login: item.user.login,
+        avatar_url: item.user.avatar_url,
+        html_url: item.user.html_url,
+      }
+    : null,
+  state: determinePRState({
+    merged_at: item.pull_request?.merged_at,
+    state: item.state,
+  }),
+  created_at: item.created_at,
+  updated_at: item.updated_at,
+  html_url: item.html_url,
+  merged_at: item.pull_request?.merged_at || null,
+  closed_at: item.closed_at,
+  repository_url: item.repository_url,
+});
+
+// PullRequestFromListからDisplayablePullRequestへの変換
+const mapListPRToDisplayable = (pr: PullRequestFromList): DisplayablePullRequest => ({
+  id: pr.id,
+  number: pr.number,
+  title: pr.title,
+  user: pr.user
+    ? {
+        login: pr.user.login,
+        avatar_url: pr.user.avatar_url,
+        html_url: pr.user.html_url,
+      }
+    : null,
+  state: determinePRState(pr),
+  created_at: pr.created_at,
+  updated_at: pr.updated_at,
+  html_url: pr.html_url,
+  merged_at: pr.merged_at,
+  closed_at: pr.closed_at,
+});
+
 /**
- * Fetches the list of repositories for the organization
+ * 組織のリポジトリ一覧を取得
  */
 export const getRepositories = async (accessToken: string, org: string): Promise<Repository[]> => {
-  const octokit = createOctokit(accessToken);
+  const octokit = getOctokit(accessToken);
   const repositories: Repository[] = [];
 
   for await (const { data } of octokit.paginate.iterator(octokit.rest.repos.listForOrg, { org, per_page: MAX_PER_PAGE })) {
@@ -46,54 +117,39 @@ export const getRepositories = async (accessToken: string, org: string): Promise
 };
 
 /**
- * Fetches the list of pull requests by page
- * @returns An object containing the list of pull requests and the maximum number of pages
+ * キーワードでPRを検索
  */
-export const getPullRequestsWithMaxPage = async (
-  accessToken: string,
+const searchPRsByKeyword = async (
+  octokit: Octokit,
+  org: string,
+  repo: string,
+  keyword: string,
+  page: number,
+  perPage: number = DEFAULT_PER_PAGE,
+): Promise<PaginationResult<DisplayablePullRequest>> => {
+  const query = `repo:${org}/${repo} ${keyword.trim()} is:pr`;
+  const response = await octokit.request('GET /search/issues', {
+    q: query,
+    per_page: perPage,
+    page,
+  });
+
+  return {
+    pullRequests: response.data.items.map(mapSearchedPRToDisplayable),
+    maxPage: extractMaxPageFromHeaders(response.headers.link),
+  };
+};
+
+/**
+ * 全てのPRを取得
+ */
+const getAllPRs = async (
+  octokit: Octokit,
   org: string,
   repo: string,
   page: number,
-  keyword?: string,
-): Promise<{ pullRequests: DisplayablePullRequest[]; maxPage: number }> => {
-  const octokit = createOctokit(accessToken);
-  const perPage = 10;
-
-  if (keyword && keyword.trim() !== '') {
-    const query = `repo:${org}/${repo} ${keyword.trim()} is:pr`;
-    const response = await octokit.request('GET /search/issues', {
-      q: query,
-      per_page: perPage,
-      page,
-    });
-
-    let maxPage = 1;
-    const link = response.headers.link;
-    const match = link?.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
-    if (match != null) {
-      maxPage = Number(match[1]);
-    }
-
-    const pullRequests: DisplayablePullRequest[] = response.data.items.map((item: SearchedPullRequestItem) => ({
-      id: item.id,
-      number: item.number,
-      title: item.title,
-      user: item.user ? { login: item.user.login, avatar_url: item.user.avatar_url, html_url: item.user.html_url } : null,
-      // For search results, 'merged' state is not directly available.
-      // We use item.state ('open' or 'closed'). If closed, it might be merged or just closed.
-      // PullRequestCard will need to handle this ambiguity if it wants to show 'merged' distinctly.
-      // For now, we map 'closed' from search as 'closed', not 'merged'.
-      state: item.state === 'open' ? 'open' : 'closed',
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      html_url: item.html_url,
-      merged_at: null, // Not available directly from search/issues
-      closed_at: item.closed_at,
-      repository_url: item.repository_url,
-    }));
-    return { pullRequests, maxPage };
-  }
-  // If no keyword, list all pull requests
+  perPage: number = DEFAULT_PER_PAGE,
+): Promise<PaginationResult<DisplayablePullRequest>> => {
   const response = await octokit.rest.pulls.list({
     owner: org,
     repo,
@@ -102,62 +158,32 @@ export const getPullRequestsWithMaxPage = async (
     page,
   });
 
-  let maxPage = 1;
-  const link = response.headers.link;
-  const match = link?.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
-  if (match != null) {
-    maxPage = Number(match[1]);
-  }
-
-  const pullRequests: DisplayablePullRequest[] = response.data.map((pr: PullRequestFromList) => ({
-    id: pr.id,
-    number: pr.number,
-    title: pr.title,
-    user: pr.user ? { login: pr.user.login, avatar_url: pr.user.avatar_url, html_url: pr.user.html_url } : null,
-    state: pr.merged_at ? 'merged' : pr.state === 'open' ? 'open' : 'closed',
-    created_at: pr.created_at,
-    updated_at: pr.updated_at,
-    html_url: pr.html_url,
-    merged_at: pr.merged_at,
-    closed_at: pr.closed_at,
-  }));
-  return { pullRequests, maxPage };
+  return {
+    pullRequests: response.data.map(mapListPRToDisplayable),
+    maxPage: extractMaxPageFromHeaders(response.headers.link),
+  };
 };
 
 /**
- * Fetches the details of a specific pull request
+ * PR一覧をページング付きで取得（キーワード検索対応）
+ */
+export const getPullRequestsWithMaxPage = async (
+  accessToken: string,
+  org: string,
+  repo: string,
+  page: number,
+  keyword?: string,
+): Promise<PaginationResult<DisplayablePullRequest>> => {
+  const octokit = getOctokit(accessToken);
+
+  return keyword?.trim() ? await searchPRsByKeyword(octokit, org, repo, keyword, page) : await getAllPRs(octokit, org, repo, page);
+};
+
+/**
+ * 特定のPRの詳細を取得
  */
 export const getPullRequest = async (accessToken: string, owner: string, repo: string, pull_number: number): Promise<PullRequestDetail> => {
-  const octokit = createOctokit(accessToken);
+  const octokit = getOctokit(accessToken);
   const response = await octokit.rest.pulls.get({ owner, repo, pull_number });
-
   return response.data;
-};
-
-/**
- * Searches for pull requests by a keyword using the GET /search/issues endpoint.
- * This searches across all of GitHub. To limit to specific repos or orgs,
- * include qualifiers in the keyword string (e.g., "repo:owner/repo my keyword").
- * @param accessToken GitHub personal access token
- * @param keyword The keyword to search for in pull requests
- * @returns A promise that resolves to an array of pull requests matching the keyword
- */
-export const searchPullRequestsByKeyword = async (accessToken: string, keyword: string): Promise<SearchedPullRequestItem[]> => {
-  const octokit = createOctokit(accessToken);
-  try {
-    // Use octokit.request() to directly call the GET /search/issues endpoint.
-    // The 'is:pr' qualifier in the query string ensures we only get pull requests.
-    const response = await octokit.request('GET /search/issues', {
-      q: `${keyword} is:pr`, // Append 'is:pr' to filter for pull requests
-      // Add other parameters like sort, order, per_page, page as needed
-      // headers: { 'X-GitHub-Api-Version': '2022-11-28' } // Optional: Specify API version
-    });
-    // The search API (search/issues) can return both issues and PRs.
-    // The `is:pr` qualifier filters for PRs.
-    // The items should conform to SearchedPullRequestItem if the query is correct and items are PRs.
-    return response.data.items as SearchedPullRequestItem[];
-  } catch (error) {
-    console.error('Error searching pull requests by keyword:', error);
-    throw error;
-  }
 };
