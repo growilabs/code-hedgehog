@@ -26,12 +26,13 @@ import remarkGfm from 'remark-gfm';
 
 import type { AppType } from '../../server.ts';
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+import { downloadCSV, generatCSV } from '../lib/commentsCSV.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
 import { formatDate } from '../lib/utils.ts';
 
 const client = hc<AppType>('/');
 
-type Comment = {
+export type Comment = {
   path: string;
   position?: number;
   body: string;
@@ -49,8 +50,9 @@ type PullRequestContentProps = {
 const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: PullRequestContentProps) => {
   const [reviewExecuted, setReviewExecuted] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [overviewComment, setOverviewComment] = useState<Comment>();
   const [comments, setComments] = useState<Comment[]>([]);
+  const [prComments, setPRComments] = useState<Comment[]>([]);
+  const [inlineComments, setInlineComments] = useState<Comment[]>([]);
   const [error, setError] = useState('');
 
   const state = pullRequest.state === 'open' ? 'open' : pullRequest.merged_at != null ? 'merged' : 'closed';
@@ -65,16 +67,21 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
 
       if (res.ok) {
         const { comments } = await res.json();
+        setComments(comments);
 
-        const inlineComments: Comment[] = [];
+        const fetchedInlineComments: Comment[] = [];
+        const fetchedPRComments: Comment[] = [];
+
         for (const comment of comments) {
           if (comment.type === 'inline') {
-            inlineComments.push(comment);
+            fetchedInlineComments.push(comment);
           } else if (comment.type === 'pr') {
-            setOverviewComment(comment);
+            fetchedPRComments.push(comment);
           }
         }
-        setComments(inlineComments);
+
+        setInlineComments(fetchedInlineComments);
+        setPRComments(fetchedPRComments);
         setReviewExecuted(true);
       } else {
         const error = await res.json();
@@ -89,12 +96,30 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
     }
   };
 
+  const downloadCommentsCSV = () => {
+    try {
+      const commentsData = generatCSV(comments);
+      const csvFileName = `code_hedgehog_review_result_${owner}_${repo}_${number}.csv`;
+
+      downloadCSV(commentsData, csvFileName);
+    } catch (error) {
+      console.error('Error download csv:', error);
+    }
+  };
+
   return (
     <>
-      <Link to="/" className="inline-flex items-center text-primary hover:text-primary/80 mb-4">
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        プルリクエスト一覧に戻る
-      </Link>
+      <div className="flex justify-between">
+        <Link to="/" className="inline-flex items-center text-primary hover:text-primary/80 mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          プルリクエスト一覧に戻る
+        </Link>
+        {reviewExecuted && (
+          <Button size="sm" variant="outline" onClick={downloadCommentsCSV}>
+            レビュー結果 CSV ダウンロード
+          </Button>
+        )}
+      </div>
 
       <div className="flex items-start gap-3 mb-8">
         {state === 'open' ? (
@@ -134,24 +159,26 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
 
       {reviewExecuted ? (
         <div>
-          {overviewComment != null && (
+          {prComments.length > 0 && (
             <>
               <h2 className="text-lg font-medium">全体概要</h2>
-              <Card className="bg-muted/50 mt-4 py-0">
-                <CardContent className="markdown-container">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                    {overviewComment.body}
-                  </ReactMarkdown>
-                </CardContent>
-              </Card>
+              {prComments.map((overviewComment) => (
+                <Card className="bg-muted/50 mt-4 py-0" key={overviewComment.body}>
+                  <CardContent className="markdown-container">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                      {overviewComment.body}
+                    </ReactMarkdown>
+                  </CardContent>
+                </Card>
+              ))}
             </>
           )}
           <h2 className="text-lg font-medium mt-6 flex items-center">
             <MessageSquare className="h-5 w-5 mr-2" />
-            コメント ({comments.length})
+            コメント ({inlineComments.length})
           </h2>
 
-          {comments.length === 0 ? (
+          {inlineComments.length === 0 ? (
             <Card className="bg-muted/50 mt-4">
               <CardContent className="flex flex-col items-center justify-center">
                 <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
@@ -160,7 +187,7 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
             </Card>
           ) : (
             <div className="space-y-4 mt-4">
-              {comments.map((comment) => (
+              {inlineComments.map((comment) => (
                 <Card key={comment.body} className="bg-muted/50 py-0">
                   <CardContent className="p-4">
                     <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
@@ -214,7 +241,7 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                 ) : (
                   <>
                     <CirclePlay className="h-4 w-4 mr-2" />
-                    レビューを実行
+                    レビューを実行する
                   </>
                 )}
               </Button>
