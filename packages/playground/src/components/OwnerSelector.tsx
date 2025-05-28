@@ -1,11 +1,34 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
+import { hc } from 'hono/client';
 import { useAtom, useSetAtom } from 'jotai';
+import { useEffect, useState } from 'react';
+import type { AppType } from '../../server.ts';
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+
+const client = hc<AppType>('/');
 
 const OwnerSelector = () => {
   const [selectedOwner, setSelectedOwner] = useAtom(selectedOwnerAtom);
   const setSelectedRepo = useSetAtom(selectedRepoAtom);
-  const owners = import.meta.env.VITE_OWNERS?.split(',') ?? [];
+  const [owners, setOwners] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchOwners = async () => {
+      try {
+        const response = await client.api.config.owners.$get(); // client を apiClient に変更
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        const data = await response.json();
+
+        setOwners(data.owners);
+      } catch (error) {
+        console.error('Failed to fetch owners:', error);
+      }
+    };
+
+    fetchOwners();
+  }, []);
 
   const handleOwnerChange = (value: string) => {
     setSelectedOwner(value);
