@@ -24,12 +24,12 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 
-import type { AppType } from '../../server.ts';
+import type { AppPostType } from '../../server.ts';
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
 import { formatDate } from '../lib/utils.ts';
 
-const client = hc<AppType>('/');
+const client = hc<AppPostType>('/');
 
 type Comment = {
   path: string;

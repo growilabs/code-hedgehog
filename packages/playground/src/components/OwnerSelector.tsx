@@ -2,10 +2,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { hc } from 'hono/client';
 import { useAtom, useSetAtom } from 'jotai';
 import { useEffect, useState } from 'react';
-import type { AppType } from '../../server.ts';
+import type { AppGetType } from '../../server.ts';
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 
-const client = hc<AppType>('/');
+const client = hc<AppGetType>('/');
 
 const OwnerSelector = () => {
   const [selectedOwner, setSelectedOwner] = useAtom(selectedOwnerAtom);

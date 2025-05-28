@@ -12,7 +12,6 @@ const isProduction = Deno.env.get('DENO_ENV') === 'production';
 
 const getOwnersHandler = (c: Context) => {
   try {
-    // console.log('/api/config/owners called, sending fixed response'); // デバッグ用
     const ownersEnv = Deno.env.get('OWNERS');
     if (!ownersEnv) {
       console.warn('OWNERS environment variable is not set.');
@@ -33,15 +32,9 @@ const runProcessorSchema = z.object({
   number: z.string(),
 });
 
-// /api ルートグループ
-const apiApp = new Hono();
-
-// /api/config/owners ルート
-apiApp.get('/config/owners', getOwnersHandler);
-
-// /api/run-processor ルート
-apiApp.post(
-  '/run-processor',
+// Basic routing - 公式ドキュメントの推奨方法
+const postRoute = app.post(
+  '/api/run-processor',
   validator('json', (value, c) => {
     const parsed = runProcessorSchema.safeParse(value);
     if (!parsed.success) {
@@ -52,16 +45,20 @@ apiApp.post(
   async (c) => {
     try {
       const { githubToken, owner, repo, number } = await c.req.valid('json');
+
+      // Use in @code-hedgehog/action
       Deno.env.set('GITHUB_TOKEN', githubToken);
       Deno.env.set('GITHUB_REPOSITORY', `${owner}/${repo}`);
       Deno.env.set('GITHUB_PR_NUMBER', number);
-      const configVal = {
-        // Renamed from config to avoid conflict with configApp
+
+      const config = {
         processor: Deno.env.get('CODE_HEDGEHOG_PROCESSOR') || 'dify',
         filter: { exclude: ['**/dist/**', 'deno.lock'], maxChanges: 300 },
       };
-      const runner = new ActionRunner(configVal);
+
+      const runner = new ActionRunner(config);
       const comments = await runner.run();
+
       return c.json({ comments });
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : String(error) }, 500);
@@ -69,9 +66,11 @@ apiApp.post(
   },
 );
 
-app.route('/api', apiApp); // /api プレフィックスで apiApp をメインアプリにマウント
+const getRoute = app.get('/api/config/owners', getOwnersHandler);
 
-export type AppType = typeof app; // AppType はメインアプリ全体の型
+// 公式ドキュメントに従い、app を直接 export
+export type AppPostType = typeof postRoute;
+export type AppGetType = typeof getRoute;
 
 if (isProduction) {
   app.use('/*', serveStatic({ root: './dist' }));
