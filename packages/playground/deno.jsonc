@@ -20,6 +20,7 @@
     "@radix-ui/react-select": "npm:@radix-ui/react-select@^2.2.4",
     "@radix-ui/react-separator": "npm:@radix-ui/react-separator@^1.1.6",
     "@radix-ui/react-slot": "npm:@radix-ui/react-slot@^1.2.2",
+    "@std/crypto": "jsr:@std/crypto@^1.0.5",
     "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.6",
     "@types/express": "npm:@types/express@^5.0.2",
     "@types/react": "npm:@types/react@^19.0.10",

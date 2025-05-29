@@ -1,3 +1,4 @@
+import { crypto } from '@std/crypto';
 import { type Context, Hono } from 'hono';
 import { serveStatic } from 'hono/deno';
 import { validator } from 'hono/validator';
@@ -9,6 +10,15 @@ const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
 const HOST = Deno.env.get('HOST') || '0.0.0.0';
 
 const isProduction = Deno.env.get('DENO_ENV') === 'production';
+
+const generateGitHubDiffId = async (filePath: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(filePath);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+};
 
 const runProcessorSchema = z.object({
   githubToken: z.string(),
@@ -44,7 +54,16 @@ const route = app
         const runner = new ActionRunner(config);
         const comments = await runner.run();
 
-        return c.json({ comments });
+        const commentsWithDiffId = await Promise.all(
+          comments.map(async (comment) => {
+            const diffId = await generateGitHubDiffId(comment.path);
+            return { ...comment, diffId };
+          }),
+        );
+
+        return c.json({
+          comments: commentsWithDiffId,
+        });
       } catch (error) {
         return c.json({ error: error instanceof Error ? error.message : String(error) }, 500);
       }

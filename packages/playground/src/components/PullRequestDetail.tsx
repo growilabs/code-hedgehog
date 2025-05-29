@@ -37,6 +37,7 @@ export type Comment = {
   position?: number;
   body: string;
   type: 'inline' | 'file' | 'pr';
+  diffId: string;
 };
 
 type PullRequestContentProps = {
@@ -59,6 +60,7 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
 
   const executeReview = async () => {
     setReviewLoading(true);
+    setError('');
 
     try {
       const res = await client.api['run-processor'].$post({
@@ -86,11 +88,11 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
       } else {
         const error = await res.json();
         console.error('Error executing review:', error);
-        setError('レビューの実行に失敗しました。もう一度お試しください。');
+        setError(`Error: ${'error' in error ? error.error : JSON.stringify(error)}`);
       }
-    } catch (err) {
-      console.error('Error executing review:', err);
-      setError('レビューの実行に失敗しました。もう一度お試しください。');
+    } catch (error) {
+      console.error('Error executing review:', error);
+      setError(`Error: ${JSON.stringify(error)}`);
     } finally {
       setReviewLoading(false);
     }
@@ -137,7 +139,9 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
         )}
         <div>
           <h1 className="text-xl font-semibold mb-2">
-            {pullRequest.title} <span className="text-muted-foreground font-normal">#{pullRequest.number}</span>
+            <a href={`https://github.com/${owner}/${repo}/pull/${number}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
+              {pullRequest.title} <span className="text-muted-foreground font-normal">#{pullRequest.number}</span>
+            </a>
           </h1>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <Badge variant={state} className="flex items-center gap-1">
@@ -197,9 +201,9 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                     <div className="flex items-center text-xs text-muted-foreground bg-muted p-2 rounded mt-3">
                       <FileCode className="h-3.5 w-3.5 mr-1" />
                       <span className="mr-2">{comment.path}:</span>
-                      <span>行 {comment.position ?? '-'}</span>
+                      <span>差分内で上から {comment.position ?? '-'} 行目の位置</span>
                       <a
-                        href={`https://github.com/${owner}/${repo}/pull/${number}/files`}
+                        href={`https://github.com/${owner}/${repo}/pull/${number}/files#diff-${comment.diffId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="ml-auto flex items-center text-primary hover:text-primary/80"
@@ -231,6 +235,13 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                 </>
               ) : (
                 <h2 className="text-xl font-semibold mt-4">レビュー実行可能</h2>
+              )}
+              {error && (
+                <div className="text-destructive text-center mt-2">
+                  <CircleAlert className="inline-block h-5 w-5 mr-2" />
+                  レビューの実行に失敗しました
+                  <p className="mt-2">{error}</p>
+                </div>
               )}
               <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading || githubToken === ''}>
                 {reviewLoading ? (
