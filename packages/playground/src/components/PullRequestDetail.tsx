@@ -60,6 +60,7 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
 
   const executeReview = async () => {
     setReviewLoading(true);
+    setError('');
 
     try {
       const res = await client.api['run-processor'].$post({
@@ -87,11 +88,11 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
       } else {
         const error = await res.json();
         console.error('Error executing review:', error);
-        setError('レビューの実行に失敗しました。もう一度お試しください。');
+        setError(`Error: ${'error' in error ? error.error : JSON.stringify(error)}`);
       }
-    } catch (err) {
-      console.error('Error executing review:', err);
-      setError('レビューの実行に失敗しました。もう一度お試しください。');
+    } catch (error) {
+      console.error('Error executing review:', error);
+      setError(`Error: ${JSON.stringify(error)}`);
     } finally {
       setReviewLoading(false);
     }
@@ -234,6 +235,13 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                 </>
               ) : (
                 <h2 className="text-xl font-semibold mt-4">レビュー実行可能</h2>
+              )}
+              {error && (
+                <div className="text-destructive text-center mt-2">
+                  <CircleAlert className="inline-block h-5 w-5 mr-2" />
+                  レビューの実行に失敗しました
+                  <p className="mt-2">{error}</p>
+                </div>
               )}
               <Button size="lg" className="w-full mt-4" onClick={executeReview} disabled={reviewLoading || githubToken === ''}>
                 {reviewLoading ? (
