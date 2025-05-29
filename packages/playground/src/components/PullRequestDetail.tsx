@@ -37,6 +37,7 @@ export type Comment = {
   position?: number;
   body: string;
   type: 'inline' | 'file' | 'pr';
+  diffId: string;
 };
 
 type PullRequestContentProps = {
@@ -137,7 +138,9 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
         )}
         <div>
           <h1 className="text-xl font-semibold mb-2">
-            {pullRequest.title} <span className="text-muted-foreground font-normal">#{pullRequest.number}</span>
+            <a href={`https://github.com/${owner}/${repo}/pull/${number}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
+              {pullRequest.title} <span className="text-muted-foreground font-normal">#{pullRequest.number}</span>
+            </a>
           </h1>
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <Badge variant={state} className="flex items-center gap-1">
@@ -197,9 +200,9 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                     <div className="flex items-center text-xs text-muted-foreground bg-muted p-2 rounded mt-3">
                       <FileCode className="h-3.5 w-3.5 mr-1" />
                       <span className="mr-2">{comment.path}:</span>
-                      <span>行 {comment.position ?? '-'}</span>
+                      <span>差分内で上から {comment.position ?? '-'} 行目の位置</span>
                       <a
-                        href={`https://github.com/${owner}/${repo}/pull/${number}/files`}
+                        href={`https://github.com/${owner}/${repo}/pull/${number}/files#diff-${comment.diffId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="ml-auto flex items-center text-primary hover:text-primary/80"

@@ -8,6 +8,7 @@
     "jsr:@std/assert@^1.0.12": "1.0.12",
     "jsr:@std/async@^1.0.9": "1.0.11",
     "jsr:@std/bytes@^1.0.2": "1.0.5",
+    "jsr:@std/crypto@^1.0.5": "1.0.5",
     "jsr:@std/data-structures@^1.0.6": "1.0.6",
     "jsr:@std/encoding@^1.0.5": "1.0.8",
     "jsr:@std/expect@^1.0.15": "1.0.15",
@@ -107,6 +108,9 @@
     },
     "@std/bytes@1.0.5": {
       "integrity": "4465dd739d7963d964c809202ebea6d5c6b8e3829ef25c6a224290fbb8a1021e"
+    },
+    "@std/crypto@1.0.5": {
+      "integrity": "0dcfbb319fe0bba1bd3af904ceb4f948cde1b92979ec1614528380ed308a3b40"
     },
     "@std/data-structures@1.0.6": {
       "integrity": "76a7fd8080c66604c0496220a791860492ab21a04a63a969c0b9a0609bbbb760"
@@ -2760,6 +2764,7 @@
       },
       "packages/playground": {
         "dependencies": [
+          "jsr:@std/crypto@^1.0.5",
           "npm:@deno/vite-plugin@^1.0.4",
           "npm:@octokit/rest@^21.1.1",
           "npm:@octokit/types@14",
