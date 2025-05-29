@@ -61,7 +61,7 @@ const RepoSelector = () => {
         <SelectTrigger className="w-full" ref={selectTriggerRef}>
           <SelectValue placeholder="リポジトリを選択">{selectedRepo}</SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-56">
           {repos.map((repo) => (
             <SelectItem key={repo.id} value={repo.name}>
               {repo.name}

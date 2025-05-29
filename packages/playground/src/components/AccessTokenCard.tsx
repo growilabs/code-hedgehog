@@ -55,7 +55,7 @@ const AccessTokenCard = () => {
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full gap-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Github className="h-5 w-5" />
