@@ -305,9 +305,40 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     }
 
     const lines = diffText.split('\n');
-    const numberedLines = lines.map((line, index) => {
-      return `${index}: ${line}`;
-    });
+    const numberedLines: string[] = [];
+    let oldLineNumber = 0;
+    let newLineNumber = 0;
+
+    for (const line of lines) {
+      if (line.startsWith('@@')) {
+        // Extract starting line numbers from hunk header
+        // Example: @@ -86,11 +88,11 @@ → old file starts at line 86, new file starts at line 88
+        const match = line.match(/^@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+        if (match) {
+          oldLineNumber = Number.parseInt(match[1], 10);
+          newLineNumber = Number.parseInt(match[2], 10);
+        }
+        numberedLines.push(line);
+      } else if (line.startsWith('-')) {
+        numberedLines.push(`${oldLineNumber}: ${line}`);
+        oldLineNumber++;
+      } else if (line.startsWith('+')) {
+        numberedLines.push(`${newLineNumber}: ${line}`);
+        newLineNumber++;
+      } else if (line.startsWith(' ') || line === '') {
+        if (line.startsWith(' ')) {
+          numberedLines.push(`${newLineNumber}: ${line}`);
+        } else {
+          numberedLines.push(line);
+        }
+        oldLineNumber++;
+        newLineNumber++;
+      } else {
+        // Other lines (file headers, etc.)
+        numberedLines.push(line);
+      }
+    }
+
     return numberedLines.join('\n');
   }
 

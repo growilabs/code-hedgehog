@@ -202,9 +202,9 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                     <div className="flex items-center text-xs text-muted-foreground bg-muted p-2 rounded mt-3">
                       <FileCode className="h-3.5 w-3.5 mr-1" />
                       <span className="mr-2">{comment.path}:</span>
-                      <span>差分内で上から {comment.position ?? '-'} 行目の位置</span>
+                      <span>{comment.position ?? '-'} 行</span>
                       <a
-                        href={`https://github.com/${owner}/${repo}/pull/${number}/files#diff-${comment.diffId}`}
+                        href={`https://github.com/${owner}/${repo}/pull/${number}/files#diff-${comment.diffId}${comment.position != null ? `R${comment.position}` : ''}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="ml-auto flex items-center text-primary hover:text-primary/80"

@@ -332,7 +332,8 @@ export class GitHubVCS extends BaseVCS {
           event: 'COMMENT',
           comments: inlineComments.map((comment) => ({
             path: comment.path,
-            position: comment.position,
+            line: comment.position,
+            side: 'RIGHT',
             body: comment.body,
           })),
         });
