@@ -30,11 +30,12 @@ export interface PathInstruction {
 
 // Base review configuration extending the core config
 export interface LocalReviewConfig {
-  language?: string;
-  file_path_instructions?: PathInstruction[];
-  path_filters?: string;
-  skip_simple_changes?: boolean;
-  severityThreshold?: number; // Threshold for comment severity (1-5, default: 3)
+  language: string;
+  file_path_instructions: PathInstruction[];
+  path_filters: string;
+  skip_simple_changes: boolean;
+  review_diff_since_last_review: boolean;
+  severityThreshold: number; // Threshold for comment severity (1-5, default: 3)
 }
 
 // Combined review configuration using the imported alias

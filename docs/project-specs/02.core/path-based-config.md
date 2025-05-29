@@ -40,6 +40,7 @@ limit_reviews_by_labels: # レビュー対象を特定のラベルを持つPRに
 
 # ファイルレベルの制御
 skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
+review_diff_since_last_review: false # 最後の AI レビュー以降の差分のみをレビュー対象とするか (デフォルト: false)
 path_filters: # レビュー対象外のファイルパス (Globパターン, 除外専用)
   - "dist/**"
   - "**/*.min.js"
@@ -101,6 +102,13 @@ checks:
 -   `true` の場合、シンプルな変更 (フォーマット、コメント、空白行のみ) をレビュー対象外とします。
 -   型: `boolean`
 -   デフォルト: `false`
+
+### review_diff_since_last_review
+
+- `true` の場合、最後の AI レビュー以降に発生した差分のみをレビュー対象とします。
+- これにより、過去にレビュー済みの部分を再度レビューすることを避け、効率的な差分レビューが可能になります。
+- 型: `boolean`
+- デフォルト: `false`
 
 ### path_filters
 

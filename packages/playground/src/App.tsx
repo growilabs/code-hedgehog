@@ -13,7 +13,15 @@ const App = () => {
   return (
     <BrowserRouter>
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-4">CodeHedgehog</h1>
+        <header className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <img src="/code-hedgehog.png" alt="code-hedgehog" width="48" />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">CodeHedgehog</h1>
+              <p className="text-sm text-muted-foreground">AI Code Reviews</p>
+            </div>
+          </div>
+        </header>
         <Routes>
           <Route
             path="/"

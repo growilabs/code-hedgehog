@@ -1,7 +1,11 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.tsx';
+import { hc } from 'hono/client';
 import { useAtom, useSetAtom } from 'jotai';
 import { useEffect, useState } from 'react';
+import type { AppType } from '../../server.ts';
 import { selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+
+const client = hc<AppType>('/');
 
 const OwnerSelector = () => {
   const [selectedOwner, setSelectedOwner] = useAtom(selectedOwnerAtom);
@@ -9,39 +13,21 @@ const OwnerSelector = () => {
   const [owners, setOwners] = useState<string[]>([]);
 
   useEffect(() => {
-    let isMounted = true; // コンポーネントがマウントされているかを追跡
-
     const fetchOwners = async () => {
       try {
-        const response = await fetch('/api/config/owners');
-
+        const response = await client.api.config.owners.$get(); // client を apiClient に変更
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`);
         }
-
         const data = await response.json();
 
-        // コンポーネントがまだマウントされている場合のみ状態を更新
-        if (isMounted) {
-          setOwners(data.owners || []);
-        }
+        setOwners(data.owners);
       } catch (error) {
         console.error('Failed to fetch owners:', error);
-
-        // エラー時はフォールバック値を使用（コンポーネントがマウントされている場合のみ）
-        if (isMounted) {
-          const fallbackOwners = import.meta.env.VITE_OWNERS?.split(',') || [];
-          setOwners(fallbackOwners);
-        }
       }
     };
 
     fetchOwners();
-
-    // クリーンアップ関数：コンポーネントのアンマウント時に実行
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const handleOwnerChange = (value: string) => {
