@@ -104,7 +104,7 @@ const PullRequestItem = React.memo(({ pr }: { pr: DisplayablePullRequest }) => {
         return <GitPullRequest size={20} className="text-green-500" />;
       case 'merged':
         return <GitMerge size={20} className="text-purple-500" />;
-      default:
+      case 'closed':
         return <GitPullRequestClosed size={20} className="text-red-500" />;
     }
   };
@@ -121,7 +121,7 @@ const PullRequestItem = React.memo(({ pr }: { pr: DisplayablePullRequest }) => {
               </Link>
             </h3>
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-              <Badge variant={state as 'open' | 'merged' | 'closed'} className="flex items-center gap-1">
+              <Badge variant={state} className="flex items-center gap-1">
                 {state}
               </Badge>
               <div className="flex items-center gap-1">
@@ -250,7 +250,7 @@ const StateDisplay = ({
     );
   }
 
-  return <>{children}</>;
+  return children;
 };
 
 // メインコンポーネント：プルリクエストリスト
