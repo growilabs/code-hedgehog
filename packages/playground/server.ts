@@ -48,7 +48,8 @@ const route = app
 
         const config = {
           processor: Deno.env.get('CODE_HEDGEHOG_PROCESSOR') || 'dify',
-          filter: { exclude: ['**/dist/**', 'deno.lock'], maxChanges: 300 },
+          // TODO: .coderabbitai.yaml で設定できるようにする
+          filter: { exclude: ['**/dist/**', 'deno.lock', 'yarn.lock'], maxChanges: 300 },
         };
 
         const runner = new ActionRunner(config);

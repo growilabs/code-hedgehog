@@ -110,7 +110,7 @@ export const getRepositories = async (accessToken: string, org: string): Promise
   const octokit = getOctokit(accessToken);
   const repositories: Repository[] = [];
 
-  for await (const { data } of octokit.paginate.iterator(octokit.rest.repos.listForOrg, { org, per_page: MAX_PER_PAGE })) {
+  for await (const { data } of octokit.paginate.iterator(octokit.rest.repos.listForOrg, { org, sort: 'pushed', per_page: MAX_PER_PAGE })) {
     repositories.push(...data);
   }
   return repositories;

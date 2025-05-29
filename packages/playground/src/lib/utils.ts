@@ -13,3 +13,10 @@ export const formatDate = (dateString: string) => {
     year: 'numeric',
   });
 };
+
+export const replaceOverview = (text: string) => {
+  return text
+    .replace('## Overall Summary', '## PR全体の概要')
+    .replace('## Reviewed Changes', '## 各ファイル毎の概要')
+    .replace('Comments suppressed due to low severity', '重要度の低いコメント');
+};

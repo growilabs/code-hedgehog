@@ -28,7 +28,7 @@ import type { AppType } from '../../server.ts';
 import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
 import { downloadCSV, generatCSV } from '../lib/commentsCSV.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
-import { formatDate } from '../lib/utils.ts';
+import { formatDate, replaceOverview } from '../lib/utils.ts';
 
 const client = hc<AppType>('/');
 
@@ -78,7 +78,8 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
           if (comment.type === 'inline') {
             fetchedInlineComments.push(comment);
           } else if (comment.type === 'pr') {
-            fetchedPRComments.push(comment);
+            const replacedPRComment = { ...comment, body: replaceOverview(comment.body) };
+            fetchedPRComments.push(replacedPRComment);
           }
         }
 
