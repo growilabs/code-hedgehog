@@ -2,13 +2,19 @@
 
 import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, type IFileFilter, type IPullRequestProcessor, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import { FileManager, type IFileFilter, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import { DEFAULT_CONFIG, type ReviewConfig, loadBaseConfig as loadExternalBaseConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
 
 export class ActionRunner {
+  // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
+  private reviewConfig: ReviewConfig = DEFAULT_CONFIG;
+
   constructor(private readonly config: ActionConfig) {}
 
-  async run(): Promise<void> {
+  async run(): Promise<IReviewComment[]> {
+    await this.loadBaseConfig();
+
     const dryRunEnvVar = process.env.CODE_HEDGEHOG_DRY_RUN_VCS_PROCESSING;
     const dryRun = dryRunEnvVar === 'true' || dryRunEnvVar === '1';
 
@@ -29,9 +35,13 @@ export class ActionRunner {
         core.info('::: DRY RUN :::');
       }
 
+      const allComments: IReviewComment[] = [];
+
       // Process files in batches and get reviews
-      for await (const files of fileManager.collectChangedFiles()) {
+      for await (const files of fileManager.collectChangedFiles(this.reviewConfig)) {
         const { comments } = await processor.process(prInfo, files);
+        allComments.push(...(comments ?? []));
+
         if (comments != null && comments.length > 0) {
           if (dryRun) {
             core.info(comments.map((comment) => `- ${JSON.stringify(comment, null, 2)}`).join('\n'));
@@ -43,6 +53,8 @@ export class ActionRunner {
       }
 
       core.info('Code review completed successfully');
+
+      return allComments;
     } catch (error) {
       core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -130,5 +142,14 @@ export class ActionRunner {
       exclude: this.config.filter.exclude,
       maxChanges: this.config.filter.maxChanges,
     };
+  }
+
+  /**
+   * Load configuration using the external module.
+   * This method now acts as a wrapper to update the instance's config.
+   */
+  protected async loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
+    // Call the external function and update the instance's config
+    this.reviewConfig = await loadExternalBaseConfig(configPath); // Rename function call
   }
 }

@@ -2,6 +2,7 @@
  * Version Control System types
  */
 
+import type { ReviewConfig } from '@code-hedgehog/processor-base';
 import type { IFileChange } from './file.ts';
 import type { IReviewComment } from './review.ts';
 
@@ -95,9 +96,10 @@ export interface IVersionControlSystem {
 
   /**
    * Creates an async iterator that yields batches of file changes
+   * @param reviewConfig .coderabbitai.yaml file configurations
    * @param batchSize Number of files to process in each batch
    */
-  getPullRequestChangesStream(batchSize?: number): AsyncIterableIterator<IFileChange[]>;
+  getPullRequestChangesStream(reviewConfig: ReviewConfig, batchSize?: number): AsyncIterableIterator<IFileChange[]>;
 
   /**
    * Creates a review with a batch of comments

@@ -2,6 +2,7 @@
   "imports": {
     "@actions/core": "npm:@actions/core@^1.11.1",
     "@actions/github": "npm:@actions/github@^6.0.0",
+    "@code-hedgehog/processor-base": "../processors/base/mod.ts",
     "@octokit/core": "npm:@octokit/core@^5.0.1",
     "@octokit/plugin-rest-endpoint-methods": "npm:@octokit/plugin-rest-endpoint-methods@^10.4.1",
     "@octokit/plugin-paginate-rest": "npm:@octokit/plugin-paginate-rest@^9.2.2",

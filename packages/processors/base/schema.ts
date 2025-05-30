@@ -91,6 +91,7 @@ export const ConfigSchema = z.object({
   file_path_instructions: z.array(PathInstructionSchema).optional(),
   path_filters: z.string().optional(),
   skip_simple_changes: z.boolean().optional().default(false),
+  review_diff_since_last_review: z.boolean().optional().default(false),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -102,5 +103,6 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_path_instructions: [], // Local extension
   path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
   skip_simple_changes: false,
+  review_diff_since_last_review: false,
   severityThreshold: 3, // Default threshold for comment severity (1-5)
 };

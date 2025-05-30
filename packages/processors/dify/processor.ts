@@ -7,7 +7,7 @@ import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewCommentS
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
 // Internal configuration type for DifyProcessor
-type InternalDifyConfig = ReviewConfig & {
+type InternalDifyConfig = Partial<ReviewConfig> & {
   // Extend ReviewConfig to ensure compatibility
   baseUrl: string;
   user: string;

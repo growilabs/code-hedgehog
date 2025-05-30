@@ -7,6 +7,7 @@
  */
 import * as core from '@actions/core';
 import { getOctokit } from '@actions/github';
+import type { ReviewConfig } from '@code-hedgehog/processor-base';
 import type { ICommitComparisonShas, IFileChange, IPullRequestInfo, IReviewComment, IVCSConfig } from '../types/mod.ts';
 import { BaseVCS } from './base.ts';
 import type { CreateGitHubAPI, IGitHubAPI } from './github.types.ts';
@@ -135,7 +136,7 @@ export class GitHubVCS extends BaseVCS {
       const { data: commits } = await this.getCommits();
 
       if (commits.length === 0) {
-        core.warning(`No commits found in PR #${this.context.pullNumber}`);
+        core.info(`No commits found in PR #${this.context.pullNumber}`);
         return;
       }
 
@@ -147,11 +148,15 @@ export class GitHubVCS extends BaseVCS {
       });
 
       if (commitsBeforeLastComment.length === 0) {
-        core.debug('No commits found before the latest comment.');
+        core.info('No commits found before the latest PR comment');
         return;
       }
 
       const baseSha = commitsBeforeLastComment[commitsBeforeLastComment.length - 1].sha;
+
+      if (baseSha === headSha) {
+        core.info('No new commits found since the last PR comment');
+      }
 
       return { baseSha, headSha };
     } catch (error) {
@@ -166,14 +171,20 @@ export class GitHubVCS extends BaseVCS {
    * - File size limits (skips patches larger than 1MB)
    * - Total file count limits (warns after 3000 files)
    *
+   * @param reviewConfig .coderabbitai.yaml file configurations
    * @param batchSize Number of files to include in each yielded batch
    */
-  async *getPullRequestChangesStream(batchSize = 10): AsyncIterableIterator<IFileChange[]> {
+  async *getPullRequestChangesStream(reviewConfig: ReviewConfig, batchSize = 10): AsyncIterableIterator<IFileChange[]> {
     try {
       // Optimize page size based on batch size to reduce API calls
       const pageSize = Math.min(100, Math.max(batchSize * 2, 30));
 
-      const shaRange = await this.getShaRangeSinceLastIssueComment();
+      let shaRange: ICommitComparisonShas | undefined;
+
+      // If review_diff_since_last_review is enabled, fetch the SHA range since the last issue comment
+      if (reviewConfig.review_diff_since_last_review) {
+        shaRange = await this.getShaRangeSinceLastIssueComment();
+      }
 
       const iterator = this.api.paginate.iterator(
         shaRange != null

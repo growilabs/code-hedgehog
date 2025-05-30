@@ -4,7 +4,7 @@
     "enabled": true
   },
   "files": {
-    "ignore": ["dist/*.js", ".vite/**"]
+    "ignore": ["dist/*.js", "dist/*.css", ".vite/**"]
   },
   "linter": {
     "enabled": true,
