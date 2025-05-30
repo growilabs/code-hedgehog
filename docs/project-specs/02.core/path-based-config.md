@@ -24,7 +24,7 @@
 
 ```yaml
 # LLM のレスポンスの言語
-# ISO 言語コードを指定する、デフォルトは "en-US"
+# ISO 言語コードを指定する、デフォルトは "ja-JP"
 language: "ja-JP"
 
 # PRレベルの制御
@@ -70,7 +70,7 @@ checks:
 
 -   レビューに使用する言語コード (例: `"ja-JP"`, `"en-US"`)。
 -   型: `string`
--   デフォルト: `"en-US"`
+-   デフォルト: `"ja-JP"`
 
 ### ignore_draft_prs
 

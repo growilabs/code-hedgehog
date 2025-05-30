@@ -98,7 +98,7 @@ export type Config = z.infer<typeof ConfigSchema>;
 
 // Default configuration (Moved from deps.ts, now using ReviewConfig type)
 export const DEFAULT_CONFIG: ReviewConfig = {
-  language: 'en-US',
+  language: 'ja-JP',
   path_instructions: [], // Required by core
   file_path_instructions: [], // Local extension
   path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
