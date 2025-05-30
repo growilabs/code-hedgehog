@@ -32,7 +32,7 @@ export async function uploadFile(
   apiKey: string,
   user: string,
   content: UploadContent | UploadContent[] | string, // Allow JSON string
-  fileName = 'data.json',
+  fileName = 'data.txt',
 ): Promise<string> {
   const maxRetries = 3;
   const retryDelay = 1000; // 1 second
@@ -40,7 +40,7 @@ export async function uploadFile(
   // Create FormData with JSON file
   const formData = new FormData();
   const jsonString = typeof content === 'string' ? content : JSON.stringify(content);
-  const blob = new Blob([jsonString], { type: 'application/json' });
+  const blob = new Blob([jsonString], { type: 'text/plain' });
   formData.append('file', blob, fileName);
   formData.append('user', user);
 
