@@ -39,7 +39,7 @@ export async function uploadFile(
 
   // Create FormData with JSON file
   const formData = new FormData();
-  const jsonString = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+  const jsonString = typeof content === 'string' ? content : JSON.stringify(content);
   const blob = new Blob([jsonString], { type: 'text/plain' });
   formData.append('file', blob, fileName);
   formData.append('user', user);
