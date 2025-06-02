@@ -41,10 +41,15 @@ limit_reviews_by_labels: # レビュー対象を特定のラベルを持つPRに
 # ファイルレベルの制御
 skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
 review_diff_since_last_review: false # 最後の AI レビュー以降の差分のみをレビュー対象とするか (デフォルト: false)
-path_filters: # レビュー対象外のファイルパス (Globパターン, 除外専用)
-  - "dist/**"
-  - "**/*.min.js"
-  - "**/*.map"
+# ファイルフィルター設定
+file_filter:
+  exclude: # レビュー対象外のファイルパス (Globパターン, 除外専用)
+    - "dist/**"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "deno.lock"
+    - "yarn.lock"
+  max_changes: 300 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 0)
 file_path_instructions: # パスごとのレビュー指示
   - path: "src/**/*.{ts,tsx}"
     instructions: |
@@ -110,7 +115,11 @@ checks:
 - 型: `boolean`
 - デフォルト: `false`
 
-### path_filters
+### file_filter
+
+- ファイルのフィルタリングに関する設定をまとめたオブジェクト。
+
+#### file_filter.exclude
 
 -   レビュー対象から**除外**するファイルパスの Glob パターンリスト。
 -   このリストは除外専用であり、包含パターン (`!` プレフィックスなど) は指定できません。指定されたパターンにマッチするファイルはレビュー対象外となります。
@@ -121,8 +130,17 @@ checks:
     - "**/*.min.js"
     - "**/*.map"
     - "**/node_modules/**"
-    - "**/vendor/**" # 例として追加
+    - "**/vendor/**"
+    - "deno.lock"
+    - "yarn.lock"
     ```
+
+#### file_filter.max_changes
+
+- レビュー対象とするファイルの最大変更行数を指定します。この行数を超える変更があったファイルはレビュー対象外となります。
+- `0` を指定した場合は無制限となります。
+- 型: `number`
+- デフォルト: `0` (無制限)
 
 ### file_path_instructions
 
@@ -182,9 +200,11 @@ checks:
 ```yaml
 language: "ja-JP"
 skip_simple_changes: true
-path_filters:
-  - "dist/**"
-  - "**/*.map"
+file_filter:
+  exclude:
+    - "dist/**"
+    - "**/*.map"
+  max_changes: 500 # 例: 500行以上の変更があるファイルはスキップ
 file_path_instructions:
   - path: "src/**/*.ts"
     instructions: |
@@ -218,9 +238,10 @@ ignore_draft_prs: true
 ### 3. 複数パスへの指示と除外
 
 ```yaml
-path_filters:
-  - "**/generated/**" # 生成されたコードを除外
-  - "**/fixtures/**" # テストフィクスチャを除外
+file_filter:
+  exclude:
+    - "**/generated/**" # 生成されたコードを除外
+    - "**/fixtures/**" # テストフィクスチャを除外
 file_path_instructions:
   - path: "src/core/**/*.py"
     instructions: |

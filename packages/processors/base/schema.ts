@@ -86,10 +86,17 @@ export const PathInstructionSchema = z.object({
   instructions: z.string(),
 });
 
+export const FileFilterSchema = z.object({
+  exclude: z.array(z.string()).optional().default(['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**']),
+  max_changes: z.number().optional().default(0),
+});
+
 export const ConfigSchema = z.object({
   language: z.string().optional(),
   file_path_instructions: z.array(PathInstructionSchema).optional(),
-  path_filters: z.string().optional(),
+  // path_filters is deprecated, use file_filter.exclude instead
+  path_filters: z.string().optional(), // For backward compatibility
+  file_filter: FileFilterSchema.optional(),
   skip_simple_changes: z.boolean().optional().default(false),
   review_diff_since_last_review: z.boolean().optional().default(false),
 });
@@ -101,7 +108,13 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   language: 'ja-JP',
   path_instructions: [], // Required by core
   file_path_instructions: [], // Local extension
-  path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
+  // path_filters is for backward compatibility, will be merged into file_filter.exclude by loadBaseConfig
+  path_filters: undefined, // Default to undefined, let loadBaseConfig handle merging
+  file_filter: {
+    // New default structure
+    exclude: ['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**'],
+    max_changes: 0,
+  },
   skip_simple_changes: false,
   review_diff_since_last_review: false,
   severityThreshold: 3, // Default threshold for comment severity (1-5)

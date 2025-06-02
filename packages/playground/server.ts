@@ -4,6 +4,8 @@ import { serveStatic } from 'hono/deno';
 import { validator } from 'hono/validator';
 import { z } from 'zod';
 import { ActionRunner } from '../action/src/runner.ts';
+import type { ActionConfig } from '../action/src/config.ts';
+import { loadBaseConfig, DEFAULT_CONFIG } from '../processors/base/mod.ts';
 
 const app = new Hono();
 const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
@@ -34,25 +36,39 @@ const route = app
     validator('json', (value, c) => {
       const parsed = runProcessorSchema.safeParse(value);
       if (!parsed.success) {
-        return c.text('Invalid!', 401);
+        return c.json({ error: 'Invalid request body', details: parsed.error.flatten() }, 400);
       }
       return parsed.data;
     }),
     async (c) => {
       try {
-        const { githubToken, owner, repo, number } = await c.req.valid('json');
+        const validatedData = await c.req.valid('json');
+        // If validation failed, the validator middleware would have already sent a response.
+        // However, to satisfy TypeScript, we check if validatedData is undefined,
+        // though in practice with Hono's validator, this path shouldn't be hit if validation fails.
+        if (!validatedData) {
+          // This case should ideally not be reached if validator is set up correctly
+          return c.json({ error: 'Validation failed unexpectedly.' }, 500);
+        }
+        const { githubToken, owner, repo, number } = validatedData;
 
         Deno.env.set('GITHUB_TOKEN', githubToken);
         Deno.env.set('GITHUB_REPOSITORY', `${owner}/${repo}`);
         Deno.env.set('GITHUB_PR_NUMBER', number);
 
-        const config = {
+        // Load configuration from .coderabbitai.yaml
+        const loadedReviewConfig = await loadBaseConfig(); // Uses default path '.coderabbitai.yaml'
+
+        const actionRunnerConfig: ActionConfig = {
           processor: Deno.env.get('CODE_HEDGEHOG_PROCESSOR') || 'dify',
-          // TODO: .coderabbitai.yaml で設定できるようにする
-          filter: { exclude: ['**/dist/**', 'deno.lock', 'yarn.lock'], maxChanges: 300 },
+          filter: {
+            exclude: loadedReviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
+            maxChanges: loadedReviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
+            // include is not part of ReviewConfig, so it remains undefined or could be sourced differently if needed.
+          },
         };
 
-        const runner = new ActionRunner(config);
+        const runner = new ActionRunner(actionRunnerConfig);
         const comments = await runner.run();
 
         const commentsWithDiffId = await Promise.all(
