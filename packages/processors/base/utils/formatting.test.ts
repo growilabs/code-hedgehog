@@ -1,7 +1,13 @@
 import { expect } from '@std/expect';
 // deno-lint-ignore-file no-explicit-any
 import { test } from '@std/testing/bdd';
-import { createCollapsibleSection, createCountedCollapsibleSection, formatFileSummaryTable, formatGroupedComments } from './formatting.ts';
+import {
+  addLineNumbersToDiff,
+  createCollapsibleSection,
+  createCountedCollapsibleSection,
+  formatFileSummaryTable,
+  formatGroupedComments,
+} from './formatting.ts';
 
 import type { GroupedComment } from './group.ts';
 
@@ -74,4 +80,20 @@ test('createCountedCollapsibleSection: delegates', () => {
   const html = createCountedCollapsibleSection('Title', 3, 'Body');
   expect(html).toContain('<summary>Title (3)</summary>');
   expect(html).toContain('Body</details>');
+});
+
+test("addLineNumbersToDiff returns 'No changes' for null", () => {
+  expect(addLineNumbersToDiff(null)).toBe('No changes');
+});
+
+test('addLineNumbersToDiff adds line numbers to unified diff', () => {
+  const diff = ['@@ -1,3 +1,4 @@', ' line1', '-line2', '+line2 modified', ' line3', '+line4', '', 'diff --git a/foo b/foo'].join('\n');
+  const expected = ['@@ -1,3 +1,4 @@', '1:  line1', '2: -line2', '2: +line2 modified', '3:  line3', '4: +line4', '', 'diff --git a/foo b/foo'].join('\n');
+  expect(addLineNumbersToDiff(diff)).toBe(expected);
+});
+
+test('addLineNumbersToDiff handles multiple hunks', () => {
+  const diff = ['@@ -10,2 +10,3 @@', ' lineA', '-lineB', '+lineB changed', '@@ -20,1 +21,2 @@', '+added', ' lineC'].join('\n');
+  const expected = ['@@ -10,2 +10,3 @@', '10:  lineA', '11: -lineB', '11: +lineB changed', '@@ -20,1 +21,2 @@', '21: +added', '22:  lineC'].join('\n');
+  expect(addLineNumbersToDiff(diff)).toBe(expected);
 });
