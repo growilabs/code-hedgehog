@@ -1,12 +1,8 @@
 import process from 'node:process';
-import { ImpactLevel } from '../base/schema.ts';
 // Import the base config type
 import type { ReviewConfig } from '../base/types.ts'; // Use base ReviewConfig
-import { createHorizontalBatches, createVerticalBatches } from '../base/utils/batch.ts';
-import { formatFileSummaryTable } from '../base/utils/formatting.ts';
+import { addLineNumbersToDiff, formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-import { CommentType } from './deps.ts';
-import type { z } from './deps.ts'; // Import zod for type assertion
 import { BaseProcessor, OpenAI, OverallSummarySchema, ReviewResponseSchema, SummaryResponseSchema, zodResponseFormat } from './deps.ts';
 import type {
   IFileChange,
@@ -266,7 +262,7 @@ export class OpenaiProcessor extends BaseProcessor {
           title: prInfo.title,
           description: prInfo.body || '',
           filePath: file.path,
-          patch: this.addLineNumbersToDiff(file.patch),
+          patch: addLineNumbersToDiff(file.patch),
           instructions: this.getInstructionsForFile(file.path, config),
           aspects: summarizeResult.aspects.map((aspect) => ({
             name: aspect.key,
