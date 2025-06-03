@@ -18,6 +18,7 @@ WORKDIR /app/packages/playground
 COPY packages/playground/deno.jsonc .
 COPY packages/playground/vite.config.ts .
 COPY packages/playground/index.html .
+COPY packages/playground/favicon.ico .
 COPY packages/playground/server.ts .
 COPY packages/playground/src ./src
 # COPY packages/playground/public ./public
