@@ -233,6 +233,7 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
                 <>
                   <h2 className="text-xl font-semibold mt-4">レビュー実行中</h2>
                   <p className="text-muted-foreground text-sm text-center mt-2">実行完了まで3分ほどかかります。</p>
+                  <p className="text-muted-foreground text-sm text-center">差分ファイル数が多い場合はさらに時間がかかります。</p>
                 </>
               ) : (
                 <h2 className="text-xl font-semibold mt-4">レビュー実行可能</h2>
@@ -275,13 +276,6 @@ const PullRequestDetail = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const localStorageGithubToken = localStorage.getItem('github_token');
-  // localStorage に値がある場合、sessionStorage に移動して削除する
-  if (localStorageGithubToken != null) {
-    sessionStorage.setItem('github_token', localStorageGithubToken);
-    localStorage.removeItem('github_token');
-  }
-
   const githubToken = useAtomValue(githubTokenAtom) || sessionStorage.getItem('github_token') || '';
 
   useEffect(() => {
@@ -301,6 +295,15 @@ const PullRequestDetail = () => {
       }
     })();
   }, [githubToken, selectedOwner, selectedRepo, number]);
+
+  useEffect(() => {
+    const localStorageGithubToken = localStorage.getItem('github_token');
+    // localStorage に値がある場合、sessionStorage に移動して削除する
+    if (localStorageGithubToken != null) {
+      sessionStorage.setItem('github_token', localStorageGithubToken);
+      localStorage.removeItem('github_token');
+    }
+  }, []);
 
   if (selectedOwner === '' || selectedRepo === '') {
     return <Navigate to="/" replace />;
