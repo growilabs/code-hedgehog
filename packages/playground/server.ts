@@ -3,9 +3,9 @@ import { type Context, Hono } from 'hono';
 import { serveStatic } from 'hono/deno';
 import { validator } from 'hono/validator';
 import { z } from 'zod';
-import { ActionRunner } from '../action/src/runner.ts';
 import type { ActionConfig } from '../action/src/config.ts';
-import { loadBaseConfig, DEFAULT_CONFIG } from '../processors/base/mod.ts';
+import { ActionRunner } from '../action/src/runner.ts';
+import { DEFAULT_CONFIG, loadBaseConfig } from '../processors/base/mod.ts';
 
 const app = new Hono();
 const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
