@@ -29,6 +29,8 @@ interface PaginationResult<T> {
   maxPage: number;
 }
 
+export type PRSearchState = 'open' | 'closed';
+
 const MAX_PER_PAGE = 100;
 const DEFAULT_PER_PAGE = 10;
 
@@ -124,12 +126,14 @@ const searchPRsByKeyword = async (
   org: string,
   repo: string,
   keyword: string,
+  prState: PRSearchState,
   page: number,
   perPage: number = DEFAULT_PER_PAGE,
 ): Promise<PaginationResult<DisplayablePullRequest>> => {
-  const query = `repo:${org}/${repo} ${keyword.trim()} is:pr`;
+  const query = `repo:${org}/${repo} ${keyword.trim()} is:pr state:${prState}`;
   const response = await octokit.request('GET /search/issues', {
     q: query,
+    sort: 'created',
     per_page: perPage,
     page,
   });
@@ -147,13 +151,14 @@ const getAllPRs = async (
   octokit: Octokit,
   org: string,
   repo: string,
+  prState: PRSearchState,
   page: number,
   perPage: number = DEFAULT_PER_PAGE,
 ): Promise<PaginationResult<DisplayablePullRequest>> => {
   const response = await octokit.rest.pulls.list({
     owner: org,
     repo,
-    state: 'all',
+    state: prState,
     per_page: perPage,
     page,
   });
@@ -172,11 +177,12 @@ export const getPullRequestsWithMaxPage = async (
   org: string,
   repo: string,
   page: number,
+  prState: PRSearchState,
   keyword?: string,
 ): Promise<PaginationResult<DisplayablePullRequest>> => {
   const octokit = getOctokit(accessToken);
 
-  return keyword?.trim() ? await searchPRsByKeyword(octokit, org, repo, keyword, page) : await getAllPRs(octokit, org, repo, page);
+  return keyword?.trim() ? await searchPRsByKeyword(octokit, org, repo, keyword, prState, page) : await getAllPRs(octokit, org, repo, prState, page);
 };
 
 /**
