@@ -63,7 +63,19 @@ describe('loadBaseConfig', () => {
 
     const config = await loadBaseConfig('valid.yaml'); // Rename function call
 
-    const expectedConfig = { ...DEFAULT_CONFIG, ...customConfig };
+    const expectedConfig = {
+      ...DEFAULT_CONFIG,
+      ...customConfig,
+      file_filter: {
+        ...DEFAULT_CONFIG.file_filter,
+        exclude: customConfig.path_filters
+          ? customConfig.path_filters
+              .split('\n')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : DEFAULT_CONFIG.file_filter.exclude,
+      },
+    };
     expect(config).toEqual(expectedConfig);
     expect(warnStub.calls.length).toBe(0);
     expect(errorStub.calls.length).toBe(0);
