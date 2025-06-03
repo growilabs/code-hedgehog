@@ -51,8 +51,14 @@ const getOctokit = (accessToken: string): Octokit => {
 // 共通のページング処理関数
 const extractMaxPageFromHeaders = (linkHeader?: string | null): number => {
   if (!linkHeader) return 1;
-  const match = linkHeader.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
-  return match ? Number(match[1]) : 1;
+  const lastMatch = linkHeader.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="last"/);
+  if (lastMatch) {
+    return Number(lastMatch[1]);
+  }
+
+  // 最終ページを表示している場合は linkHeader に last 含まれないので、prev から最大ページ数を取得する
+  const prevMatch = linkHeader.match(/<[^>]+[?&]page=(\d+)[^>]*>;\s*rel="prev"/);
+  return prevMatch ? Number(prevMatch[1]) + 1 : 1;
 };
 
 // PR状態の判定を統一
