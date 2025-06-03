@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input.tsx';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination.tsx';
 import { type DisplayablePullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
 import { useAtomValue } from 'jotai';
-import { Calendar, Check, CircleAlert, Clock, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, Search as SearchIcon, User } from 'lucide-react';
+import { Calendar, CircleAlert, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, Search as SearchIcon, User } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -96,6 +96,10 @@ const SearchFilter = React.memo(({ onSearch }: { onSearch: (keyword: string) => 
 
 // コンポーネント：プルリクエストアイテム
 const PullRequestItem = React.memo(({ pr }: { pr: DisplayablePullRequest }) => {
+  const accessToken = useAtomValue(githubTokenAtom);
+  const selectedOwner = useAtomValue(selectedOwnerAtom);
+  const selectedRepo = useAtomValue(selectedRepoAtom);
+
   const state = pr.merged_at ? 'merged' : pr.state;
 
   const getStateIcon = () => {
@@ -109,6 +113,11 @@ const PullRequestItem = React.memo(({ pr }: { pr: DisplayablePullRequest }) => {
     }
   };
 
+  const handleItemClick = () => {
+    // 画面遷移する直前にアクセストークンを localStorage に保存し、遷移後すぐに削除する
+    localStorage.setItem('github_token', accessToken);
+  };
+
   return (
     <Card className="hover:bg-muted/20 transition-colors py-0">
       <CardContent className="p-4">
@@ -116,7 +125,7 @@ const PullRequestItem = React.memo(({ pr }: { pr: DisplayablePullRequest }) => {
           <div className="mt-1 flex-shrink-0">{getStateIcon()}</div>
           <div className="flex-grow min-w-0">
             <h3 className="text-base font-medium mb-1 truncate">
-              <Link to={`/pulls/${pr.number}`} className="hover:underline">
+              <Link to={`/pulls/${pr.number}?owner=${selectedOwner}&repo=${selectedRepo}`} className="hover:underline" onClick={handleItemClick}>
                 {pr.title} <span className="text-muted-foreground font-normal">#{pr.number}</span>
               </Link>
             </h3>

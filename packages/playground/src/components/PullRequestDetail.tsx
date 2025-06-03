@@ -20,12 +20,12 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 
 import type { AppType } from '../../server.ts';
-import { githubTokenAtom, selectedOwnerAtom, selectedRepoAtom } from '../atoms/vcsAtoms.ts';
+import { githubTokenAtom } from '../atoms/vcsAtoms.ts';
 import { downloadCSV, generatCSV } from '../lib/commentsCSV.ts';
 import { type PullRequestDetail as PullRequestDetailType, getPullRequest } from '../lib/github.ts';
 import { formatDate, replaceOverview } from '../lib/utils.ts';
@@ -267,22 +267,32 @@ const PullRequestContent = ({ pullRequest, githubToken, owner, repo, number }: P
 
 const PullRequestDetail = () => {
   const { number } = useParams<{ number: string }>();
-  const githubToken = useAtomValue(githubTokenAtom);
-  const selectedOwner = useAtomValue(selectedOwnerAtom);
-  const selectedRepo = useAtomValue(selectedRepoAtom);
+  const [searchParams] = useSearchParams();
+  const selectedOwner = searchParams.get('owner');
+  const selectedRepo = searchParams.get('repo');
+
   const [pullRequest, setPullRequest] = useState<PullRequestDetailType | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const localStorageGithubToken = localStorage.getItem('github_token');
+  // localStorage に値がある場合、sessionStorage に移動して削除する
+  if (localStorageGithubToken != null) {
+    sessionStorage.setItem('github_token', localStorageGithubToken);
+    localStorage.removeItem('github_token');
+  }
+
+  const githubToken = useAtomValue(githubTokenAtom) || sessionStorage.getItem('github_token') || '';
+
   useEffect(() => {
     (async () => {
-      if (selectedOwner === '' || selectedRepo === '' || number == null) return;
+      if (selectedOwner == null || selectedRepo == null || number == null) return;
 
       setLoading(true);
       setError('');
 
       try {
-        const pullRequest = await getPullRequest(githubToken, selectedOwner, selectedRepo, Number(number));
+        const pullRequest = await getPullRequest(githubToken ?? '', selectedOwner, selectedRepo, Number(number));
         setPullRequest(pullRequest);
       } catch {
         setError('プルリクエスト詳細の取得に失敗しました');
@@ -304,7 +314,7 @@ const PullRequestDetail = () => {
             <Loader className="h-8 w-8 text-primary animate-spin mb-4" />
             <p className="text-muted-foreground">プルリクエストの詳細を読み込み中...</p>
           </div>
-        ) : error !== '' || pullRequest == null || number == null ? (
+        ) : error !== '' || pullRequest == null || number == null || selectedOwner == null || selectedRepo == null ? (
           <div className="text-center py-8">
             <CircleAlert className="h-8 w-8 text-destructive mx-auto mb-4" />
             <p className="text-destructive mb-2">{error || 'プルリクエストが見つかりません'}</p>
