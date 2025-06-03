@@ -20,7 +20,7 @@ COPY packages/playground/vite.config.ts .
 COPY packages/playground/index.html .
 COPY packages/playground/server.ts .
 COPY packages/playground/src ./src
-COPY packages/playground/public ./public
+# COPY packages/playground/public ./public
 
 # Copy .env file for build-time environment variables
 COPY packages/playground/.env* ./
