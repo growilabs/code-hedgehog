@@ -195,4 +195,173 @@ describe('loadBaseConfig', () => {
     expect(warnStub.calls.length).toBe(0);
     expect(errorStub.calls.length).toBe(0);
   });
+
+  test('should prioritize file_filter over deprecated path_filters if both are present in YAML', async () => {
+    const mixedConfig = {
+      file_filter: {
+        exclude: ['new_exclude/**'],
+        max_changes: 50,
+      },
+      path_filters: 'old_exclude/**', // This should be ignored
+      skip_simple_changes: true,
+    };
+    const yamlContent = yaml.dump(mixedConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('mixed-config.yaml');
+
+    expect(config.file_filter.exclude).toEqual(['new_exclude/**']);
+    expect(config.file_filter.max_changes).toBe(50);
+    expect(config.skip_simple_changes).toBe(true);
+    // Ensure no warning about path_filters being used, as it should be ignored.
+    // If there were a specific warning for deprecated fields, we could check for that.
+    // For now, we check that the general "Invalid config format" warning is NOT present
+    // if the rest of the config is valid.
+    const invalidFormatWarning = warnStub.calls.find((call) => call.args[0].includes('Invalid config format'));
+    expect(invalidFormatWarning).toBeUndefined();
+  });
+
+  test('should use DEFAULT_CONFIG.file_filter if file_filter is not in YAML, even if path_filters is present', async () => {
+    const onlyPathFiltersConfig = {
+      path_filters: 'should_be_ignored/**', // This should be ignored
+      language: 'en-US',
+    };
+    const yamlContent = yaml.dump(onlyPathFiltersConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('only-path-filters.yaml');
+
+    expect(config.file_filter.exclude).toEqual(DEFAULT_CONFIG.file_filter.exclude);
+    expect(config.file_filter.max_changes).toEqual(DEFAULT_CONFIG.file_filter.max_changes);
+    expect(config.language).toBe('en-US');
+    const invalidFormatWarning = warnStub.calls.find((call) => call.args[0].includes('Invalid config format'));
+    expect(invalidFormatWarning).toBeUndefined();
+  });
+
+  test('should correctly merge file_filter when only exclude is provided in YAML', async () => {
+    const partialFileFilterConfig = {
+      file_filter: {
+        exclude: ['custom_exclude/**'],
+      },
+      skip_simple_changes: true,
+    };
+    const yamlContent = yaml.dump(partialFileFilterConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+
+    const config = await loadBaseConfig('partial-file-filter.yaml');
+
+    expect(config.file_filter.exclude).toEqual(['custom_exclude/**']);
+    expect(config.file_filter.max_changes).toEqual(DEFAULT_CONFIG.file_filter.max_changes); // max_changes should fallback to default
+    expect(config.skip_simple_changes).toBe(true);
+  });
+
+  test('should correctly merge file_filter when only max_changes is provided in YAML', async () => {
+    const partialFileFilterConfig = {
+      file_filter: {
+        max_changes: 100,
+      },
+      language: 'fr-FR',
+    };
+    const yamlContent = yaml.dump(partialFileFilterConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+
+    const config = await loadBaseConfig('partial-file-filter-max-changes.yaml');
+
+    expect(config.file_filter.exclude).toEqual(DEFAULT_CONFIG.file_filter.exclude); // exclude should fallback to default
+    expect(config.file_filter.max_changes).toBe(100);
+    expect(config.language).toBe('fr-FR');
+  });
+
+  test('should warn and use default file_filter if exclude is not an array', async () => {
+    const invalidConfig = {
+      file_filter: {
+        exclude: 'not-an-array',
+      },
+    };
+    const yamlContent = yaml.dump(invalidConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('invalid-exclude-type.yaml');
+
+    expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
+    expect(warnStub.calls.length).toBe(1);
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
+    expect(warnStub.calls[0].args[0]).toContain('file_filter.exclude');
+  });
+
+  test('should warn and use default file_filter if exclude contains non-strings', async () => {
+    const invalidConfig = {
+      file_filter: {
+        exclude: ['a-string', 123, 'another-string'],
+      },
+    };
+    const yamlContent = yaml.dump(invalidConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('invalid-exclude-element-type.yaml');
+
+    expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
+    expect(warnStub.calls.length).toBe(1);
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
+    expect(warnStub.calls[0].args[0]).toContain('file_filter.exclude.1'); // Error on the second element
+  });
+
+  test('should warn and use default file_filter if max_changes is not a number', async () => {
+    const invalidConfig = {
+      file_filter: {
+        max_changes: 'not-a-number',
+      },
+    };
+    const yamlContent = yaml.dump(invalidConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('invalid-max-changes-type.yaml');
+
+    expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
+    expect(warnStub.calls.length).toBe(1);
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
+    expect(warnStub.calls[0].args[0]).toContain('file_filter.max_changes');
+  });
+
+  test('should warn and use default file_filter if max_changes is a negative number', async () => {
+    const invalidConfig = {
+      file_filter: {
+        max_changes: -5,
+      },
+    };
+    const yamlContent = yaml.dump(invalidConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('negative-max-changes.yaml');
+
+    expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
+    expect(warnStub.calls.length).toBe(1);
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
+    expect(warnStub.calls[0].args[0]).toContain('file_filter.max_changes');
+  });
+
+  test('should warn and use default file_filter if file_filter contains unknown keys (due to .strict())', async () => {
+    const invalidConfig = {
+      file_filter: {
+        exclude: ['valid/**'],
+        unknown_property: 'should cause error',
+      },
+    };
+    const yamlContent = yaml.dump(invalidConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('unknown-key-in-file-filter.yaml');
+    expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
+    expect(warnStub.calls.length).toBe(1);
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
+    // Zod's message for strict mode includes "Unrecognized key(s) in object: 'unknown_property'"
+    expect(warnStub.calls[0].args[0]).toContain("Unrecognized key(s) in object: 'unknown_property'");
+  });
 });

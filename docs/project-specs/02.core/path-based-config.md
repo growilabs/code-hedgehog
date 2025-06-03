@@ -42,9 +42,17 @@ limit_reviews_by_labels: # レビュー対象を特定のラベルを持つPRに
 skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
 review_diff_since_last_review: false # 最後の AI レビュー以降の差分のみをレビュー対象とするか (デフォルト: false)
 # ファイルフィルター設定
-# path_filters は非推奨です。file_filter.exclude を使用してください。
-# file_filter と path_filters が両方指定された場合、file_filter.exclude が優先されます。
-# 将来的には path_filters のサポートは削除されます。
+
+`file_filter` セクションでは、レビュー対象とするファイルをフィルタリングするための設定を行います。
+
+**設定の優先順位とフォールバック:**
+
+*   **.coderabbitai.yaml ファイル内の `file_filter` 設定**:
+    *   `exclude`: YAML ファイルに `file_filter.exclude` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルトの除外リストが適用されます。
+    *   `max_changes`: YAML ファイルに `file_filter.max_changes` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルト値 (`0` = 無制限) が適用されます。
+*   **`path_filters` (非推奨)**:
+    *   古い設定項目である `path_filters` は非推奨です。YAML ファイルに記述されていても、現在のシステムでは無視され、`file_filter.exclude` の値には影響しません。常に `file_filter.exclude` を使用してください。
+
 file_filter:
   exclude: # レビュー対象外のファイルパス (Globパターン, 除外専用)
     - "dist/**"

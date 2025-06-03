@@ -84,8 +84,11 @@ export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise
   const parsedYaml = validationResult.data; // Use validated data
   console.debug(`Validated YAML content from ${configPath}:`, JSON.stringify(parsedYaml));
 
-  // Merge validated fields into the default config
-  // Zod ensures the types are correct (or optional and thus undefined)
+  // Merge validated fields into the default config.
+  // For file_filter (exclude, max_changes), if specified in YAML, those values are used.
+  // Otherwise, DEFAULT_CONFIG values are used.
+  // The deprecated path_filters field is ignored.
+  // Zod ensures the types are correct (or optional and thus undefined).
   const baseConfig: ReviewConfig = {
     ...DEFAULT_CONFIG,
     language: parsedYaml.language ?? DEFAULT_CONFIG.language,
