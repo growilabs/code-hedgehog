@@ -50,7 +50,10 @@ describe('loadBaseConfig', () => {
 
   test('should load and merge config from valid YAML file', async () => {
     const customConfig: Partial<ReviewConfig> = {
-      path_filters: '*.test.ts\n!src/ignore.ts',
+      file_filter: {
+        exclude: ['*.test.ts', '!src/ignore.ts'],
+        max_changes: 0,
+      },
       skip_simple_changes: true,
     };
     // Control the YAML string returned by readFile
@@ -66,15 +69,6 @@ describe('loadBaseConfig', () => {
     const expectedConfig = {
       ...DEFAULT_CONFIG,
       ...customConfig,
-      file_filter: {
-        ...DEFAULT_CONFIG.file_filter,
-        exclude: customConfig.path_filters
-          ? customConfig.path_filters
-              .split('\n')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : DEFAULT_CONFIG.file_filter.exclude,
-      },
     };
     expect(config).toEqual(expectedConfig);
     expect(warnStub.calls.length).toBe(0);
@@ -157,7 +151,7 @@ describe('loadBaseConfig', () => {
   test('should fallback to default values for invalid types in YAML', async () => {
     const invalidTypeConfig = {
       file_path_instructions: 'not an array', // Invalid type
-      path_filters: 123, // Invalid type
+      file_filter: 123, // Invalid type
       skip_simple_changes: 'not a boolean', // Invalid type
       path_instructions: { path: 'invalid', instructions: 'object' }, // Invalid type
     };
@@ -171,7 +165,7 @@ describe('loadBaseConfig', () => {
 
     // Expect the config to have fallen back to defaults for the invalid fields
     expect(config.file_path_instructions).toEqual(DEFAULT_CONFIG.file_path_instructions);
-    expect(config.path_filters).toEqual(DEFAULT_CONFIG.path_filters);
+    expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
     expect(config.skip_simple_changes).toEqual(DEFAULT_CONFIG.skip_simple_changes);
     expect(config.path_instructions).toEqual(DEFAULT_CONFIG.path_instructions);
     expect(warnStub.calls.length).toBe(1); // Expect 1 warning due to Zod validation failure

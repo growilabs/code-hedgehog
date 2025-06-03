@@ -24,8 +24,7 @@ const BaseConfigSchema = z
   .object({
     language: z.string().optional(),
     file_path_instructions: z.array(PathInstructionSchema).optional(),
-    path_filters: z.string().optional(), // For backward compatibility
-    file_filter: FileFilterSchema.optional(), // New filter structure
+    file_filter: FileFilterSchema.optional(),
     skip_simple_changes: z.boolean().optional(),
     review_diff_since_last_review: z.boolean().optional(),
     // path_instructions is required in ReviewConfig, but might be missing in YAML
@@ -94,27 +93,11 @@ export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise
     skip_simple_changes: parsedYaml.skip_simple_changes ?? DEFAULT_CONFIG.skip_simple_changes,
     review_diff_since_last_review: parsedYaml.review_diff_since_last_review ?? DEFAULT_CONFIG.review_diff_since_last_review,
     path_instructions: parsedYaml.path_instructions ?? DEFAULT_CONFIG.path_instructions,
-    // Handle file_filter and backward compatibility with path_filters
     file_filter: {
-      exclude:
-        parsedYaml.file_filter?.exclude ??
-        (parsedYaml.path_filters
-          ? parsedYaml.path_filters
-              .split('\n')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : DEFAULT_CONFIG.file_filter.exclude),
+      exclude: parsedYaml.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
       max_changes: parsedYaml.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
     },
-    // Ensure path_filters in the final config is consistent (optional: could be removed if fully deprecated)
-    path_filters: parsedYaml.path_filters, // Keep original if present, or undefined
   };
-
-  // If path_filters was used to populate file_filter.exclude,
-  // and file_filter.exclude was not explicitly set in yaml,
-  // we can set baseConfig.path_filters to undefined to avoid redundancy,
-  // or keep it for pure backward compatibility if some other part of the system still reads it.
-  // For now, we keep it as is from parsedYaml.path_filters.
 
   console.debug(`Merged base config: ${JSON.stringify(baseConfig)}`);
   return baseConfig;

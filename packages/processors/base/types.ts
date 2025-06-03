@@ -37,7 +37,6 @@ export interface FileFilterConfig {
 export interface LocalReviewConfig {
   language: string;
   file_path_instructions: PathInstruction[];
-  path_filters?: string; // Optional for backward compatibility
   file_filter: FileFilterConfig; // New filter structure
   skip_simple_changes: boolean;
   review_diff_since_last_review: boolean;

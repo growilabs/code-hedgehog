@@ -42,6 +42,9 @@ limit_reviews_by_labels: # レビュー対象を特定のラベルを持つPRに
 skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
 review_diff_since_last_review: false # 最後の AI レビュー以降の差分のみをレビュー対象とするか (デフォルト: false)
 # ファイルフィルター設定
+# path_filters は非推奨です。file_filter.exclude を使用してください。
+# file_filter と path_filters が両方指定された場合、file_filter.exclude が優先されます。
+# 将来的には path_filters のサポートは削除されます。
 file_filter:
   exclude: # レビュー対象外のファイルパス (Globパターン, 除外専用)
     - "dist/**"
