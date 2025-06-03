@@ -16,9 +16,9 @@ const PathInstructionSchema = z
 const FileFilterSchema = z
   .object({
     exclude: z.array(z.string()).optional(),
-    max_changes: z.number().optional(),
+    max_changes: z.number().nonnegative().optional(), // Add .nonnegative()
   })
-  .passthrough();
+  .strict(); // Change to .strict()
 
 const BaseConfigSchema = z
   .object({

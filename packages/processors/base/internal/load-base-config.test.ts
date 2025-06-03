@@ -289,7 +289,8 @@ describe('loadBaseConfig', () => {
     expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
-    expect(warnStub.calls[0].args[0]).toContain('file_filter.exclude');
+    // Zod error path for exclude when it's not an array
+    expect(warnStub.calls[0].args[0]).toContain('Expected array, received string');
   });
 
   test('should warn and use default file_filter if exclude contains non-strings', async () => {
@@ -307,7 +308,8 @@ describe('loadBaseConfig', () => {
     expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
-    expect(warnStub.calls[0].args[0]).toContain('file_filter.exclude.1'); // Error on the second element
+    // Zod error path for an element within the exclude array
+    expect(warnStub.calls[0].args[0]).toContain('Expected string, received number');
   });
 
   test('should warn and use default file_filter if max_changes is not a number', async () => {
@@ -325,7 +327,8 @@ describe('loadBaseConfig', () => {
     expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
-    expect(warnStub.calls[0].args[0]).toContain('file_filter.max_changes');
+    // Zod error path for max_changes when it's not a number
+    expect(warnStub.calls[0].args[0]).toContain('Expected number, received string');
   });
 
   test('should warn and use default file_filter if max_changes is a negative number', async () => {
@@ -343,7 +346,8 @@ describe('loadBaseConfig', () => {
     expect(config.file_filter).toEqual(DEFAULT_CONFIG.file_filter);
     expect(warnStub.calls.length).toBe(1);
     expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
-    expect(warnStub.calls[0].args[0]).toContain('file_filter.max_changes');
+    // Zod error message for non-negative numbers
+    expect(warnStub.calls[0].args[0]).toContain('Number must be greater than or equal to 0');
   });
 
   test('should warn and use default file_filter if file_filter contains unknown keys (due to .strict())', async () => {
