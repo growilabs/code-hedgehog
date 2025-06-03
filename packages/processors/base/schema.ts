@@ -87,8 +87,18 @@ export const PathInstructionSchema = z.object({
 });
 
 export const FileFilterSchema = z.object({
-  exclude: z.array(z.string()).optional().default(['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**']),
-  max_changes: z.number().optional().default(0),
+  exclude: z
+    .array(z.string())
+    .optional()
+    .default(['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**'])
+    .describe('List of glob patterns to exclude files from review.'),
+  max_changes: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .default(0)
+    .describe('Maximum number of changes (lines) for a file to be reviewed. Specify 0 for unlimited changes (default: 0).'),
 });
 
 export const ConfigSchema = z.object({
@@ -109,7 +119,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_filter: {
     // New default structure
     exclude: ['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**'],
-    max_changes: 0,
+    max_changes: 0, // 0 means unlimited
   },
   skip_simple_changes: false,
   review_diff_since_last_review: false,
