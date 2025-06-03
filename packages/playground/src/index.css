@@ -189,6 +189,15 @@
   list-style-type: disc;
 }
 
+.markdown-container > table > tbody > tr > td:nth-child(1) {
+  width: 25%;
+}
+
+.markdown-container > table > tbody > tr > td > code {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
 pre {
   background-color: #fff;
   border-radius: 4px;

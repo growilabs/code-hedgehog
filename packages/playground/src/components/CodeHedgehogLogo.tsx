@@ -10,6 +10,7 @@ const CodeHedgehogLogo = ({ width = 308 }) => {
     : 'M52.0922 68.2628L62.9133 69.0752L62.5711 58.6138L72.9996 56.006L65.5406 41.1815L71.6608 32.5757L57.4977 25.2738L61.4437 15.8957L40.7274 15.8154L37.5264 4L20.6454 16.1866L15.9948 10.7603L6.55273 32.4453L18.612 24.6118L23.6854 30.8806L28.6983 30.319L27.6615 35.7954L38.1908 44.5115L25.2356 59.8074L48.6596 74L52.0922 68.2628Z';
 
   return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: <explanation>
     <svg
       width={width}
       viewBox="0 0 308 79"
@@ -18,7 +19,6 @@ const CodeHedgehogLogo = ({ width = 308 }) => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <title>CodeHedgehog</title>
       <defs>
         <clipPath id="clip0_1_47">
           <rect width="73" height="70" fill="white" transform="translate(0 4)" />
