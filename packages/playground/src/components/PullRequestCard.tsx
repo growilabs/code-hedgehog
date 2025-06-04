@@ -2,7 +2,8 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import { Input } from '@/components/ui/input.tsx';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination.tsx';
-import { type DisplayablePullRequest, getPullRequestsWithMaxPage } from '@/lib/github.ts';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.tsx';
+import { type DisplayablePullRequest, type PRSearchState, getPullRequestsWithMaxPage } from '@/lib/github.ts';
 import { useAtomValue } from 'jotai';
 import { Calendar, CircleAlert, GitMerge, GitPullRequest, GitPullRequestClosed, Loader, Search as SearchIcon, User } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -20,6 +21,7 @@ const usePullRequests = (selectedOwner: string, selectedRepo: string) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [activeKeyword, setActiveKeyword] = useState('');
+  const [prState, setPRState] = useState<PRSearchState>('open');
 
   const fetchPullRequests = useCallback(async () => {
     if (!selectedOwner || !selectedRepo) return;
@@ -33,6 +35,7 @@ const usePullRequests = (selectedOwner: string, selectedRepo: string) => {
         selectedOwner,
         selectedRepo,
         currentPage,
+        prState,
         activeKeyword,
       );
       setPullRequests(fetchedPullRequests);
@@ -42,7 +45,7 @@ const usePullRequests = (selectedOwner: string, selectedRepo: string) => {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, selectedOwner, selectedRepo, currentPage, activeKeyword]);
+  }, [accessToken, selectedOwner, selectedRepo, currentPage, activeKeyword, prState]);
 
   useEffect(() => {
     fetchPullRequests();
@@ -51,6 +54,11 @@ const usePullRequests = (selectedOwner: string, selectedRepo: string) => {
   const updateKeyword = useCallback((keyword: string) => {
     setCurrentPage(1);
     setActiveKeyword(keyword);
+  }, []);
+
+  const updatePRState = useCallback((state: PRSearchState) => {
+    setPRState(state);
+    setCurrentPage(1);
   }, []);
 
   return {
@@ -62,37 +70,53 @@ const usePullRequests = (selectedOwner: string, selectedRepo: string) => {
     activeKeyword,
     setCurrentPage,
     updateKeyword,
+    prState,
+    updatePRState,
   };
 };
 
 // コンポーネント：検索フィルター
-const SearchFilter = React.memo(({ onSearch }: { onSearch: (keyword: string) => void }) => {
-  const [inputValue, setInputValue] = useState('');
+const SearchFilter = React.memo(
+  ({ onSearch, prState, updatePRState }: { onSearch: (keyword: string) => void; prState: PRSearchState; updatePRState: (state: PRSearchState) => void }) => {
+    const [inputValue, setInputValue] = useState('');
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    onSearch(inputValue);
-  };
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      onSearch(inputValue);
+    };
 
-  return (
-    <form onSubmit={handleSubmit} className="mb-4">
-      <div className="relative">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="text"
-          placeholder="キーワードでフィルタリングしてEnter..."
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          className="w-full pl-10"
-        />
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        キーワードのみの場合、タイトル・本文・コメントから検索します。 GitHubのUIと同様に修飾子も利用可能です (例: <code>author:ユーザー名</code>,{' '}
-        <code>label:バグ</code>, <code>is:merged</code>)。
-      </p>
-    </form>
-  );
-});
+    return (
+      <form onSubmit={handleSubmit} className="mb-4">
+        <div className="flex">
+          <div className="w-full relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="キーワードでフィルタリングしてEnter..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              className="w-full pl-10"
+            />
+          </div>
+          <Tabs defaultValue={prState} className="ml-4">
+            <TabsList>
+              <TabsTrigger value="open" onClick={() => updatePRState('open')}>
+                Open
+              </TabsTrigger>
+              <TabsTrigger value="closed" onClick={() => updatePRState('closed')}>
+                Closed
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          キーワードのみの場合、タイトル・本文・コメントから検索します。 GitHubのUIと同様に修飾子も利用可能です (例: <code>author:ユーザー名</code>,{' '}
+          <code>label:バグ</code>, <code>is:merged</code>)。
+        </p>
+      </form>
+    );
+  },
+);
 
 // コンポーネント：プルリクエストアイテム
 const PullRequestItem = React.memo(({ pr }: { pr: DisplayablePullRequest }) => {
@@ -253,7 +277,7 @@ const StateDisplay = ({
       <div className="text-center py-8">
         <GitPullRequest className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground">
-          {activeKeyword ? `「${activeKeyword}」に一致するプルリクエストは見つかりませんでした` : 'このリポジトリにはプルリクエストが見つかりませんでした'}
+          {activeKeyword ? `「${activeKeyword}」に一致するプルリクエストは見つかりませんでした` : 'プルリクエストが見つかりませんでした'}
         </p>
       </div>
     );
@@ -271,14 +295,14 @@ const PullRequestList = React.memo(
     selectedOwner: string;
     selectedRepo: string;
   }) => {
-    const { pullRequests, loading, error, currentPage, totalPages, activeKeyword, setCurrentPage, updateKeyword } = usePullRequests(
+    const { pullRequests, loading, error, currentPage, totalPages, activeKeyword, setCurrentPage, updateKeyword, prState, updatePRState } = usePullRequests(
       selectedOwner,
       selectedRepo,
     );
 
     return (
       <>
-        <SearchFilter onSearch={updateKeyword} />
+        <SearchFilter onSearch={updateKeyword} prState={prState} updatePRState={updatePRState} />
         <StateDisplay loading={loading} error={error} pullRequests={pullRequests} activeKeyword={activeKeyword}>
           <div className="space-y-3">
             {pullRequests.map((pr) => (
