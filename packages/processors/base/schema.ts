@@ -90,7 +90,7 @@ export const FileFilterSchema = z.object({
   exclude: z
     .array(z.string())
     .optional()
-    .default(['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**'])
+    .default(['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**'])
     .describe('List of glob patterns to exclude files from review.'),
   max_changes: z
     .number()
@@ -118,7 +118,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_path_instructions: [], // Local extension
   file_filter: {
     // New default structure
-    exclude: ['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**'],
+    exclude: ['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**'],
     max_changes: 50,
   },
   skip_simple_changes: false,
