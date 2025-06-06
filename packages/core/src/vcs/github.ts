@@ -258,6 +258,64 @@ export class GitHubVCS extends BaseVCS {
   }
 
   /**
+   * Fetches the contents of a repository at a specific commit
+   * @param sha The commit SHA, branch name, or tag name
+   * @param path The repository path to get contents for (default: root)
+   * @returns A promise that resolves to the repository contents
+   *
+   * The response data will be an array containing objects with:
+   * - name: The file/directory name
+   * - path: The full path to the file/directory
+   * - type: Either 'file', 'dir', or 'symlink'
+   * - size: The file size (0 for directories)
+   * - sha: The commit SHA
+   */
+  /**
+   * Fetches repository contents at a specific commit/branch/tag
+   * @param sha The commit SHA, branch name, or tag name
+   * @param path Repository path to get contents for (default: root directory)
+   * @returns Array of content entries, where each entry contains:
+   * - name: File/directory name
+   * - path: Full path to the file/directory
+   * - type: 'file', 'dir', 'symlink' or 'submodule'
+   * - size: File size (0 for directories)
+   * - sha: Content's SHA
+   * - url: API URL for the content
+   * - html_url: GitHub URL for the content
+   * - git_url: Git URL for the content
+   * - download_url: Raw content download URL
+   */
+  async getBranchContent(
+    sha: string,
+    path = '',
+  ): Promise<Array<{
+    name: string;
+    path: string;
+    type: 'file' | 'dir' | 'symlink' | 'submodule';
+    size: number;
+    sha: string;
+    url: string;
+    html_url: string | null;
+    git_url: string | null;
+    download_url: string | null;
+  }>> {
+    try {
+      const response = await this.api.rest.repos.getContent({
+        owner: this.context.owner,
+        repo: this.context.repo,
+        ref: sha,
+        path: path,
+      });
+
+      // Convert to array if response is a single file
+      const contents = Array.isArray(response.data) ? response.data : [response.data];
+      return contents;
+    } catch (error) {
+      throw this.formatError('fetch branch content', error);
+    }
+  }
+
+  /**
    * Creates a review on the pull request with the provided comments
    * Skips API call if no comments are provided
    */

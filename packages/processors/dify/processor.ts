@@ -1,4 +1,5 @@
 import process from 'node:process';
+import type { GitHubVCS } from '../../core/src/vcs/github.ts';
 import type { ReviewConfig } from '../base/types.ts';
 import { addLineNumbersToDiff, formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
@@ -16,7 +17,22 @@ type InternalDifyConfig = Partial<ReviewConfig> & {
   apiKeyReview: string;
 };
 
+interface RepoContent {
+  name: string;
+  path: string;
+  type: 'file' | 'dir' | 'symlink' | 'submodule';
+  size: number;
+  sha: string;
+  url: string;
+  html_url: string | null;
+  git_url: string | null;
+  download_url: string | null;
+  content?: string;
+}
+
 export class DifyProcessor extends BaseProcessor {
+  private repoContents: Map<string, RepoContent> = new Map();
+  private headSha: string | null = null;
   // Use a different name for Dify specific config to avoid conflict with private base config
   protected readonly difyConfig: InternalDifyConfig;
 
@@ -288,6 +304,38 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       try {
+        // Initialize repository contents cache if not done yet
+        if (!this.headSha && this.vcs && this.vcs.type === 'github') {
+          try {
+            const githubVcs = this.vcs as GitHubVCS;
+            const commits = await githubVcs.getCommits();
+            this.headSha = commits.data[commits.data.length - 1].sha;
+
+            if (this.headSha) {
+              const contents = await githubVcs.getBranchContent(this.headSha);
+              for (const content of contents) {
+                this.repoContents.set(content.path, content);
+              }
+            }
+          } catch (error) {
+            console.error('Failed to cache repository contents:', error);
+          }
+        }
+
+        let overviewFileId: string | undefined;
+        try {
+          const overviewData = {
+            headSha: this.headSha,
+            rootFiles: Array.from(this.repoContents.entries()).map(([path, content]) => ({
+              path,
+              type: content.type,
+            })),
+          };
+          overviewFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, JSON.stringify(overviewData));
+        } catch (error) {
+          console.error('Failed to upload overview:', error);
+        }
+
         // Upload aspects data
         const aspectsFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, summarizeResult.aspects);
 
@@ -313,6 +361,13 @@ export class DifyProcessor extends BaseProcessor {
               upload_file_id: aspectsFileId,
               type: 'document',
             },
+            overview: overviewFileId
+              ? {
+                  transfer_method: 'local_file',
+                  upload_file_id: overviewFileId,
+                  type: 'document',
+                }
+              : undefined,
             overallSummary: overallSummaryFileId
               ? {
                   transfer_method: 'local_file',
