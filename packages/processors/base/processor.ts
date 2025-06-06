@@ -95,21 +95,32 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   }
 
   /**
-   * Check if file should be filtered based on path_filters
+   * Check if file should be filtered based on file_filter.exclude
    */
   protected isFileFiltered(filePath: string): boolean {
-    if (!this.config.path_filters) return false;
+    const excludeFilters = this.config.file_filter?.exclude;
+    if (!excludeFilters || excludeFilters.length === 0) {
+      return false;
+    }
 
-    const filters = this.config.path_filters
-      .split('\n')
-      .map((f: string) => f.trim())
-      .filter(Boolean);
-
-    return filters.some((filter: string) => {
+    // file_filter.exclude is for exclusion only.
+    // Patterns starting with '!' are not supported here,
+    // as the primary purpose of this list is to exclude.
+    // If a pattern starts with '!', it's likely a misconfiguration
+    // or an attempt to include, which should be handled differently or ignored.
+    return excludeFilters.some((filter: string) => {
       if (filter.startsWith('!')) {
+        // Log a warning or ignore if '!' is used in exclude, as it's counterintuitive.
+        // For now, we'll treat it as a normal pattern to match for exclusion,
+        // effectively ignoring the '!' for the purpose of this check.
+        // A more robust solution might involve validating config or having separate include/exclude logic.
+        console.warn(
+          `Warning: Pattern "${filter}" in file_filter.exclude starts with '!'. ` +
+            `This is currently treated as a normal exclusion pattern: "${filter.slice(1)}"`,
+        );
         return matchesGlobPattern(filePath, filter.slice(1));
       }
-      return false;
+      return matchesGlobPattern(filePath, filter);
     });
   }
 

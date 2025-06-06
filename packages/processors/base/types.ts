@@ -29,10 +29,15 @@ export interface PathInstruction {
 }
 
 // Base review configuration extending the core config
+export interface FileFilterConfig {
+  exclude: string[];
+  max_changes: number;
+}
+
 export interface LocalReviewConfig {
   language: string;
   file_path_instructions: PathInstruction[];
-  path_filters: string;
+  file_filter: FileFilterConfig; // New filter structure
   skip_simple_changes: boolean;
   review_diff_since_last_review: boolean;
   severityThreshold: number; // Threshold for comment severity (1-5, default: 3)

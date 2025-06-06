@@ -5,7 +5,21 @@
 # ISO 言語コードを指定する、デフォルトは "ja-JP"
 language: "ja-JP"
 
-# パスベースのレビュー指示
+# ファイルレベルの制御
+skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
+review_diff_since_last_review: false # 最後の AI レビュー以降の差分のみをレビュー対象とするか (デフォルト: false)
+
+# ファイルフィルター設定
+file_filter:
+  exclude: # レビュー対象外のファイルパス (Globパターン, 除外専用)
+    - "dist/**"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "deno.lock"
+    - "yarn.lock"
+  max_changes: 50 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 50)
+
+# パスごとのレビュー指示
 file_path_instructions:
   - path: "src/**/*.{ts,tsx}"
     instructions: |
@@ -13,22 +27,9 @@ file_path_instructions:
       - 型の適切な使用
       - nullチェックの完全性
       - 非同期処理の適切な実装
-
   - path: "test/**/*.ts"
     instructions: |
       テストコードのレビュー指示：
       - テストケースの網羅性
       - エッジケースの考慮
       - テストの独立性確保
-
-# パスフィルター（レビュー対象外のパス）
-path_filters: |
-  !dist/**
-  !*.min.js
-  !*.map
-
-# シンプルな変更のスキップ設定
-skip_simple_changes: true
-
-# 最後の AI レビュー以降の差分のみをレビュー対象とするか
-review_diff_since_last_review: false

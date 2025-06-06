@@ -2,7 +2,7 @@
 
 import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, type IFileFilter, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import { FileManager, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
 import { DEFAULT_CONFIG, type ReviewConfig, loadBaseConfig as loadExternalBaseConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
 
@@ -23,7 +23,10 @@ export class ActionRunner {
 
       // Initialize components
       const vcsClient = createVCS(githubConfig);
-      const fileManager = new FileManager(vcsClient, this.getFileFilter());
+      const fileManager = new FileManager(vcsClient, {
+        exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
+        maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
+      });
       const processor = await this.createProcessor();
 
       // Get PR information
@@ -134,14 +137,6 @@ export class ActionRunner {
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);
     }
-  }
-
-  private getFileFilter(): IFileFilter {
-    return {
-      include: this.config.filter.include,
-      exclude: this.config.filter.exclude,
-      maxChanges: this.config.filter.maxChanges,
-    };
   }
 
   /**

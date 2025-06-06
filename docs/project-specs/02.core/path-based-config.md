@@ -41,10 +41,26 @@ limit_reviews_by_labels: # レビュー対象を特定のラベルを持つPRに
 # ファイルレベルの制御
 skip_simple_changes: true # シンプルな変更をスキップするか (デフォルト: false)
 review_diff_since_last_review: false # 最後の AI レビュー以降の差分のみをレビュー対象とするか (デフォルト: false)
-path_filters: # レビュー対象外のファイルパス (Globパターン, 除外専用)
-  - "dist/**"
-  - "**/*.min.js"
-  - "**/*.map"
+# ファイルフィルター設定
+
+`file_filter` セクションでは、レビュー対象とするファイルをフィルタリングするための設定を行います。
+
+**設定の優先順位とフォールバック:**
+
+*   **.coderabbitai.yaml ファイル内の `file_filter` 設定**:
+    *   `exclude`: YAML ファイルに `file_filter.exclude` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルトの除外リストが適用されます。
+    *   `max_changes`: YAML ファイルに `file_filter.max_changes` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルト値 (`50`) が適用されます。
+*   **`path_filters` (非推奨)**:
+    *   古い設定項目である `path_filters` は非推奨です。YAML ファイルに記述されていても、現在のシステムでは無視され、`file_filter.exclude` の値には影響しません。常に `file_filter.exclude` を使用してください。
+
+file_filter:
+  exclude: # レビュー対象外のファイルパス (Globパターン, 除外専用)
+    - "dist/**"
+    - "**/*.min.js"
+    - "**/*.map"
+    - "deno.lock"
+    - "yarn.lock"
+  max_changes: 300 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 50)
 file_path_instructions: # パスごとのレビュー指示
   - path: "src/**/*.{ts,tsx}"
     instructions: |
@@ -77,18 +93,21 @@ checks:
 -   `true` の場合、ドラフト状態のプルリクエストをレビュー対象外とします。
 -   型: `boolean`
 -   デフォルト: `true`
+-   **(注意: この設定項目は仕様として定義されていますが、現状の `.coderabbitai.yaml` の読み込み処理では解釈されず、実際のPRフィルタリングロジックにも適用されていません)**
 
 ### ignored_branches
 
 -   レビュー対象外とするブランチ名の Glob パターンリスト。
 -   型: `string[]`
 -   デフォルト: `[]`
+-   **(注意: この設定項目は仕様として定義されていますが、現状の `.coderabbitai.yaml` の読み込み処理では解釈されず、実際のPRフィルタリングロジックにも適用されていません)**
 
 ### ignored_titles
 
 -   レビュー対象外とするプルリクエストのタイトルに含まれる文字列リスト (大文字小文字を区別しない)。
 -   型: `string[]`
 -   デフォルト: `[]`
+-   **(注意: この設定項目は仕様として定義されていますが、現状の `.coderabbitai.yaml` の読み込み処理では解釈されず、実際のPRフィルタリングロジックにも適用されていません)**
 
 ### limit_reviews_by_labels
 
@@ -96,6 +115,7 @@ checks:
 -   空のリストの場合は、ラベルによる制限を行いません。
 -   型: `string[]`
 -   デフォルト: `[]`
+-   **(注意: この設定項目は仕様として定義されていますが、現状の `.coderabbitai.yaml` の読み込み処理では解釈されず、実際のPRフィルタリングロジックにも適用されていません)**
 
 ### skip_simple_changes
 
@@ -110,7 +130,11 @@ checks:
 - 型: `boolean`
 - デフォルト: `false`
 
-### path_filters
+### file_filter
+
+- ファイルのフィルタリングに関する設定をまとめたオブジェクト。
+
+#### file_filter.exclude
 
 -   レビュー対象から**除外**するファイルパスの Glob パターンリスト。
 -   このリストは除外専用であり、包含パターン (`!` プレフィックスなど) は指定できません。指定されたパターンにマッチするファイルはレビュー対象外となります。
@@ -121,8 +145,17 @@ checks:
     - "**/*.min.js"
     - "**/*.map"
     - "**/node_modules/**"
-    - "**/vendor/**" # 例として追加
+    - "**/vendor/**"
+    - "deno.lock"
+    - "yarn.lock"
     ```
+
+#### file_filter.max_changes
+
+- レビュー対象とするファイルの最大変更行数を指定します。この行数を超える変更があったファイルはレビュー対象外となります。
+- `0` を指定した場合は無制限となります。
+- 型: `number`
+- デフォルト: `50`
 
 ### file_path_instructions
 
@@ -133,6 +166,8 @@ checks:
 -   デフォルト: `[]`
 
 ### checks
+
+**(注意: `checks` およびその配下の設定項目は仕様として定義されていますが、現状の `.coderabbitai.yaml` の読み込み処理では解釈されず、GitHub Checks API との連携機能も実装されていません)**
 
 -   GitHub Checks API の挙動を制御する設定。
 
@@ -167,13 +202,13 @@ checks:
    - デフォルト設定を使用
    - 警告ログを出力
 
-2. **構文エラーの場合**
-   - エラー内容を報告
-   - デフォルト設定を使用
+2. **構文エラーまたは不正な値の場合**
+  - YAMLの構文エラー、または設定値が期待される型や形式でない場合（例: `file_filter.exclude` が文字列の配列でない、`max_changes` が数値でないなど）、エラー箇所と内容を含む詳細な警告ログが出力されます。
+  - デフォルト設定が使用されます。
 
 3. **無効なパターンの場合**
-   - 該当パターンをスキップ
-   - 警告ログを出力
+  - （この項目は主に `file_path_instructions` の `path` パターンなど、個別のパターン評価に関するものであり、設定ファイル全体のバリデーションとは異なります。現状の `loadBaseConfig` では、Zodによるスキーマ検証で不正な値はまとめて処理されます。）
+  - 個別のパターンが無効である場合、該当パターンはスキップされ、警告ログが出力されることがあります（具体的な挙動はパターンを使用する箇所に依存します）。
 
 ## 使用例
 
@@ -182,9 +217,11 @@ checks:
 ```yaml
 language: "ja-JP"
 skip_simple_changes: true
-path_filters:
-  - "dist/**"
-  - "**/*.map"
+file_filter:
+  exclude:
+    - "dist/**"
+    - "**/*.map"
+  max_changes: 500 # 例: 500行以上の変更があるファイルはスキップ
 file_path_instructions:
   - path: "src/**/*.ts"
     instructions: |
@@ -218,9 +255,10 @@ ignore_draft_prs: true
 ### 3. 複数パスへの指示と除外
 
 ```yaml
-path_filters:
-  - "**/generated/**" # 生成されたコードを除外
-  - "**/fixtures/**" # テストフィクスチャを除外
+file_filter:
+  exclude:
+    - "**/generated/**" # 生成されたコードを除外
+    - "**/fixtures/**" # テストフィクスチャを除外
 file_path_instructions:
   - path: "src/core/**/*.py"
     instructions: |

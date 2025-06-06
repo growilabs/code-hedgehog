@@ -29,6 +29,3 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           processor: 'openai'
-          exclude: |
-            ["**/dist/**", "deno.lock"]
-          max-changes: "300"

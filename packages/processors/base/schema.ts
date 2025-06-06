@@ -86,10 +86,25 @@ export const PathInstructionSchema = z.object({
   instructions: z.string(),
 });
 
+export const FileFilterSchema = z.object({
+  exclude: z
+    .array(z.string())
+    .optional()
+    .default(['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**'])
+    .describe('List of glob patterns to exclude files from review.'),
+  max_changes: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .default(0)
+    .describe('Maximum number of changes (lines) for a file to be reviewed. Specify 0 for unlimited changes (default: 0).'),
+});
+
 export const ConfigSchema = z.object({
   language: z.string().optional(),
   file_path_instructions: z.array(PathInstructionSchema).optional(),
-  path_filters: z.string().optional(),
+  file_filter: FileFilterSchema.optional(),
   skip_simple_changes: z.boolean().optional().default(false),
   review_diff_since_last_review: z.boolean().optional().default(false),
 });
@@ -101,7 +116,11 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   language: 'ja-JP',
   path_instructions: [], // Required by core
   file_path_instructions: [], // Local extension
-  path_filters: ['!dist/**', '!**/*.min.js', '!**/*.map', '!**/node_modules/**'].join('\n'),
+  file_filter: {
+    // New default structure
+    exclude: ['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**'],
+    max_changes: 50,
+  },
   skip_simple_changes: false,
   review_diff_since_last_review: false,
   severityThreshold: 3, // Default threshold for comment severity (1-5)

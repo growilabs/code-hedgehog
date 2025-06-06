@@ -13,11 +13,18 @@ const PathInstructionSchema = z
   })
   .passthrough(); // Allow other potential fields within PathInstruction
 
+const FileFilterSchema = z
+  .object({
+    exclude: z.array(z.string()).optional(),
+    max_changes: z.number().nonnegative().optional(), // Add .nonnegative()
+  })
+  .strict(); // Change to .strict()
+
 const BaseConfigSchema = z
   .object({
     language: z.string().optional(),
     file_path_instructions: z.array(PathInstructionSchema).optional(),
-    path_filters: z.string().optional(),
+    file_filter: FileFilterSchema.optional(),
     skip_simple_changes: z.boolean().optional(),
     review_diff_since_last_review: z.boolean().optional(),
     // path_instructions is required in ReviewConfig, but might be missing in YAML
@@ -77,18 +84,22 @@ export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise
   const parsedYaml = validationResult.data; // Use validated data
   console.debug(`Validated YAML content from ${configPath}:`, JSON.stringify(parsedYaml));
 
-  // Merge validated fields into the default config
-  // Zod ensures the types are correct (or optional and thus undefined)
+  // Merge validated fields into the default config.
+  // For file_filter (exclude, max_changes), if specified in YAML, those values are used.
+  // Otherwise, DEFAULT_CONFIG values are used.
+  // The deprecated path_filters field is ignored.
+  // Zod ensures the types are correct (or optional and thus undefined).
   const baseConfig: ReviewConfig = {
     ...DEFAULT_CONFIG,
-    // Use validated data, falling back to defaults if optional field is missing
     language: parsedYaml.language ?? DEFAULT_CONFIG.language,
     file_path_instructions: parsedYaml.file_path_instructions ?? DEFAULT_CONFIG.file_path_instructions,
-    path_filters: parsedYaml.path_filters ?? DEFAULT_CONFIG.path_filters,
     skip_simple_changes: parsedYaml.skip_simple_changes ?? DEFAULT_CONFIG.skip_simple_changes,
     review_diff_since_last_review: parsedYaml.review_diff_since_last_review ?? DEFAULT_CONFIG.review_diff_since_last_review,
-    // path_instructions is required in ReviewConfig, ensure it defaults correctly
     path_instructions: parsedYaml.path_instructions ?? DEFAULT_CONFIG.path_instructions,
+    file_filter: {
+      exclude: parsedYaml.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
+      max_changes: parsedYaml.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
+    },
   };
 
   console.debug(`Merged base config: ${JSON.stringify(baseConfig)}`);
