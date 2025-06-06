@@ -1,6 +1,7 @@
 import process from 'node:process';
 import type { GitHubVCS } from '../../core/src/vcs/github.ts';
 import type { ReviewConfig } from '../base/types.ts';
+import { addLineNumbersToDiff } from '../base/utils/formatting.ts';
 import { formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
@@ -328,15 +329,10 @@ export class DifyProcessor extends BaseProcessor {
             headSha: this.headSha,
             rootFiles: Array.from(this.repoContents.entries()).map(([path, content]) => ({
               path,
-              type: content.type
-            }))
+              type: content.type,
+            })),
           };
-          overviewFileId = await uploadFile(
-            this.difyConfig.baseUrl,
-            this.difyConfig.apiKeyReview,
-            this.difyConfig.user,
-            JSON.stringify(overviewData)
-          );
+          overviewFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, JSON.stringify(overviewData));
         } catch (error) {
           console.error('Failed to upload overview:', error);
         }
@@ -354,13 +350,12 @@ export class DifyProcessor extends BaseProcessor {
           overallSummaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, overallSummaryData);
         }
 
-        // Debug: Log workflow inputs
         const workflowInputs = {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || '',
             filePath: file.path,
-            patch: file.patch || 'No changes',
+            patch: addLineNumbersToDiff(file.patch),
             instructions: this.getInstructionsForFile(file.path, config),
             aspects: {
               transfer_method: 'local_file',
@@ -386,7 +381,6 @@ export class DifyProcessor extends BaseProcessor {
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,
         };
-
 
         const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, workflowInputs);
         const review = ReviewResponseSchema.parse(response);
