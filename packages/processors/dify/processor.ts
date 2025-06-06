@@ -338,10 +338,29 @@ export class DifyProcessor extends BaseProcessor {
             console.log('=== getBranchContent: INIT END ===\n');
           }
         }
-        // List cached contents only if we have them
-        const content = this.repoContents.get(file.path);
-        if (content) {
-          console.log('📝 Repository contents:', JSON.stringify(content, null, 2));
+
+        // Upload repository contents as overview
+        let overviewFileId: string | undefined;
+        try {
+          // Create overview data with root files list
+          const overviewData = {
+            headSha: this.headSha,
+            rootFiles: Array.from(this.repoContents.entries()).map(([path, content]) => ({
+              path,
+              type: content.type
+            }))
+          };
+
+          console.log('📤 Uploading root files overview:', JSON.stringify(overviewData, null, 2));
+          overviewFileId = await uploadFile(
+            this.difyConfig.baseUrl,
+            this.difyConfig.apiKeyReview,
+            this.difyConfig.user,
+            JSON.stringify(overviewData)
+          );
+          console.log('✅ Overview file uploaded with ID:', overviewFileId);
+        } catch (error) {
+          console.error('❌ Failed to upload overview:', error);
         }
 
         // Upload aspects data
@@ -357,7 +376,8 @@ export class DifyProcessor extends BaseProcessor {
           overallSummaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, overallSummaryData);
         }
 
-        const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, {
+        // Debug: Log workflow inputs
+        const workflowInputs = {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || '',
@@ -369,6 +389,13 @@ export class DifyProcessor extends BaseProcessor {
               upload_file_id: aspectsFileId,
               type: 'document',
             },
+            overview: overviewFileId
+              ? {
+                  transfer_method: 'local_file',
+                  upload_file_id: overviewFileId,
+                  type: 'document',
+                }
+              : undefined,
             overallSummary: overallSummaryFileId
               ? {
                   transfer_method: 'local_file',
@@ -380,7 +407,23 @@ export class DifyProcessor extends BaseProcessor {
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,
-        });
+        };
+
+        console.log('\n=== Workflow Debug START ===');
+        console.log('📥 Preparing workflow inputs');
+        console.log('🔍 Overview file ID:', overviewFileId);
+        console.log(' Workflow inputs:', JSON.stringify(workflowInputs, null, 2));
+        console.log('📦 Raw request body:', JSON.stringify({
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer [REDACTED]',
+          },
+          body: JSON.stringify(workflowInputs),
+        }, null, 2));
+        console.log('=== Workflow Debug END ===\n');
+
+        const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, workflowInputs);
         const review = ReviewResponseSchema.parse(response);
 
         // Process all comments, separating them by confidence
