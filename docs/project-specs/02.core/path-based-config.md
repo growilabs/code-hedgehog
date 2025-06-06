@@ -49,7 +49,7 @@ review_diff_since_last_review: false # 最後の AI レビュー以降の差分�
 
 *   **.coderabbitai.yaml ファイル内の `file_filter` 設定**:
     *   `exclude`: YAML ファイルに `file_filter.exclude` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルトの除外リストが適用されます。
-    *   `max_changes`: YAML ファイルに `file_filter.max_changes` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルト値 (`0` = 無制限) が適用されます。
+    *   `max_changes`: YAML ファイルに `file_filter.max_changes` が指定されている場合、その値が使用されます。指定されていない場合は、デフォルト値 (`50`) が適用されます。
 *   **`path_filters` (非推奨)**:
     *   古い設定項目である `path_filters` は非推奨です。YAML ファイルに記述されていても、現在のシステムでは無視され、`file_filter.exclude` の値には影響しません。常に `file_filter.exclude` を使用してください。
 
@@ -60,7 +60,7 @@ file_filter:
     - "**/*.map"
     - "deno.lock"
     - "yarn.lock"
-  max_changes: 300 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 0)
+  max_changes: 300 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 50)
 file_path_instructions: # パスごとのレビュー指示
   - path: "src/**/*.{ts,tsx}"
     instructions: |
@@ -155,7 +155,7 @@ checks:
 - レビュー対象とするファイルの最大変更行数を指定します。この行数を超える変更があったファイルはレビュー対象外となります。
 - `0` を指定した場合は無制限となります。
 - 型: `number`
-- デフォルト: `0` (無制限)
+- デフォルト: `50`
 
 ### file_path_instructions
 

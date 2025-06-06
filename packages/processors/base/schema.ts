@@ -119,7 +119,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_filter: {
     // New default structure
     exclude: ['dist/**', '**/*.min.js', '**/*.map', 'deno.lock', 'yarn.lock', '**/node_modules/**', '**/vendor/**'],
-    max_changes: 0, // 0 means unlimited
+    max_changes: 50,
   },
   skip_simple_changes: false,
   review_diff_since_last_review: false,
