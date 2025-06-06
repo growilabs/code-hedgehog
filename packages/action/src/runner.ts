@@ -2,7 +2,7 @@
 
 import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, type IFileFilter, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import { FileManager, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
 import { DEFAULT_CONFIG, type ReviewConfig, loadBaseConfig as loadExternalBaseConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
 
