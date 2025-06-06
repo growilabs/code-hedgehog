@@ -23,7 +23,10 @@ export class ActionRunner {
 
       // Initialize components
       const vcsClient = createVCS(githubConfig);
-      const fileManager = new FileManager(vcsClient, this.getFileFilter());
+      const fileManager = new FileManager(vcsClient, {
+        exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
+        maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
+      });
       const processor = await this.createProcessor();
 
       // Get PR information
@@ -134,19 +137,6 @@ export class ActionRunner {
       default:
         throw new Error(`Unsupported processor: ${this.config.processor}`);
     }
-  }
-
-  private getFileFilter(): IFileFilter {
-    // Ensure reviewConfig and file_filter are loaded and have defaults
-    const excludePatterns = this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude;
-    const maxChangesLines = this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes;
-
-    return {
-      // 'include' is not part of ReviewConfig, assuming it might come from ActionConfig or is intentionally undefined
-      include: this.config.filter?.include, // Keep this if it's still relevant from ActionConfig
-      exclude: excludePatterns,
-      maxChanges: maxChangesLines,
-    };
   }
 
   /**

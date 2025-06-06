@@ -33,6 +33,3 @@ jobs:
           DIFY_API_KEY_REVIEW: ${{ secrets.DIFY_API_KEY_REVIEW }}
         with:
           processor: 'dify'
-          exclude: |
-            ["**/dist/**", "deno.lock"]
-          max-changes: "300"

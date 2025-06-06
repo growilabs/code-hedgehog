@@ -5,7 +5,6 @@ import { validator } from 'hono/validator';
 import { z } from 'zod';
 import type { ActionConfig } from '../action/src/config.ts';
 import { ActionRunner } from '../action/src/runner.ts';
-import { DEFAULT_CONFIG, loadBaseConfig } from '../processors/base/mod.ts';
 
 const app = new Hono();
 const PORT = Number.parseInt(Deno.env.get('PORT') || '8000');
@@ -56,16 +55,8 @@ const route = app
         Deno.env.set('GITHUB_REPOSITORY', `${owner}/${repo}`);
         Deno.env.set('GITHUB_PR_NUMBER', number);
 
-        // Load configuration from .coderabbitai.yaml
-        const loadedReviewConfig = await loadBaseConfig(); // Uses default path '.coderabbitai.yaml'
-
         const actionRunnerConfig: ActionConfig = {
           processor: Deno.env.get('CODE_HEDGEHOG_PROCESSOR') || 'dify',
-          filter: {
-            exclude: loadedReviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
-            maxChanges: loadedReviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
-            // include is not part of ReviewConfig, so it remains undefined or could be sourced differently if needed.
-          },
         };
 
         const runner = new ActionRunner(actionRunnerConfig);
