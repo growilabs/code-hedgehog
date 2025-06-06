@@ -350,7 +350,7 @@ export class DifyProcessor extends BaseProcessor {
           overallSummaryFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, overallSummaryData);
         }
 
-        const workflowInputs = {
+        const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, {
           inputs: {
             title: prInfo.title,
             description: prInfo.body || '',
@@ -380,9 +380,7 @@ export class DifyProcessor extends BaseProcessor {
           },
           response_mode: 'blocking' as const,
           user: this.difyConfig.user,
-        };
-
-        const response = await runWorkflow(`${this.difyConfig.baseUrl}/workflows/run`, this.difyConfig.apiKeyReview, workflowInputs);
+        });
         const review = ReviewResponseSchema.parse(response);
 
         // Process all comments, separating them by confidence
