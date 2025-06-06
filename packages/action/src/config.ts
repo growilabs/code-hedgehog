@@ -13,9 +13,3 @@ export interface ActionConfig {
     [key: string]: unknown;
   };
 }
-
-export function getConfig(): ActionConfig {
-  return {
-    processor: core.getInput('processor', { required: true }),
-  };
-}
