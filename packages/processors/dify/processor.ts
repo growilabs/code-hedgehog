@@ -306,36 +306,19 @@ export class DifyProcessor extends BaseProcessor {
       try {
         // Initialize repository contents cache if not done yet
         if (!this.headSha && this.vcs && this.vcs.type === 'github') {
-          console.log('\n=== getBranchContent: INIT START ===');
-          console.log('🔍 Initializing repository contents cache...');
-
           try {
             const githubVcs = this.vcs as GitHubVCS;
-
-            // Get PR info and latest commit SHA
             const commits = await githubVcs.getCommits();
             this.headSha = commits.data[commits.data.length - 1].sha;
 
-            console.log(`🔀 Head commit SHA: ${this.headSha}`);
-
             if (this.headSha) {
-              // Get all repository contents at once
               const contents = await githubVcs.getBranchContent(this.headSha);
-
-              // Cache all contents
               for (const content of contents) {
                 this.repoContents.set(content.path, content);
               }
-
-              console.log('✅ Successfully cached repository contents');
-              console.log(`📊 Cached ${this.repoContents.size} files`);
-            } else {
-              console.log('❌ Failed to get head SHA');
             }
           } catch (error) {
-            console.log('❌ Failed to cache repository contents:', error instanceof Error ? error.message : String(error));
-          } finally {
-            console.log('=== getBranchContent: INIT END ===\n');
+            console.error('Failed to cache repository contents:', error);
           }
         }
 
