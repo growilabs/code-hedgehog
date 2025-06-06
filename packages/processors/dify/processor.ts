@@ -308,25 +308,25 @@ export class DifyProcessor extends BaseProcessor {
         if (!this.headSha && this.vcs && this.vcs.type === 'github') {
           console.log('\n=== getBranchContent: INIT START ===');
           console.log('🔍 Initializing repository contents cache...');
-          
+
           try {
             const githubVcs = this.vcs as GitHubVCS;
-            
+
             // Get PR info and latest commit SHA
             const commits = await githubVcs.getCommits();
             this.headSha = commits.data[commits.data.length - 1].sha;
-            
+
             console.log(`🔀 Head commit SHA: ${this.headSha}`);
-            
+
             if (this.headSha) {
               // Get all repository contents at once
               const contents = await githubVcs.getBranchContent(this.headSha);
-              
+
               // Cache all contents
               for (const content of contents) {
                 this.repoContents.set(content.path, content);
               }
-              
+
               console.log('✅ Successfully cached repository contents');
               console.log(`📊 Cached ${this.repoContents.size} files`);
             } else {
@@ -338,12 +338,11 @@ export class DifyProcessor extends BaseProcessor {
             console.log('=== getBranchContent: INIT END ===\n');
           }
         }
-// List cached contents only if we have them
-const content = this.repoContents.get(file.path);
-if (content) {
-  console.log('📝 Repository contents:', JSON.stringify(content, null, 2));
-}
-
+        // List cached contents only if we have them
+        const content = this.repoContents.get(file.path);
+        if (content) {
+          console.log('📝 Repository contents:', JSON.stringify(content, null, 2));
+        }
 
         // Upload aspects data
         const aspectsFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, summarizeResult.aspects);
