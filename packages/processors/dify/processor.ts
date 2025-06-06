@@ -1,8 +1,7 @@
 import process from 'node:process';
 import type { GitHubVCS } from '../../core/src/vcs/github.ts';
 import type { ReviewConfig } from '../base/types.ts';
-import { addLineNumbersToDiff } from '../base/utils/formatting.ts';
-import { formatFileSummaryTable } from '../base/utils/formatting.ts';
+import { addLineNumbersToDiff, formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
