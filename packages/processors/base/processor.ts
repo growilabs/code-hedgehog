@@ -1,4 +1,5 @@
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IPullRequestProcessor, IReviewComment } from './deps.ts';
+import type { IVersionControlSystem } from '../../core/src/types/vcs.ts';
 import type { ReviewConfig, TokenConfig } from './types.ts';
 import { createHorizontalBatches, createVerticalBatches } from './utils/batch.ts';
 import { createCountedCollapsibleSection, formatGroupedComments } from './utils/formatting.ts';
@@ -17,6 +18,7 @@ import { estimateTokenCount, isWithinLimit } from './utils/token.ts';
  * Provides common functionality for reviewing pull requests
  */
 export abstract class BaseProcessor implements IPullRequestProcessor {
+  protected vcs?: IVersionControlSystem;
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
   private config: ReviewConfig = DEFAULT_CONFIG;
 
@@ -272,7 +274,8 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
   /**
    * Main processing flow - now with 3 phases
    */
-  async process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult> {
+  async process(prInfo: IPullRequestInfo, files: IFileChange[], vcs?: IVersionControlSystem): Promise<IPullRequestProcessedResult> {
+    this.vcs = vcs;
     // 0. Load base configuration
     await this.loadBaseConfig(); // Rename method call
 

@@ -1,6 +1,7 @@
 import process from 'node:process';
+import type { GitHubVCS } from '../../core/src/vcs/github.ts';
 import type { ReviewConfig } from '../base/types.ts';
-import { addLineNumbersToDiff, formatFileSummaryTable } from '../base/utils/formatting.ts';
+import { formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
 import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
@@ -16,7 +17,22 @@ type InternalDifyConfig = Partial<ReviewConfig> & {
   apiKeyReview: string;
 };
 
+interface RepoContent {
+  name: string;
+  path: string;
+  type: 'file' | 'dir' | 'symlink' | 'submodule';
+  size: number;
+  sha: string;
+  url: string;
+  html_url: string | null;
+  git_url: string | null;
+  download_url: string | null;
+  content?: string;
+}
+
 export class DifyProcessor extends BaseProcessor {
+  private repoContents: Map<string, RepoContent> = new Map();
+  private headSha: string | null = null;
   // Use a different name for Dify specific config to avoid conflict with private base config
   protected readonly difyConfig: InternalDifyConfig;
 
@@ -288,6 +304,47 @@ export class DifyProcessor extends BaseProcessor {
       }
 
       try {
+        // Initialize repository contents cache if not done yet
+        if (!this.headSha && this.vcs && this.vcs.type === 'github') {
+          console.log('\n=== getBranchContent: INIT START ===');
+          console.log('🔍 Initializing repository contents cache...');
+          
+          try {
+            const githubVcs = this.vcs as GitHubVCS;
+            
+            // Get PR info and latest commit SHA
+            const commits = await githubVcs.getCommits();
+            this.headSha = commits.data[commits.data.length - 1].sha;
+            
+            console.log(`🔀 Head commit SHA: ${this.headSha}`);
+            
+            if (this.headSha) {
+              // Get all repository contents at once
+              const contents = await githubVcs.getBranchContent(this.headSha);
+              
+              // Cache all contents
+              for (const content of contents) {
+                this.repoContents.set(content.path, content);
+              }
+              
+              console.log('✅ Successfully cached repository contents');
+              console.log(`📊 Cached ${this.repoContents.size} files`);
+            } else {
+              console.log('❌ Failed to get head SHA');
+            }
+          } catch (error) {
+            console.log('❌ Failed to cache repository contents:', error instanceof Error ? error.message : String(error));
+          } finally {
+            console.log('=== getBranchContent: INIT END ===\n');
+          }
+        }
+// List cached contents only if we have them
+const content = this.repoContents.get(file.path);
+if (content) {
+  console.log('📝 Repository contents:', JSON.stringify(content, null, 2));
+}
+
+
         // Upload aspects data
         const aspectsFileId = await uploadFile(this.difyConfig.baseUrl, this.difyConfig.apiKeyReview, this.difyConfig.user, summarizeResult.aspects);
 
@@ -306,7 +363,7 @@ export class DifyProcessor extends BaseProcessor {
             title: prInfo.title,
             description: prInfo.body || '',
             filePath: file.path,
-            patch: addLineNumbersToDiff(file.patch),
+            patch: file.patch || 'No changes',
             instructions: this.getInstructionsForFile(file.path, config),
             aspects: {
               transfer_method: 'local_file',

@@ -39,7 +39,7 @@ export class ActionRunner {
 
       // Process files in batches and get reviews
       for await (const files of fileManager.collectChangedFiles(this.reviewConfig)) {
-        const { comments } = await processor.process(prInfo, files);
+        const { comments } = await processor.process(prInfo, files, vcsClient);
         allComments.push(...(comments ?? []));
 
         if (comments != null && comments.length > 0) {

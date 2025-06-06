@@ -1,6 +1,6 @@
 import type { IFileChange } from './file.ts';
 import type { IReviewComment } from './review.ts';
-import type { IPullRequestInfo } from './vcs.ts';
+import type { IPullRequestInfo, IVersionControlSystem } from './vcs.ts';
 
 /**
  * Path based instruction configuration
@@ -32,5 +32,5 @@ export interface IPullRequestProcessor {
   /**
    * Main processing flow
    */
-  process(prInfo: IPullRequestInfo, files: IFileChange[]): Promise<IPullRequestProcessedResult>;
+  process(prInfo: IPullRequestInfo, files: IFileChange[], vcs?: IVersionControlSystem): Promise<IPullRequestProcessedResult>;
 }
