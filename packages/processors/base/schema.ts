@@ -119,7 +119,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_filter: {
     // New default structure
     exclude: ['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**'],
-    max_changes: 50,
+    max_changes: 500,
   },
   skip_simple_changes: false,
   review_diff_since_last_review: false,
