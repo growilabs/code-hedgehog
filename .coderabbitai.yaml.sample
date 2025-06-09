@@ -17,7 +17,7 @@ file_filter:
     - "**/*.map"
     - "deno.lock"
     - "yarn.lock"
-  max_changes: 50 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 50)
+  max_changes: 500 # レビュー対象とするファイルの最大変更行数 (0の場合は無制限, デフォルト: 500)
 
 # パスごとのレビュー指示
 file_path_instructions:
