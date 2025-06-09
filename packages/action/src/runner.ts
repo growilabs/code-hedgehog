@@ -2,13 +2,18 @@
 
 import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import { FileManager, type IPullRequestInfo, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
 import { DEFAULT_CONFIG, type ReviewConfig, loadBaseConfig as loadExternalBaseConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
 
+export interface ExtendedPullRequestInfo extends IPullRequestInfo {
+  isDraft: boolean;
+  labels: string[];
+}
+
 export class ActionRunner {
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
-  private reviewConfig: ReviewConfig = DEFAULT_CONFIG;
+  protected reviewConfig: ReviewConfig = DEFAULT_CONFIG;
 
   constructor(private readonly config: ActionConfig) {}
 
@@ -31,7 +36,13 @@ export class ActionRunner {
 
       // Get PR information
       core.info('Fetching pull request information...');
-      const prInfo = await vcsClient.getPullRequestInfo();
+      const prInfo = (await vcsClient.getPullRequestInfo()) as ExtendedPullRequestInfo;
+
+      // Check if PR should be reviewed based on configuration
+      if (await this.shouldSkipReview(prInfo)) {
+        core.info('Skipping review based on PR configuration');
+        return [];
+      }
 
       core.info('Starting code review...');
       if (dryRun) {
@@ -146,5 +157,74 @@ export class ActionRunner {
   protected async loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
     // Call the external function and update the instance's config
     this.reviewConfig = await loadExternalBaseConfig(configPath); // Rename function call
+  }
+
+  /**
+   * Check if the PR should be skipped based on configuration
+   */
+  protected async shouldSkipReview(prInfo: ExtendedPullRequestInfo): Promise<boolean> {
+    // Check draft PR status
+    if (this.reviewConfig.ignore_draft_prs && prInfo.isDraft) {
+      core.info('Skipping review for draft PR');
+      return true;
+    }
+
+    // Check ignored branches
+    if (
+      this.reviewConfig.ignored_branches.some((pattern) => {
+        try {
+          const regex = this.globToRegExp(pattern);
+          if (regex.test(prInfo.headBranch)) {
+            core.info(`Skipping review for ignored branch pattern: ${pattern}`);
+            return true;
+          }
+        } catch (error) {
+          core.warning(`Invalid branch pattern ${pattern}: ${error}`);
+        }
+        return false;
+      })
+    ) {
+      return true;
+    }
+
+    // Check ignored titles
+    if (this.reviewConfig.ignored_titles.length > 0) {
+      const title = prInfo.title.toLowerCase();
+      for (const pattern of this.reviewConfig.ignored_titles) {
+        if (title.includes(pattern.toLowerCase())) {
+          core.info(`Skipping review for ignored title pattern: ${pattern}`);
+          return true;
+        }
+      }
+    }
+
+    // Check required labels
+    if (this.reviewConfig.limit_reviews_by_labels.length > 0) {
+      const prLabels = prInfo.labels.map((label) => label.toLowerCase());
+      const requiredLabels = this.reviewConfig.limit_reviews_by_labels.map((label) => label.toLowerCase());
+      const hasRequiredLabel = requiredLabels.some((label) => prLabels.includes(label));
+
+      if (!hasRequiredLabel) {
+        core.info('Skipping review as PR does not have any required labels');
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Convert glob pattern to RegExp
+   * Simple implementation that handles * and ** patterns
+   */
+  protected globToRegExp(pattern: string): RegExp {
+    // Escape special regex characters except * and **
+    const escaped = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*\*/g, '{{GLOBSTAR}}') // 一時的なプレースホルダー
+      .replace(/\*/g, '[^/]*')
+      .replace(/{{GLOBSTAR}}/g, '.*');
+
+    return new RegExp(`^${escaped}$`);
   }
 }

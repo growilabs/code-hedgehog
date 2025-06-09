@@ -55,6 +55,10 @@ describe('loadBaseConfig', () => {
         max_changes: 0,
       },
       skip_simple_changes: true,
+      ignore_draft_prs: false,
+      ignored_branches: ['dev/*', 'feature/*'],
+      ignored_titles: ['WIP', 'DO NOT MERGE'],
+      limit_reviews_by_labels: ['ready-for-review'],
     };
     // Control the YAML string returned by readFile
     const yamlContent = yaml.dump(customConfig);
@@ -367,5 +371,41 @@ describe('loadBaseConfig', () => {
     expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
     // Zod's message for strict mode includes "Unrecognized key(s) in object: 'unknown_property'"
     expect(warnStub.calls[0].args[0]).toContain("Unrecognized key(s) in object: 'unknown_property'");
+  });
+
+  test('should handle PR-level settings with invalid types', async () => {
+    const invalidConfig = {
+      ignore_draft_prs: 'not-a-boolean',
+      ignored_branches: 'not-an-array',
+      ignored_titles: 123,
+      limit_reviews_by_labels: [123, 456],
+    };
+    const yamlContent = yaml.dump(invalidConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+    const warnStub = stub(console, 'warn');
+
+    const config = await loadBaseConfig('invalid-pr-settings.yaml');
+
+    expect(config.ignore_draft_prs).toBe(DEFAULT_CONFIG.ignore_draft_prs);
+    expect(config.ignored_branches).toEqual(DEFAULT_CONFIG.ignored_branches);
+    expect(config.ignored_titles).toEqual(DEFAULT_CONFIG.ignored_titles);
+    expect(config.limit_reviews_by_labels).toEqual(DEFAULT_CONFIG.limit_reviews_by_labels);
+    expect(warnStub.calls.length).toBe(1);
+    expect(warnStub.calls[0].args[0]).toContain('Invalid config format');
+  });
+
+  test('should use default PR-level settings if not provided', async () => {
+    const minimalConfig = {
+      language: 'en-US',
+    };
+    const yamlContent = yaml.dump(minimalConfig);
+    stub(fs, 'readFile', () => Promise.resolve(yamlContent));
+
+    const config = await loadBaseConfig('minimal-config.yaml');
+
+    expect(config.ignore_draft_prs).toBe(DEFAULT_CONFIG.ignore_draft_prs);
+    expect(config.ignored_branches).toEqual(DEFAULT_CONFIG.ignored_branches);
+    expect(config.ignored_titles).toEqual(DEFAULT_CONFIG.ignored_titles);
+    expect(config.limit_reviews_by_labels).toEqual(DEFAULT_CONFIG.limit_reviews_by_labels);
   });
 });

@@ -107,6 +107,11 @@ export const ConfigSchema = z.object({
   file_filter: FileFilterSchema.optional(),
   skip_simple_changes: z.boolean().optional().default(false),
   review_diff_since_last_review: z.boolean().optional().default(false),
+  // PR level settings
+  ignore_draft_prs: z.boolean().optional().default(true),
+  ignored_branches: z.array(z.string()).optional().default([]),
+  ignored_titles: z.array(z.string()).optional().default([]),
+  limit_reviews_by_labels: z.array(z.string()).optional().default([]),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -124,4 +129,9 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   skip_simple_changes: false,
   review_diff_since_last_review: false,
   severityThreshold: 3, // Default threshold for comment severity (1-5)
+  // PR level settings
+  ignore_draft_prs: true,
+  ignored_branches: [],
+  ignored_titles: [],
+  limit_reviews_by_labels: [],
 };

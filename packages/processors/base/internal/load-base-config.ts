@@ -29,6 +29,11 @@ const BaseConfigSchema = z
     review_diff_since_last_review: z.boolean().optional(),
     // path_instructions is required in ReviewConfig, but might be missing in YAML
     path_instructions: z.array(PathInstructionSchema).optional(),
+    // PR level settings
+    ignore_draft_prs: z.boolean().optional(),
+    ignored_branches: z.array(z.string()).optional(),
+    ignored_titles: z.array(z.string()).optional(),
+    limit_reviews_by_labels: z.array(z.string()).optional(),
   })
   .passthrough(); // Allow other fields (processor-specific)
 
@@ -100,6 +105,11 @@ export async function loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise
       exclude: parsedYaml.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
       max_changes: parsedYaml.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
     },
+    // PR level settings
+    ignore_draft_prs: parsedYaml.ignore_draft_prs ?? DEFAULT_CONFIG.ignore_draft_prs,
+    ignored_branches: parsedYaml.ignored_branches ?? DEFAULT_CONFIG.ignored_branches,
+    ignored_titles: parsedYaml.ignored_titles ?? DEFAULT_CONFIG.ignored_titles,
+    limit_reviews_by_labels: parsedYaml.limit_reviews_by_labels ?? DEFAULT_CONFIG.limit_reviews_by_labels,
   };
 
   console.debug(`Merged base config: ${JSON.stringify(baseConfig)}`);

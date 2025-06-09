@@ -41,6 +41,11 @@ export interface LocalReviewConfig {
   skip_simple_changes: boolean;
   review_diff_since_last_review: boolean;
   severityThreshold: number; // Threshold for comment severity (1-5, default: 3)
+  // PR level settings
+  ignore_draft_prs: boolean;
+  ignored_branches: string[];
+  ignored_titles: string[];
+  limit_reviews_by_labels: string[];
 }
 
 // Combined review configuration using the imported alias
