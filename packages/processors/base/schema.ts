@@ -118,7 +118,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   file_path_instructions: [], // Local extension
   file_filter: {
     // New default structure
-    exclude: ['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**'],
+    exclude: ['**/*.min.{js,css}', '**/*.map', '**/node_modules/**', '**/vendor/**', 'yarn.lock', 'deno.lock'],
     max_changes: 500,
   },
   skip_simple_changes: false,

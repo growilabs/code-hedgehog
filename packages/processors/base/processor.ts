@@ -293,8 +293,11 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
     // 2. Generate overall summary
     const overallSummary = await this.generateOverallSummary(prInfo, files, this.config, summarizeResults);
 
+    // Filter out removed files before passing to review
+    const filesToReview = files.filter((file) => file.status !== 'removed');
+
     // 3. Execute detailed review with context
-    return this.review(prInfo, files, this.config, summarizeResults, overallSummary);
+    return this.review(prInfo, filesToReview, this.config, summarizeResults, overallSummary);
   }
   /**
    * Format review comment with suggestion
