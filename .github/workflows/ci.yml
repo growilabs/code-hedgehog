@@ -18,25 +18,49 @@ jobs:
     env:
       COVERAGE_THRESHOLD: 60 # カバレッジの閾値 (デフォルト80%)
     steps:
-      # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
+      # ステップ1: コードのチェックアウト
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ステップ2: Deno環境のセットアップ (Composite Actionを使用)
-      - name: Setup Deno Environment
-        uses: ./.github/actions/setup-deno # Use the composite action
+      # ステップ2: Denoのセットアップ
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
         with:
           deno-version: 2.3.5
 
-      # ステップ3: リンターと型チェックの実行
+      # ステップ3: 依存関係のキャッシュ
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-lifecycle-scripts-v1-${{ hashFiles('deno.jsonc', 'deno.lock') }}
+          restore-keys: |
+            deno-lifecycle-scripts-v1-
+
+      # ステップ4: ライフサイクルスクリプト付きでbiomeを含む依存関係をインストール
+      - name: Install dependencies with lifecycle scripts
+        run: |
+          echo "=== Installing with lifecycle scripts ==="
+          deno install --allow-scripts=npm:@biomejs/biome@1.9.4,npm:@swc/core@1.11.24,npm:@tailwindcss/oxide@4.1.6
+          
+          echo "=== Verifying biome installation ==="
+          ls -la node_modules/.deno/@biomejs+biome@1.9.4/node_modules/@biomejs/ 2>/dev/null || echo "biome directory not found"
+          
+          echo "=== Checking biome binary ==="
+          find node_modules -name "*biome*" -type f | head -5
+          
+          echo "=== Testing biome execution ==="
+          deno run -A npm:@biomejs/biome --version || echo "biome execution failed"
+
+      # ステップ5: リンターと型チェックの実行
       - name: Run Checks
         run: deno task check-all
 
-      # ステップ4: テストの実行とカバレッジデータの生成 (CI用)
+      # ステップ6: テストの実行とカバレッジデータの生成 (CI用)
       - name: Run Tests with Coverage (CI)
         run: deno task test:cov:ci
 
-      # ステップ5: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
+      # ステップ7: カバレッジ閾値のチェック（VeryGoodOpenSourceのアクション使用）
       - name: Check Coverage Threshold
         uses: VeryGoodOpenSource/very_good_coverage@v2
         with:
@@ -48,16 +72,20 @@ jobs:
     # 依存ジョブ (testジョブが成功した後に実行)
     needs: test
     steps:
-      # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
+      # ステップ1: コードのチェックアウト
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ステップ2: Deno環境のセットアップ (Composite Actionを使用)
-      - name: Setup Deno Environment
-        uses: ./.github/actions/setup-deno # Use the composite action
+      # ステップ2: Denoのセットアップ
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
         with:
           deno-version: 2.3.5
 
-      # ステップ3: GitHub Actionのビルド
+      # ステップ3: ライフサイクルスクリプト付きで依存関係をインストール
+      - name: Install dependencies with lifecycle scripts
+        run: deno install --allow-scripts=npm:@biomejs/biome@1.9.4,npm:@swc/core@1.11.24,npm:@tailwindcss/oxide@4.1.6
+
+      # ステップ4: GitHub Actionのビルド
       - name: Build GitHub Action
         run: deno task build:action
