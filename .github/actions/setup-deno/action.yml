@@ -21,26 +21,15 @@ runs:
       shell: bash
       run: |
         dir_path="$RUNNER_TEMP/deno_cache"
-        echo "DENO_CACHE_DIR=$dir_path" >> $GITHUB_ENV
+        echo "DENO_DIR=$dir_path" >> $GITHUB_ENV
         echo "dir=$dir_path" >> $GITHUB_OUTPUT # output 用
-
-    - name: Cache Deno modules and npm packages
-      shell: bash
-      run: |
-        deno cache --reload --lock=deno.lock
-        # npmパッケージのバイナリを解決するために、一度lintタスクで使われるコマンドに近い形で実行を試みる
-        # これにより、必要なバイナリがDenoの管理する場所にダウンロードされることを期待
-        # Biomeのバージョンチェックに失敗してもキャッシュ処理は続行する
-        deno run -A npm:@biomejs/biome --version || echo "Biome version check failed but continuing to allow caching step."
 
     - name: Cache Deno dependencies
       uses: actions/cache@v4
       with:
         # Use the environment variable set in the previous step
-        path: |
-          ${{ env.DENO_CACHE_DIR }}
-          ~/.cache/deno/npm # npmパッケージのキャッシュ場所も追加
+        path: ${{ env.DENO_DIR }}
         # Improve cache key accuracy by including deno.jsonc
-        key: deno-npm-${{ runner.os }}-${{ hashFiles('deno.jsonc', 'deno.lock') }}
+        key: deno-${{ hashFiles('deno.jsonc', 'deno.lock') }}
         restore-keys: |
-          deno-npm-${{ runner.os }}-
+          deno-
