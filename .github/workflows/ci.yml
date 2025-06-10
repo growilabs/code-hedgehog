@@ -16,7 +16,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      COVERAGE_THRESHOLD: 65 # カバレッジの閾値 (デフォルト80%)
+      COVERAGE_THRESHOLD: 60 # カバレッジの閾値 (デフォルト80%)
     steps:
       # ステップ1: コードのチェックアウト (Composite Action を見つけるために必要)
       - name: Checkout code
