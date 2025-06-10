@@ -21,14 +21,14 @@ runs:
       shell: bash
       run: |
         dir_path="$RUNNER_TEMP/deno_cache"
-        echo "DENO_DIR=$dir_path" >> $GITHUB_ENV
+        echo "DENO_CACHE_DIR=$dir_path" >> $GITHUB_ENV
         echo "dir=$dir_path" >> $GITHUB_OUTPUT # output 用
 
     - name: Cache Deno dependencies
       uses: actions/cache@v4
       with:
         # Use the environment variable set in the previous step
-        path: ${{ env.DENO_DIR }}
+        path: ${{ env.DENO_CACHE_DIR }}
         # Improve cache key accuracy by including deno.jsonc
         key: deno-${{ hashFiles('deno.jsonc', 'deno.lock') }}
         restore-keys: |
