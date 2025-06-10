@@ -1,10 +1,17 @@
-// packages/action/src/runner.ts
-
 import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, type IPullRequestInfo, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import {
+  FileManager,
+  type IPullRequestInfo,
+  type IPullRequestProcessor,
+  type IReviewComment,
+  type IVCSConfig,
+  type IVersionControlSystem,
+  createVCS,
+} from '@code-hedgehog/core';
 import { DEFAULT_CONFIG, type ReviewConfig, loadBaseConfig as loadExternalBaseConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
+import { shouldSkipReview } from './utils/pr-filter.ts';
 
 export interface ExtendedPullRequestInfo extends IPullRequestInfo {
   isDraft: boolean;
@@ -14,8 +21,9 @@ export interface ExtendedPullRequestInfo extends IPullRequestInfo {
 export class ActionRunner {
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
   protected reviewConfig: ReviewConfig = DEFAULT_CONFIG;
+  protected vcsClient?: IVersionControlSystem;
 
-  constructor(private readonly config: ActionConfig) {}
+  constructor(protected readonly config: ActionConfig) {}
 
   async run(): Promise<IReviewComment[]> {
     await this.loadBaseConfig();
@@ -27,8 +35,8 @@ export class ActionRunner {
       const githubConfig = this.createGitHubConfig();
 
       // Initialize components
-      const vcsClient = createVCS(githubConfig);
-      const fileManager = new FileManager(vcsClient, {
+      this.vcsClient = this.vcsClient ?? createVCS(githubConfig);
+      const fileManager = new FileManager(this.vcsClient, {
         exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
         maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
       });
@@ -36,10 +44,10 @@ export class ActionRunner {
 
       // Get PR information
       core.info('Fetching pull request information...');
-      const prInfo = (await vcsClient.getPullRequestInfo()) as ExtendedPullRequestInfo;
+      const prInfo = (await this.vcsClient.getPullRequestInfo()) as ExtendedPullRequestInfo;
 
       // Check if PR should be reviewed based on configuration
-      if (await this.shouldSkipReview(prInfo)) {
+      if (shouldSkipReview(prInfo, this.reviewConfig)) {
         core.info('Skipping review based on PR configuration');
         return [];
       }
@@ -60,7 +68,7 @@ export class ActionRunner {
           if (dryRun) {
             core.info(comments.map((comment) => `- ${JSON.stringify(comment, null, 2)}`).join('\n'));
           } else {
-            await vcsClient.createReviewBatch(comments, dryRun);
+            await this.vcsClient.createReviewBatch(comments, dryRun);
           }
           core.info(`Posted ${comments.length} review comments`);
         }
@@ -75,7 +83,7 @@ export class ActionRunner {
     }
   }
 
-  private createGitHubConfig(): IVCSConfig {
+  protected createGitHubConfig(): IVCSConfig {
     core.info('Environment variables:');
     core.info(`GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
     core.info(`GITHUB_EVENT_PATH: ${process.env.GITHUB_EVENT_PATH}`);
@@ -121,7 +129,7 @@ export class ActionRunner {
     };
   }
 
-  private async createProcessor(): Promise<IPullRequestProcessor> {
+  protected async createProcessor(): Promise<IPullRequestProcessor> {
     core.info(`Creating processor: ${this.config.processor}`);
     // Base configuration loading is now handled within the BaseProcessor or its inheritors
 
@@ -160,71 +168,9 @@ export class ActionRunner {
   }
 
   /**
-   * Check if the PR should be skipped based on configuration
+   * For testing purposes only
    */
-  protected async shouldSkipReview(prInfo: ExtendedPullRequestInfo): Promise<boolean> {
-    // Check draft PR status
-    if (this.reviewConfig.ignore_draft_prs && prInfo.isDraft) {
-      core.info('Skipping review for draft PR');
-      return true;
-    }
-
-    // Check ignored branches
-    if (
-      this.reviewConfig.ignored_branches.some((pattern) => {
-        try {
-          const regex = this.globToRegExp(pattern);
-          if (regex.test(prInfo.headBranch)) {
-            core.info(`Skipping review for ignored branch pattern: ${pattern}`);
-            return true;
-          }
-        } catch (error) {
-          core.warning(`Invalid branch pattern ${pattern}: ${error}`);
-        }
-        return false;
-      })
-    ) {
-      return true;
-    }
-
-    // Check ignored titles
-    if (this.reviewConfig.ignored_titles.length > 0) {
-      const title = prInfo.title.toLowerCase();
-      for (const pattern of this.reviewConfig.ignored_titles) {
-        if (title.includes(pattern.toLowerCase())) {
-          core.info(`Skipping review for ignored title pattern: ${pattern}`);
-          return true;
-        }
-      }
-    }
-
-    // Check required labels
-    if (this.reviewConfig.limit_reviews_by_labels.length > 0) {
-      const prLabels = prInfo.labels.map((label) => label.toLowerCase());
-      const requiredLabels = this.reviewConfig.limit_reviews_by_labels.map((label) => label.toLowerCase());
-      const hasRequiredLabel = requiredLabels.some((label) => prLabels.includes(label));
-
-      if (!hasRequiredLabel) {
-        core.info('Skipping review as PR does not have any required labels');
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Convert glob pattern to RegExp
-   * Simple implementation that handles * and ** patterns
-   */
-  protected globToRegExp(pattern: string): RegExp {
-    // Escape special regex characters except * and **
-    const escaped = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*\*/g, '{{GLOBSTAR}}') // 一時的なプレースホルダー
-      .replace(/\*/g, '[^/]*')
-      .replace(/{{GLOBSTAR}}/g, '.*');
-
-    return new RegExp(`^${escaped}$`);
+  protected setVCSClient(client: IVersionControlSystem): void {
+    this.vcsClient = client;
   }
 }
