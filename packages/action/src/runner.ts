@@ -18,6 +18,25 @@ export interface ExtendedPullRequestInfo extends IPullRequestInfo {
   labels: string[];
 }
 
+// 型ガード関数
+function isExtendedPullRequestInfo(prInfo: IPullRequestInfo): prInfo is ExtendedPullRequestInfo {
+  return typeof (prInfo as ExtendedPullRequestInfo).isDraft === 'boolean' && Array.isArray((prInfo as ExtendedPullRequestInfo).labels);
+}
+
+// ExtendedPullRequestInfoに変換する関数
+function toExtendedPullRequestInfo(prInfo: IPullRequestInfo): ExtendedPullRequestInfo {
+  if (isExtendedPullRequestInfo(prInfo)) {
+    return prInfo;
+  }
+
+  // デフォルト値で拡張
+  return {
+    ...prInfo,
+    isDraft: false, // デフォルト値
+    labels: [], // デフォルト値
+  };
+}
+
 export class ActionRunner {
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
   protected reviewConfig: ReviewConfig = DEFAULT_CONFIG;
@@ -44,10 +63,13 @@ export class ActionRunner {
 
       // Get PR information
       core.info('Fetching pull request information...');
-      const prInfo = (await this.vcsClient.getPullRequestInfo()) as ExtendedPullRequestInfo;
+      const basePrInfo = await this.vcsClient.getPullRequestInfo();
+
+      // 型アサーションの代わりに安全な変換を使用
+      const prInfo = toExtendedPullRequestInfo(basePrInfo);
 
       // Check if PR should be reviewed based on configuration
-      if (shouldSkipReview(prInfo, this.reviewConfig)) {
+      if (shouldSkipReview(prInfo, this.reviewConfig, core)) {
         core.info('Skipping review based on PR configuration');
         return [];
       }
