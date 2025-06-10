@@ -28,13 +28,13 @@
   },
   "tasks": {
     "test": "deno test -A --parallel packages",
-    "test:cov": "deno test -A --coverage=./cov packages && deno coverage ./cov",
-    "test:cov:ci": "deno test -A --coverage=./cov packages && deno coverage ./cov --lcov > ./cov/lcov.info",
+    "test:cov": "deno test -A --coverage=./cov packages && deno coverage ./cov", // Local coverage report
+    "test:cov:ci": "deno test -A --coverage=./cov packages && deno coverage ./cov --lcov > ./cov/lcov.info", // CI coverage report with lcov output
     "format": "deno run -A npm:@biomejs/biome format ./",
     "format:fix": "deno run -A npm:@biomejs/biome format --write ./",
     "lint": "deno run -A npm:@biomejs/biome check ./",
     "lint:fix": "deno run -A npm:@biomejs/biome check --write ./",
-    "check-all": "deno check . && deno task lint && deno task format",
+    "check-all": "deno check . && deno task lint",
     "fix-all": "deno task format:fix && deno task lint:fix",
     "build:action": "cd packages/action && deno task build"
   },
