@@ -130,7 +130,7 @@ export const DEFAULT_CONFIG: ReviewConfig = {
   review_diff_since_last_review: false,
   severityThreshold: 3, // Default threshold for comment severity (1-5)
   // PR level settings
-  ignore_draft_prs: true,
+  ignore_draft_prs: false,
   ignored_branches: [],
   ignored_titles: [],
   limit_reviews_by_labels: [],

@@ -14,56 +14,9 @@ import { afterEach, beforeEach, describe, test } from '@std/testing/bdd';
 import { restore } from '@std/testing/mock';
 import type { ActionConfig } from './config.ts';
 import { ActionRunner, type ExtendedPullRequestInfo } from './runner.ts';
-import { shouldSkipReview } from './utils/pr-filter.ts';
+import { type CoreLogger, shouldSkipReview } from './utils/pr-filter.ts';
 
 // モック用のコンテナ
-// モック用の core オブジェクト
-const mockCore = {
-  info: (message: string) => {
-    // console.log(`Mock Core Info: ${message}`); // テスト実行時にログがうるさい場合はコメントアウト
-    mockContainer.addError(`INFO: ${message}`); // ログ出力をエラーコンテナで確認できるようにする
-  },
-  warning: (message: string) => {
-    // console.warn(`Mock Core Warning: ${message}`);
-    mockContainer.addError(`WARN: ${message}`);
-  },
-  error: (message: string) => {
-    // console.error(`Mock Core Error: ${message}`);
-    mockContainer.addError(`ERROR: ${message}`);
-  },
-  setFailed: (message: string) => {
-    // setFailed は CoreLogger にはないが、テストで使われているので残すか検討
-    mockContainer.addError(message); // または、CoreLogger に合わせて info/warning のみとする
-  },
-  // CoreLogger に合わせて getInput, getBooleanInput は削除
-  // もし ActionRunner のテストで setFailed 以外の core メソッドが必要な場合は、
-  // CoreLogger を拡張するか、別途モックを用意する必要がある。
-  // 現状、shouldSkipReview に渡す mockCore は CoreLogger を満たせば良い。
-  // TestActionRunner の mockSetFailed は setFailed のみをモックしている。
-  // この mockCore は shouldSkipReview に渡すためのものなので、CoreLogger に合わせる。
-  // setFailed は TestActionRunner 内部で使われるので、この mockCore オブジェクトからは削除しても良い。
-  // ただし、TestActionRunner の run メソッド内で shouldSkipReview に渡す mockCore が
-  // 他の core メソッドも期待するなら問題。
-  // shouldSkipReview は CoreLogger のみ期待するので、info と warning があれば良い。
-  // error と setFailed は CoreLogger にはないが、テストの利便性のために mockCore に含めていた。
-  // CoreLogger に合わせるなら、error と setFailed も削除する。
-  // しかし、mockCore は shouldSkipReview だけでなく、TestActionRunner の run メソッド内でも使われる。
-  // TestActionRunner の run メソッドは shouldSkipReview に mockCore を渡している。
-  // TestActionRunner の run メソッド自体は core.setFailed を直接呼び出していない (this.mockSetFailed を使う)。
-  // よって、shouldSkipReview に渡す mockCore は CoreLogger を満たせば良い。
-  // 既存の mockCore の定義から、CoreLogger にないものを削除する。
-  // setFailed は mockContainer を直接使うので、mockCore からは不要。
-};
-// mockCore を CoreLogger に準拠させる
-const loggerForSkipReview: import('./utils/pr-filter.ts').CoreLogger = {
-  info: (message: string) => {
-    mockContainer.addError(`INFO: ${message}`);
-  },
-  warning: (message: string) => {
-    mockContainer.addError(`WARN: ${message}`);
-  },
-};
-
 const mockContainer = {
   errors: [] as string[],
   addError(message: string) {
@@ -77,6 +30,7 @@ const mockContainer = {
 // テスト用のActionRunner - core.setFailedを直接モック
 class TestActionRunner extends ActionRunner {
   private mockSetFailed: (message: string) => void;
+  private mockCoreLogger: CoreLogger;
 
   constructor(config: ActionConfig, mockSetFailed?: (message: string) => void) {
     super(config);
@@ -85,6 +39,16 @@ class TestActionRunner extends ActionRunner {
       ((message: string) => {
         mockContainer.addError(message);
       });
+
+    // CoreLoggerのモック
+    this.mockCoreLogger = {
+      info: (message: string) => {
+        // テスト用ログ処理
+      },
+      warning: (message: string) => {
+        console.warn(message);
+      },
+    };
   }
 
   protected override loadBaseConfig(_configPath?: string): Promise<void> {
@@ -129,7 +93,7 @@ class TestActionRunner extends ActionRunner {
       const prInfo = (await this.vcsClient.getPullRequestInfo()) as ExtendedPullRequestInfo;
 
       // Check if PR should be reviewed based on configuration
-      if (shouldSkipReview(prInfo, this.reviewConfig, loggerForSkipReview)) {
+      if (shouldSkipReview(prInfo, this.reviewConfig, this.mockCoreLogger)) {
         return [];
       }
 
@@ -360,7 +324,12 @@ describe('ActionRunner', () => {
         limit_reviews_by_labels: ['needs-review'],
       };
 
-      const shouldSkip = shouldSkipReview(prInfo, config, loggerForSkipReview);
+      const mockLogger: CoreLogger = {
+        info: () => {},
+        warning: () => {},
+      };
+
+      const shouldSkip = shouldSkipReview(prInfo, config, mockLogger);
       assertEquals(shouldSkip, false);
     });
 
@@ -380,7 +349,12 @@ describe('ActionRunner', () => {
         limit_reviews_by_labels: ['needs-review'],
       };
 
-      const shouldSkip = shouldSkipReview(prInfo, config, loggerForSkipReview);
+      const mockLogger: CoreLogger = {
+        info: () => {},
+        warning: () => {},
+      };
+
+      const shouldSkip = shouldSkipReview(prInfo, config, mockLogger);
       assertEquals(shouldSkip, true);
     });
   });
