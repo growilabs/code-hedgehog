@@ -246,7 +246,7 @@ limit_reviews_by_labels:
   - "ready-for-review"
 
 # ドラフト PR はレビューしない (デフォルト)
-ignore_draft_prs: true
+ignore_draft_prs: false
 ```
 
 ### 3. 複数パスへの指示と除外
