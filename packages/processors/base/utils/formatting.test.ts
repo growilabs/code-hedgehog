@@ -38,7 +38,7 @@ test('formatGroupedComments: multiple groups, suggestions', () => {
       lineNumber: null,
       comments: [
         { target: 'function', issue: 'm1', improvement: 'fix1' },
-        { target: 'code', issue: 'm2', improvement: 'needs refactoring' }
+        { target: 'code', issue: 'm2', improvement: 'needs refactoring' },
       ],
     },
     {
