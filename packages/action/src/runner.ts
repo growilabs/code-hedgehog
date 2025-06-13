@@ -1,16 +1,48 @@
-// packages/action/src/runner.ts
-
 import process from 'node:process';
 import * as core from '@actions/core';
-import { FileManager, type IPullRequestProcessor, type IReviewComment, type IVCSConfig, createVCS } from '@code-hedgehog/core';
+import {
+  FileManager,
+  type IPullRequestInfo,
+  type IPullRequestProcessor,
+  type IReviewComment,
+  type IVCSConfig,
+  type IVersionControlSystem,
+  createVCS,
+} from '@code-hedgehog/core';
 import { DEFAULT_CONFIG, type ReviewConfig, loadBaseConfig as loadExternalBaseConfig } from '@code-hedgehog/processor-base';
 import type { ActionConfig } from './config.ts';
+import { shouldSkipReview } from './utils/pr-filter.ts';
+
+export interface ExtendedPullRequestInfo extends IPullRequestInfo {
+  isDraft: boolean;
+  labels: string[];
+}
+
+// 型ガード関数
+function isExtendedPullRequestInfo(prInfo: IPullRequestInfo): prInfo is ExtendedPullRequestInfo {
+  return typeof (prInfo as ExtendedPullRequestInfo).isDraft === 'boolean' && Array.isArray((prInfo as ExtendedPullRequestInfo).labels);
+}
+
+// ExtendedPullRequestInfoに変換する関数
+function toExtendedPullRequestInfo(prInfo: IPullRequestInfo): ExtendedPullRequestInfo {
+  if (isExtendedPullRequestInfo(prInfo)) {
+    return prInfo;
+  }
+
+  // デフォルト値で拡張
+  return {
+    ...prInfo,
+    isDraft: false, // デフォルト値
+    labels: [], // デフォルト値
+  };
+}
 
 export class ActionRunner {
   // Initialize config with DEFAULT_CONFIG, it will be updated by loadConfig
-  private reviewConfig: ReviewConfig = DEFAULT_CONFIG;
+  protected reviewConfig: ReviewConfig = DEFAULT_CONFIG;
+  protected vcsClient?: IVersionControlSystem;
 
-  constructor(private readonly config: ActionConfig) {}
+  constructor(protected readonly config: ActionConfig) {}
 
   async run(): Promise<IReviewComment[]> {
     await this.loadBaseConfig();
@@ -22,16 +54,21 @@ export class ActionRunner {
       const githubConfig = this.createGitHubConfig();
 
       // Initialize components
-      const vcsClient = createVCS(githubConfig);
-      const fileManager = new FileManager(vcsClient, {
-        exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
-        maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
-      });
+      this.vcsClient = this.vcsClient ?? createVCS(githubConfig);
       const processor = await this.createProcessor();
 
       // Get PR information
       core.info('Fetching pull request information...');
-      const prInfo = await vcsClient.getPullRequestInfo();
+      const basePrInfo = await this.vcsClient.getPullRequestInfo();
+
+      // 型アサーションの代わりに安全な変換を使用
+      const prInfo = toExtendedPullRequestInfo(basePrInfo);
+
+      // Check if PR should be reviewed based on configuration
+      if (shouldSkipReview(prInfo, this.reviewConfig, core)) {
+        core.info('Skipping review based on PR configuration');
+        return [];
+      }
 
       core.info('Starting code review...');
       if (dryRun) {
@@ -40,6 +77,10 @@ export class ActionRunner {
 
       const allComments: IReviewComment[] = [];
 
+      const fileManager = new FileManager(this.vcsClient, {
+        exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
+        maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
+      });
       // Process files in batches and get reviews
       for await (const files of fileManager.collectChangedFiles(this.reviewConfig)) {
         const { comments } = await processor.process(prInfo, files);
@@ -49,7 +90,7 @@ export class ActionRunner {
           if (dryRun) {
             core.info(comments.map((comment) => `- ${JSON.stringify(comment, null, 2)}`).join('\n'));
           } else {
-            await vcsClient.createReviewBatch(comments, dryRun);
+            await this.vcsClient.createReviewBatch(comments, dryRun);
           }
           core.info(`Posted ${comments.length} review comments`);
         }
@@ -64,7 +105,7 @@ export class ActionRunner {
     }
   }
 
-  private createGitHubConfig(): IVCSConfig {
+  protected createGitHubConfig(): IVCSConfig {
     core.info('Environment variables:');
     core.info(`GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
     core.info(`GITHUB_EVENT_PATH: ${process.env.GITHUB_EVENT_PATH}`);
@@ -110,7 +151,7 @@ export class ActionRunner {
     };
   }
 
-  private async createProcessor(): Promise<IPullRequestProcessor> {
+  protected async createProcessor(): Promise<IPullRequestProcessor> {
     core.info(`Creating processor: ${this.config.processor}`);
     // Base configuration loading is now handled within the BaseProcessor or its inheritors
 
@@ -146,5 +187,12 @@ export class ActionRunner {
   protected async loadBaseConfig(configPath = '.coderabbitai.yaml'): Promise<void> {
     // Call the external function and update the instance's config
     this.reviewConfig = await loadExternalBaseConfig(configPath); // Rename function call
+  }
+
+  /**
+   * For testing purposes only
+   */
+  protected setVCSClient(client: IVersionControlSystem): void {
+    this.vcsClient = client;
   }
 }
