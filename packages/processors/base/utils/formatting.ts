@@ -22,8 +22,14 @@ export function formatGroupedComments(groups: GroupedComment[]): string {
       const header = `**${group.filePath}**${group.lineNumber ? `:${group.lineNumber}` : ''}\n`;
       const comments = group.comments
         .map((comment) => {
-          const suggestion = comment.suggestion ? `\n  - ${comment.suggestion}` : '';
-          return `- ${comment.message}${suggestion}`;
+          return `## Issue Location
+${comment.target}
+
+## Reason
+${comment.issue}
+
+## Suggestion
+${comment.improvement}`;
         })
         .join('\n');
       return `${header}${comments}\n`;

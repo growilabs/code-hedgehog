@@ -23,12 +23,12 @@ test('formatGroupedComments: single group, single comment', () => {
     {
       filePath: 'foo.ts',
       lineNumber: 10,
-      comments: [{ message: 'msg' }],
+      comments: [{ target: 'codeSection', issue: 'msg', improvement: 'needs to be improved' }],
     },
   ];
   const md = formatGroupedComments(groups);
   expect(md).toContain('**foo.ts**:10');
-  expect(md).toContain('- msg');
+  expect(md).toContain('## Issue Location\ncodeSection\n\n## Reason\nmsg\n\n## Suggestion\nneeds to be improved');
 });
 
 test('formatGroupedComments: multiple groups, suggestions', () => {
@@ -36,20 +36,26 @@ test('formatGroupedComments: multiple groups, suggestions', () => {
     {
       filePath: 'a.ts',
       lineNumber: null,
-      comments: [{ message: 'm1', suggestion: 'fix1' }, { message: 'm2' }],
+      comments: [
+        { target: 'function', issue: 'm1', improvement: 'fix1' },
+        { target: 'code', issue: 'm2', improvement: 'needs refactoring' },
+      ],
     },
     {
       filePath: 'b.ts',
       lineNumber: 2,
-      comments: [{ message: 'm3', suggestion: 'fix2' }],
+      comments: [{ target: 'method', issue: 'm3', improvement: 'fix2' }],
     },
   ];
   const md = formatGroupedComments(groups);
   expect(md).toContain('**a.ts**');
-  expect(md).toContain('- m1\n  - fix1');
-  expect(md).toContain('- m2');
+  // First comment
+  expect(md).toContain('## Issue Location\nfunction\n\n## Reason\nm1\n\n## Suggestion\nfix1');
+  // Second comment
+  expect(md).toContain('## Issue Location\ncode\n\n## Reason\nm2\n\n## Suggestion\nneeds refactoring');
+  // Third comment in different file
   expect(md).toContain('**b.ts**:2');
-  expect(md).toContain('- m3\n  - fix2');
+  expect(md).toContain('## Issue Location\nmethod\n\n## Reason\nm3\n\n## Suggestion\nfix2');
 });
 
 test('formatGroupedComments: empty', () => {

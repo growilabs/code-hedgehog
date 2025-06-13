@@ -5,16 +5,16 @@ import { type CommentBase, type GroupedComment, type RawComment, convertToCommen
 test('convertToCommentBase: normal case', () => {
   const input: Record<string, RawComment[]> = {
     'a.ts': [
-      { message: 'm1', line_number: 1 },
-      { message: 'm2', suggestion: 's2' },
+      { target: 'function', issue: 'm1', improvement: '', line_number: 1 },
+      { target: 'code', issue: 'm2', improvement: 's2' },
     ],
-    'b.ts': [{ message: 'm3', line_number: null, suggestion: 's3' }],
+    'b.ts': [{ target: 'method', issue: 'm3', improvement: 's3', line_number: null }],
   };
   const result = convertToCommentBase(input);
   expect(result).toEqual([
-    { filePath: 'a.ts', lineNumber: 1, message: 'm1' },
-    { filePath: 'a.ts', lineNumber: null, message: 'm2', suggestion: 's2' },
-    { filePath: 'b.ts', lineNumber: null, message: 'm3', suggestion: 's3' },
+    { filePath: 'a.ts', lineNumber: 1, target: 'function', issue: 'm1', improvement: '' },
+    { filePath: 'a.ts', lineNumber: null, target: 'code', issue: 'm2', improvement: 's2' },
+    { filePath: 'b.ts', lineNumber: null, target: 'method', issue: 'm3', improvement: 's3' },
   ]);
 });
 
@@ -24,18 +24,18 @@ test('convertToCommentBase: empty input', () => {
 
 test('convertToCommentBase: line_number=0', () => {
   const input: Record<string, RawComment[]> = {
-    'foo.ts': [{ message: 'zero', line_number: 0 }],
+    'foo.ts': [{ target: 'code', issue: 'zero', improvement: '', line_number: 0 }],
   };
   // 0は falsy なので null になる
-  expect(convertToCommentBase(input)).toEqual([{ filePath: 'foo.ts', lineNumber: null, message: 'zero' }]);
+  expect(convertToCommentBase(input)).toEqual([{ filePath: 'foo.ts', lineNumber: null, target: 'code', issue: 'zero', improvement: '' }]);
 });
 
 test('groupCommentsByLocation: group by file and line', () => {
   const comments: CommentBase[] = [
-    { filePath: 'a.ts', lineNumber: 1, message: 'm1' },
-    { filePath: 'a.ts', lineNumber: 1, message: 'm2', suggestion: 's2' },
-    { filePath: 'a.ts', lineNumber: 2, message: 'm3' },
-    { filePath: 'b.ts', lineNumber: null, message: 'm4' },
+    { filePath: 'a.ts', lineNumber: 1, target: 'function', issue: 'm1', improvement: '' },
+    { filePath: 'a.ts', lineNumber: 1, target: 'code', issue: 'm2', improvement: 's2' },
+    { filePath: 'a.ts', lineNumber: 2, target: 'method', issue: 'm3', improvement: '' },
+    { filePath: 'b.ts', lineNumber: null, target: 'code', issue: 'm4', improvement: '' },
   ];
   const grouped = groupCommentsByLocation(comments);
   expect(grouped.length).toBe(3);
@@ -43,19 +43,19 @@ test('groupCommentsByLocation: group by file and line', () => {
     filePath: 'a.ts',
     lineNumber: 1,
     comments: [
-      { message: 'm1', suggestion: undefined },
-      { message: 'm2', suggestion: 's2' },
+      { target: 'function', issue: 'm1', improvement: '' },
+      { target: 'code', issue: 'm2', improvement: 's2' },
     ],
   });
   expect(grouped).toContainEqual({
     filePath: 'a.ts',
     lineNumber: 2,
-    comments: [{ message: 'm3', suggestion: undefined }],
+    comments: [{ target: 'method', issue: 'm3', improvement: '' }],
   });
   expect(grouped).toContainEqual({
     filePath: 'b.ts',
     lineNumber: null,
-    comments: [{ message: 'm4', suggestion: undefined }],
+    comments: [{ target: 'code', issue: 'm4', improvement: '' }],
   });
 });
 
@@ -65,9 +65,9 @@ test('groupCommentsByLocation: empty', () => {
 
 test('groupCommentsByLocation: all unique', () => {
   const comments: CommentBase[] = [
-    { filePath: 'a.ts', lineNumber: 1, message: 'm1' },
-    { filePath: 'a.ts', lineNumber: 2, message: 'm2' },
-    { filePath: 'b.ts', lineNumber: 3, message: 'm3' },
+    { filePath: 'a.ts', lineNumber: 1, target: 'function', issue: 'm1', improvement: '' },
+    { filePath: 'a.ts', lineNumber: 2, target: 'code', issue: 'm2', improvement: '' },
+    { filePath: 'b.ts', lineNumber: 3, target: 'method', issue: 'm3', improvement: '' },
   ];
   const grouped = groupCommentsByLocation(comments);
   expect(grouped.length).toBe(3);

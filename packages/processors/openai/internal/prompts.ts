@@ -262,7 +262,14 @@ ${instructions ? `## Additional Instructions\n\n${instructions}` : ''}
 ${patch}
 \`\`\`
 
-Provide a thorough review focusing on:
+For each issue you find, provide a structured review comment with:
+- target: The specific code element, pattern, or concept being reviewed
+- issue: A clear description of the problem or concern
+- improvement: Concrete suggestions for how to improve the code
+- severity: A severity level (1-5) based on the guidelines below
+- line_number: The relevant line number (when applicable)
+
+Focus your review on:
 - Code correctness and potential bugs
 - Performance implications
 - Security considerations
@@ -289,12 +296,13 @@ Respond in JSON format with:
 {
   "comments": [
     {
-      "message": string,      // Important review comment
-      "suggestion"?: string,  // Optional improvement suggestion
+      "target": string,      // Target of the review (what is being reviewed)
+      "issue": string,       // Description of the issue found
+      "improvement": string, // Suggested improvement or solution
       "line_number"?: number, // Optional line number reference
-      "severity": number      // Severity level (1-5)
+      "severity": number     // Severity level (1-5)
     }
   ],
-  "summary": string          // Overall evaluation of changes
+  "summary": string         // Overall evaluation of changes
 }
 `;

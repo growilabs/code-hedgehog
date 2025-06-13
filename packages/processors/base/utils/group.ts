@@ -8,8 +8,9 @@
 export interface CommentBase {
   filePath: string;
   lineNumber: number | null;
-  message: string;
-  suggestion?: string;
+  target: string;
+  issue: string;
+  improvement: string;
 }
 
 /**
@@ -19,8 +20,9 @@ export interface GroupedComment {
   filePath: string;
   lineNumber: number | null;
   comments: {
-    message: string;
-    suggestion?: string;
+    target: string;
+    issue: string;
+    improvement: string;
   }[];
 }
 
@@ -28,8 +30,9 @@ export interface GroupedComment {
  * Raw comment type from review
  */
 export type RawComment = {
-  message: string;
-  suggestion?: string;
+  target: string;
+  issue: string;
+  improvement: string;
   line_number?: number | null;
 };
 
@@ -43,8 +46,9 @@ export function convertToCommentBase(fileComments: Record<string, RawComment[]>)
       results.push({
         filePath,
         lineNumber: comment.line_number || null,
-        message: comment.message,
-        suggestion: comment.suggestion,
+        target: comment.target,
+        issue: comment.issue,
+        improvement: comment.improvement,
       });
     }
   }
@@ -57,7 +61,7 @@ export function convertToCommentBase(fileComments: Record<string, RawComment[]>)
 export function groupCommentsByLocation(comments: CommentBase[]): GroupedComment[] {
   const groupMap = new Map<string, GroupedComment>();
 
-  for (const { filePath, lineNumber, message, suggestion } of comments) {
+  for (const { filePath, lineNumber, target, issue, improvement } of comments) {
     const key = `${filePath}:${lineNumber ?? 'null'}`;
     const group = groupMap.get(key);
 
@@ -65,10 +69,10 @@ export function groupCommentsByLocation(comments: CommentBase[]): GroupedComment
       groupMap.set(key, {
         filePath,
         lineNumber,
-        comments: [{ message, suggestion }],
+        comments: [{ target, issue, improvement }],
       });
     } else {
-      group.comments.push({ message, suggestion });
+      group.comments.push({ target, issue, improvement });
     }
   }
 

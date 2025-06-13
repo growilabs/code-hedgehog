@@ -62,8 +62,9 @@ export type OverallSummary = z.infer<typeof OverallSummarySchema>;
  * Schema for review comments
  */
 export const ReviewCommentSchema = z.object({
-  message: z.string(), // Important review comment
-  suggestion: z.string().optional(), // Optional improvement suggestion
+  target: z.string(), // Target of the review comment
+  issue: z.string(), // Description of the issue
+  improvement: z.string(), // Suggested improvement
   line_number: z.number().optional(), // Optional line number reference
   severity: z.nativeEnum(SeverityLevel), // Severity level (Trivial to Blocker)
 });
