@@ -55,10 +55,6 @@ export class ActionRunner {
 
       // Initialize components
       this.vcsClient = this.vcsClient ?? createVCS(githubConfig);
-      const fileManager = new FileManager(this.vcsClient, {
-        exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
-        maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
-      });
       const processor = await this.createProcessor();
 
       // Get PR information
@@ -81,6 +77,10 @@ export class ActionRunner {
 
       const allComments: IReviewComment[] = [];
 
+      const fileManager = new FileManager(this.vcsClient, {
+        exclude: this.reviewConfig.file_filter?.exclude ?? DEFAULT_CONFIG.file_filter.exclude,
+        maxChanges: this.reviewConfig.file_filter?.max_changes ?? DEFAULT_CONFIG.file_filter.max_changes,
+      });
       // Process files in batches and get reviews
       for await (const files of fileManager.collectChangedFiles(this.reviewConfig)) {
         const { comments } = await processor.process(prInfo, files);
