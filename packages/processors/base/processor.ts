@@ -303,13 +303,13 @@ export abstract class BaseProcessor implements IPullRequestProcessor {
    * Format review comment with suggestion
    */
   protected formatComment(comment: ReviewComment): string {
-    return `## 指摘対象
+    return `## Issue Location
 ${comment.target}
 
-## 指摘理由
+## Reason
 ${comment.issue}
 
-## 改善案
+## Suggestion
 ${comment.improvement}`;
   }
 

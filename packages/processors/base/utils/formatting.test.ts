@@ -28,7 +28,7 @@ test('formatGroupedComments: single group, single comment', () => {
   ];
   const md = formatGroupedComments(groups);
   expect(md).toContain('**foo.ts**:10');
-  expect(md).toContain('## 指摘対象\ncodeSection\n\n## 指摘理由\nmsg\n\n## 改善案\nneeds to be improved');
+  expect(md).toContain('## Issue Location\ncodeSection\n\n## Reason\nmsg\n\n## Suggestion\nneeds to be improved');
 });
 
 test('formatGroupedComments: multiple groups, suggestions', () => {
@@ -50,12 +50,12 @@ test('formatGroupedComments: multiple groups, suggestions', () => {
   const md = formatGroupedComments(groups);
   expect(md).toContain('**a.ts**');
   // First comment
-  expect(md).toContain('## 指摘対象\nfunction\n\n## 指摘理由\nm1\n\n## 改善案\nfix1');
+  expect(md).toContain('## Issue Location\nfunction\n\n## Reason\nm1\n\n## Suggestion\nfix1');
   // Second comment
-  expect(md).toContain('## 指摘対象\ncode\n\n## 指摘理由\nm2\n\n## 改善案\nneeds refactoring');
+  expect(md).toContain('## Issue Location\ncode\n\n## Reason\nm2\n\n## Suggestion\nneeds refactoring');
   // Third comment in different file
   expect(md).toContain('**b.ts**:2');
-  expect(md).toContain('## 指摘対象\nmethod\n\n## 指摘理由\nm3\n\n## 改善案\nfix2');
+  expect(md).toContain('## Issue Location\nmethod\n\n## Reason\nm3\n\n## Suggestion\nfix2');
 });
 
 test('formatGroupedComments: empty', () => {
