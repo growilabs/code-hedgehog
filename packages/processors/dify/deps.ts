@@ -9,6 +9,7 @@ export {
   type ReviewResponse,
   type SummaryResponse,
   type ReviewComment,
+  type ReviewSummary,
   ImpactLevel,
   SummaryResponseSchema,
   OverallSummarySchema,

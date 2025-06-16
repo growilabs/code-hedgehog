@@ -2,7 +2,7 @@ import process from 'node:process';
 import type { ReviewConfig } from '../base/types.ts';
 import { addLineNumbersToDiff, formatFileSummaryTable } from '../base/utils/formatting.ts';
 import { mergeOverallSummaries } from '../base/utils/summary.ts';
-import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, SummarizeResult } from './deps.ts';
+import type { IFileChange, IPullRequestInfo, IPullRequestProcessedResult, IReviewComment, OverallSummary, ReviewSummary, SummarizeResult } from './deps.ts';
 import { BaseProcessor, OverallSummarySchema, type ReviewComment, ReviewResponseSchema, SummaryResponseSchema } from './deps.ts';
 import { runWorkflow, uploadFile } from './internal/mod.ts';
 
@@ -271,7 +271,7 @@ export class DifyProcessor extends BaseProcessor {
     }
 
     const comments: IReviewComment[] = [];
-    const fileSummaries = new Map<string, string>();
+    const fileSummaries = new Map<string, ReviewSummary>();
     const reviewsByFile: Record<string, ReviewComment[]> = {};
 
     for (const file of files) {
@@ -336,7 +336,10 @@ export class DifyProcessor extends BaseProcessor {
 
         // Store individual file summary
         if (review.summary) {
-          fileSummaries.set(file.path, review.summary);
+          fileSummaries.set(file.path, {
+            positive: review.summary.positive,
+            negative: review.summary.negative
+          });
         }
       } catch (error) {
         console.error(`Review error for ${file.path}:`, error);
