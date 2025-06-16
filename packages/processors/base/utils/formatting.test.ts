@@ -1,6 +1,7 @@
 import { expect } from '@std/expect';
 // deno-lint-ignore-file no-explicit-any
 import { test } from '@std/testing/bdd';
+import type { ReviewSummary } from '../schema.ts';
 import {
   addLineNumbersToDiff,
   createCollapsibleSection,
@@ -63,23 +64,38 @@ test('formatGroupedComments: empty', () => {
 });
 
 test('formatFileSummaryTable: basic', () => {
-  const map = new Map<string, string>([
-    ['foo.ts', 'desc1'],
-    ['bar.ts', 'desc2'],
+  const map = new Map<string, ReviewSummary>([
+    ['foo.ts', { positive: 'good points', negative: 'areas to improve' }],
+    ['bar.ts', { positive: 'excellent work', negative: 'minor issues' }],
   ]);
   const table = formatFileSummaryTable(map);
   expect(table).toContain('| File | Description |');
   expect(table).toContain('`foo.ts`');
-  expect(table).toContain('desc1');
+  expect(table).toContain('**👍 Positive Aspects**<br>');
+  expect(table).toContain('good points');
+  expect(table).toContain('**💡 Areas for Improvement**<br>');
+  expect(table).toContain('areas to improve');
   expect(table).toContain('`bar.ts`');
-  expect(table).toContain('desc2');
+  expect(table).toContain('excellent work');
+  expect(table).toContain('minor issues');
 });
 
 test('formatFileSummaryTable: summary with newline', () => {
-  const map = new Map<string, string>([['foo.ts', 'line1\nline2']]);
+  const map = new Map<string, ReviewSummary>([
+    ['foo.ts', { positive: 'line1\nline2', negative: 'issue1\nissue2' }]
+  ]);
   const table = formatFileSummaryTable(map);
+  // Check text content
   expect(table).toContain('line1 line2');
+  expect(table).toContain('issue1 issue2');
+  // Verify line break handling
   expect(table).not.toContain('\nline2');
+  expect(table).not.toContain('\nissue2');
+  // Verify section formatting
+  expect(table).toMatch(/\*\*👍 Positive Aspects\*\*<br>.*line1 line2/);
+  expect(table).toMatch(/\*\*💡 Areas for Improvement\*\*<br>.*issue1 issue2/);
+  // Check HTML break tags
+  expect(table).toContain('<br><br>'); // Empty line between sections
 });
 
 test('createCountedCollapsibleSection: delegates', () => {

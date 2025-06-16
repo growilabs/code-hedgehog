@@ -1,4 +1,5 @@
 import type { GroupedComment } from './group.ts';
+import type { ReviewSummary } from '../schema.ts';
 
 /**
  * Generate an HTML collapsible section
@@ -42,12 +43,20 @@ ${comment.improvement}`;
  * @param fileSummaries Map of file paths to their summaries
  * @returns Formatted markdown table string
  */
-export function formatFileSummaryTable(fileSummaries: Map<string, string>): string {
+export function formatFileSummaryTable(fileSummaries: Map<string, ReviewSummary>): string {
   let table = '| File | Description |\n|------|-------------|';
   for (const [path, summary] of fileSummaries) {
     // Replace newlines with spaces for cleaner table display
-    const formattedSummary = summary.replace(/\n/g, ' ');
-    table += `\n| \`${path}\` | ${formattedSummary} |`;
+    const positiveSummary = summary.positive.replace(/\n/g, ' ');
+    const negativeSummary = summary.negative.replace(/\n/g, ' ');
+    const combinedSummary = [
+      '**👍 Positive Aspects**<br>',
+      positiveSummary,
+      '<br><br>',
+      '**💡 Areas for Improvement**<br>',
+      negativeSummary
+    ].join('');
+    table += `\n| \`${path}\` | ${combinedSummary} |`;
   }
   return table;
 }

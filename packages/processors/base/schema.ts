@@ -73,9 +73,15 @@ export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
 /**
  * Response format for review workflow
  */
+export const ReviewSummarySchema = z.object({
+  positive: z.string(), // Positive aspects: Excellent implementation parts, appropriate design choices, etc.
+  negative: z.string(), // Negative aspects/Areas for improvement: Problematic implementations, risks, etc.
+});
+export type ReviewSummary = z.infer<typeof ReviewSummarySchema>;
+
 export const ReviewResponseSchema = z.object({
   comments: z.array(ReviewCommentSchema), // All review comments with confidence scores
-  summary: z.string().optional(), // Overall evaluation of changes
+  summary: ReviewSummarySchema, // Structured summary of the review
 });
 export type ReviewResponse = z.infer<typeof ReviewResponseSchema>;
 
